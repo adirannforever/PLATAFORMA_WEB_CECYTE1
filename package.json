@@ -1,0 +1,11 @@
+{
+  "name": "cecyte-platform",
+  "version": "1.0.0",
+  "description": "Plataforma Web Educativa CECyTE Plantel 1",
+  "private": true,
+  "scripts": {
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "install:all": "cd backend && npm install && cd ../frontend && npm install"
+  }
+}

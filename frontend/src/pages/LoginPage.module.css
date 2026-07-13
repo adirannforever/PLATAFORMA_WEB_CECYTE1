@@ -1,0 +1,180 @@
+.page {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* Panel izquierdo verde institucional */
+.panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42%;
+  background: linear-gradient(160deg, var(--color-primary-dark) 0%, var(--color-primary) 60%, var(--color-primary-light) 100%);
+  padding: 48px 40px;
+  position: relative;
+  overflow: hidden;
+}
+.panel::before {
+  content: '';
+  position: absolute;
+  width: 400px; height: 400px;
+  border-radius: 50%;
+  border: 60px solid rgba(200,153,42,0.07);
+  top: -100px; right: -100px;
+}
+.panel::after {
+  content: '';
+  position: absolute;
+  width: 300px; height: 300px;
+  border-radius: 50%;
+  border: 40px solid rgba(255,255,255,0.04);
+  bottom: -80px; left: -80px;
+}
+.panelContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+  position: relative;
+  z-index: 1;
+}
+.panelTitle {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--color-white);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.panelSubtitle {
+  font-size: 24px;
+  color: #F37238;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-top: -8px;
+}
+.panelDesc {
+  font-size: 16px;
+  color: rgba(255,255,255,0.65);
+  line-height: 1.7;
+  max-width: 280px;
+  margin-top: 8px;
+}
+.panelBadge {
+  font-size: 10px;
+  color: rgba(255,255,255,0.4);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 20px;
+  padding: 6px 14px;
+  letter-spacing: 0.03em;
+  margin-top: 12px;
+}
+
+/* Panel derecho — formulario */
+.formSide {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  background: var(--color-white);
+}
+.formCard {
+  width: 100%;
+  max-width: 380px;
+}
+.formHeader {
+  margin-bottom: 28px;
+}
+.formTitle {
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+  color: var(--color-gray-900);
+  margin-bottom: 6px;
+}
+.formDesc {
+  font-size: var(--font-size-sm);
+  color: var(--color-gray-600);
+}
+
+.errorMsg {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  background: var(--color-error-light);
+  color: var(--color-error);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  margin-bottom: 20px;
+  border: 1px solid rgba(192,57,43,0.2);
+}
+
+.form { display: flex; flex-direction: column; gap: 18px; }
+
+.field { display: flex; flex-direction: column; gap: 6px; }
+
+.label {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-gray-800);
+}
+.input {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1.5px solid var(--color-gray-200);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
+  color: var(--color-gray-900);
+  background: var(--color-white);
+  transition: border-color 0.15s, box-shadow 0.15s;
+  outline: none;
+}
+.input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(26,107,53,0.12);
+}
+.input::placeholder { color: var(--color-gray-400); }
+
+.submitBtn {
+  width: 100%;
+  padding: 12px;
+  background: var(--color-primary);
+  color: var(--color-white);
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  margin-top: 6px;
+  transition: background 0.15s, transform 0.1s;
+}
+.submitBtn:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+  transform: translateY(-1px);
+}
+.submitBtn:active:not(:disabled) { transform: translateY(0); }
+.submitBtn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.helpText {
+  text-align: center;
+  font-size: var(--font-size-xs);
+  color: var(--color-gray-400);
+  margin-top: 24px;
+}
+.footer {
+  font-size: 11px;
+  color: var(--color-gray-400);
+  text-align: center;
+  margin-top: 40px;
+}
+
+@media (max-width: 640px) {
+  .page { flex-direction: column; }
+  .panel { width: 100%; padding: 40px 24px; min-height: 280px; }
+  .panelTitle { font-size: 1.5rem; }
+  .formSide { padding: 32px 20px; }
+}

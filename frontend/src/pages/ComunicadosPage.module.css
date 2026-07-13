@@ -1,0 +1,118 @@
+.page { display: flex; flex-direction: column; gap: 24px; max-width: 860px; }
+.loading { color: var(--color-gray-600); padding: 20px 0; }
+.pageHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.title { font-size: var(--font-size-2xl); font-weight: 700; color: var(--color-gray-900); }
+.subtitle { font-size: var(--font-size-sm); color: var(--color-gray-600); margin-top: 4px; }
+
+.btnPrimary {
+  padding: 10px 20px;
+  background: var(--color-primary);
+  color: white;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+.btnPrimary:hover:not(:disabled) { background: var(--color-primary-dark); }
+.btnPrimary:disabled { opacity: 0.65; cursor: not-allowed; }
+
+.btnSecondary {
+  padding: 10px 20px;
+  background: var(--color-gray-100);
+  color: var(--color-gray-800);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  transition: background 0.15s;
+}
+.btnSecondary:hover { background: var(--color-gray-200); }
+
+.btnArchivar {
+  padding: 5px 12px;
+  background: var(--color-gray-100);
+  color: var(--color-gray-600);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  transition: all 0.15s;
+}
+.btnArchivar:hover { background: var(--color-error-light); color: var(--color-error); }
+
+.empty {
+  padding: 48px;
+  text-align: center;
+  color: var(--color-gray-400);
+  background: var(--color-white);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-gray-200);
+}
+
+.list { display: flex; flex-direction: column; gap: 16px; }
+.card {
+  background: var(--color-white);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-gray-200);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: box-shadow 0.15s;
+}
+.card:hover { box-shadow: var(--shadow-sm); }
+.cardHeader { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.cardMeta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-primary);
+  background: var(--color-primary-muted);
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+.fecha { font-size: var(--font-size-xs); color: var(--color-gray-400); }
+.cardTitle { font-size: var(--font-size-xl); font-weight: 700; color: var(--color-gray-900); }
+.cardContenido { font-size: var(--font-size-sm); color: var(--color-gray-600); line-height: 1.75; }
+.cardFooter { font-size: var(--font-size-xs); color: var(--color-gray-400); padding-top: 8px; border-top: 1px solid var(--color-gray-100); }
+
+/* Modal */
+.modalOverlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 200; padding: 20px;
+}
+.modal {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: 28px;
+  width: 100%; max-width: 520px;
+  box-shadow: var(--shadow-lg);
+}
+.modalTitle { font-size: var(--font-size-xl); font-weight: 700; color: var(--color-gray-900); margin-bottom: 20px; }
+.modalActions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px; }
+.form { display: flex; flex-direction: column; gap: 16px; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.label { font-size: var(--font-size-sm); font-weight: 600; color: var(--color-gray-800); }
+.input, .textarea {
+  width: 100%; padding: 10px 14px;
+  border: 1.5px solid var(--color-gray-200);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  outline: none; resize: vertical;
+  font-family: var(--font-sans);
+}
+.input:focus, .textarea:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(26,107,53,0.1);
+}
+.errorMsg {
+  padding: 10px 14px;
+  background: var(--color-error-light);
+  color: var(--color-error);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  margin-bottom: 8px;
+}
