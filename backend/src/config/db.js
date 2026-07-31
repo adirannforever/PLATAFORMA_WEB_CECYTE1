@@ -17,11 +17,11 @@ const pool = new Pool({
 
 pool.connect((err, client, release) => {
   if (err) {
-    console.error('❌ Error al conectar a la base de datos:', err.message);
+    console.error('Error al conectar a la base de datos:', err.message);
     process.exit(1);
   }
   release();
-  console.log('✅ Conexión a PostgreSQL (Neon) establecida correctamente');
+  console.log('Conexión a PostgreSQL (Neon) establecida correctamente');
 });
 
 export const query = (text, params) => pool.query(text, params);
