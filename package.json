@@ -4,8 +4,12 @@
   "description": "Plataforma Web Educativa CECyTE Plantel 1",
   "private": true,
   "scripts": {
-    "dev:backend": "cd backend && npm run dev",
-    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "dev": "concurrently -k -n \"BACKEND,FRONTEND\" -c \"blue, green\" \"npm run dev:backend\" \"npm run dev:frontend\"",
     "install:all": "cd backend && npm install && cd ../frontend && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.4"
   }
 }
