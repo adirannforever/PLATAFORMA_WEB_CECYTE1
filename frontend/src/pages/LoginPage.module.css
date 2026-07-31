@@ -80,10 +80,16 @@
   justify-content: center;
   padding: 40px 24px;
   background: var(--color-white);
+  box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.08);
+  border-radius: 12px; 
 }
 .formCard {
   width: 100%;
   max-width: 380px;
+  background: var(--color-white); 
+  box-shadow: 0px 5px 40px rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  padding: 32px; 
 }
 .formHeader {
   margin-bottom: 28px;
@@ -169,7 +175,7 @@
   font-size: 11px;
   color: var(--color-gray-400);
   text-align: center;
-  margin-top: 40px;
+  margin-top: 90px;
 }
 
 @media (max-width: 640px) {

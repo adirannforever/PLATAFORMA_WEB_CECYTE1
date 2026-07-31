@@ -1,13 +1,9 @@
-// src/App.jsx
-// Define todas las rutas de la aplicación y quién puede acceder a cada una.
 
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 
-// Layout
 import DashboardLayout from './components/layout/DashboardLayout';
 
-// Páginas
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import ComunicadosPage from './pages/ComunicadosPage';
@@ -17,9 +13,6 @@ import UsuariosPage from './pages/UsuariosPage';
 import InscripcionesPage from './pages/InscripcionesPage';
 import NotFoundPage from './pages/NotFoundPage';
 
-// ── Ruta protegida ────────────────────────────────────────────
-// Si no hay sesión → manda al login.
-// Si hay sesión pero el rol no coincide → manda al dashboard.
 const RutaProtegida = ({ children, rolesPermitidos }) => {
   const { usuario, cargando } = useAuth();
 
@@ -48,13 +41,11 @@ export default function App() {
 
   return (
     <Routes>
-      {/* Ruta pública */}
       <Route
         path="/login"
         element={usuario ? <Navigate to="/dashboard" replace /> : <LoginPage />}
       />
 
-      {/* Rutas protegidas dentro del layout del dashboard */}
       <Route
         path="/"
         element={

@@ -79,7 +79,7 @@ export default function LoginPage() {
                 id="email"
                 type="email"
                 className={styles.input}
-                placeholder="usuario@cecyte1.edu.mx"
+                placeholder="correo@cecyte1.edu.mx"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -113,7 +113,7 @@ export default function LoginPage() {
         </div>
 
         <p className={styles.footer}>
-          © 2025 CECyTE Tabasco Plantel 1 · Todos los derechos reservados
+          © {new Date().getFullYear()} CECyTE Tabasco Plantel 1 · Todos los derechos reservados
         </p>
       </div>
     </div>

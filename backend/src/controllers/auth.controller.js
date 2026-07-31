@@ -39,7 +39,7 @@ export const login = async (req, res) => {
     if (!passwordValida) {
       return res.status(401).json({
         success: false,
-        message: 'Credenciales incorrectas.',
+        message: 'Usuario o Correo Incorrecto.',
       });
     }
 

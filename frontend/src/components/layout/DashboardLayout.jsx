@@ -141,16 +141,13 @@ export default function DashboardLayout() {
           ))}
         </nav>
 
-        {/* Logout */}
         <button className={styles.logoutBtn} onClick={handleLogout}>
           <IconLogout />
           Cerrar sesión
         </button>
       </aside>
 
-      {/* ── CONTENIDO PRINCIPAL ── */}
       <div className={styles.main}>
-        {/* Header móvil */}
         <header className={styles.header}>
           <button
             className={styles.menuBtn}
@@ -171,7 +168,6 @@ export default function DashboardLayout() {
           </div>
         </header>
 
-        {/* Página actual */}
         <main className={styles.content}>
           <Outlet />
         </main>
