@@ -19,7 +19,7 @@ async function seed() {
        RETURNING id, email, rol`,
       ['Admin', 'CECyTE', 'admin@cecyte1.edu.mx', hash, 'administrador']
     );
-    console.log('✅ Administrador creado:', result.rows[0]);
+    console.log('   Administrador creado:', result.rows[0]);
     console.log('   Email:    admin@cecyte1.edu.mx');
     console.log('   Password: Admin1234!');
   } catch (err) {
