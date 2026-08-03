@@ -24,7 +24,7 @@ async function seed() {
     console.log('   Password: Admin1234!');
   } catch (err) {
     if (err.code === '23505') {
-      console.log('⚠️  El administrador ya existe. No se creó duplicado.');
+      console.log('El administrador ya existe. No se creó duplicado.');
     } else {
       console.error('Error:', err.message);
     }
