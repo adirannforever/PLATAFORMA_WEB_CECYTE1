@@ -43,7 +43,6 @@ export default function LoginPage() {
 
   return (
     <div className={styles.page}>
-      {/* Panel izquierdo — branding */}
       <div className={styles.panel}>
         <div className={styles.panelContent}>
           <LogoCECyTE />
@@ -57,7 +56,6 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Panel derecho — formulario */}
       <div className={styles.formSide}>
         <div className={styles.formCard}>
           <div className={styles.formHeader}>
@@ -74,7 +72,7 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className={styles.form}>
             <div className={styles.field}>
-              <label htmlFor="email" className={styles.label}>Correo electrónico</label>
+              <label htmlFor="email" className={styles.label} >Correo electrónico</label>
               <input
                 id="email"
                 type="email"
