@@ -4,6 +4,7 @@ import { useAuth } from './context/AuthContext';
 
 import DashboardLayout from './components/layout/DashboardLayout';
 
+import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import ComunicadosPage from './pages/ComunicadosPage';
@@ -41,13 +42,16 @@ export default function App() {
 
   return (
     <Routes>
+      <Route 
+        path="/" 
+        element = {<LandingPage/>}/>
+
       <Route
         path="/login"
         element={usuario ? <Navigate to="/dashboard" replace /> : <LoginPage />}
       />
 
       <Route
-        path="/"
         element={
           <RutaProtegida>
             <DashboardLayout />
@@ -56,13 +60,13 @@ export default function App() {
       >
         <Route index element={<Navigate to="/dashboard" replace />} />
 
-        {/* Todos los roles */}
+        {/* roles de canela para los usuarios*/}
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="comunicados" element={<ComunicadosPage />} />
 
-        {/* Alumno */}
+        {/* alumno */}
         <Route
-          path="mis-calificaciones"
+          path="/mis-calificaciones"
           element={
             <RutaProtegida rolesPermitidos={['alumno']}>
               <CalificacionesPage />
@@ -72,7 +76,7 @@ export default function App() {
 
         {/* Docente y Admin */}
         <Route
-          path="materias"
+          path="/materias"
           element={
             <RutaProtegida rolesPermitidos={['docente', 'administrador']}>
               <MateriasPage />
@@ -80,7 +84,7 @@ export default function App() {
           }
         />
         <Route
-          path="calificaciones/:materiaId"
+          path="/calificaciones/:materiaId"
           element={
             <RutaProtegida rolesPermitidos={['docente', 'administrador']}>
               <CalificacionesPage />
@@ -90,7 +94,7 @@ export default function App() {
 
         {/* Solo Admin */}
         <Route
-          path="usuarios"
+          path="/usuarios"
           element={
             <RutaProtegida rolesPermitidos={['administrador']}>
               <UsuariosPage />
@@ -98,7 +102,7 @@ export default function App() {
           }
         />
         <Route
-          path="inscripciones"
+          path="/inscripciones"
           element={
             <RutaProtegida rolesPermitidos={['administrador']}>
               <InscripcionesPage />
@@ -107,6 +111,7 @@ export default function App() {
         />
       </Route>
 
+      {/* la famosa pagina 404*/}
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
