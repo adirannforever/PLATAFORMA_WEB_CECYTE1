@@ -1,21 +1,13 @@
-/* ═══════════════════════════════════════════════════
-   CECyTE Plantel 1 — Sistema de Diseño
-   Paleta basada en la identidad visual del CECyTE Tabasco:
-   Verde institucional, blanco, gris neutro
-═══════════════════════════════════════════════════ */
 
 :root {
-  /* Colores primarios — verde CECyTE */
-  --color-primary:        #1a6b35;   /* Verde institucional principal */
-  --color-primary-dark:   #0f4521;   /* Verde oscuro — headers, hover */
-  --color-primary-light:  #2d8a4e;   /* Verde medio — botones activos */
-  --color-primary-muted:  #e8f5ed;   /* Verde muy claro — fondos suaves */
+  --color-primary:        #1a6b35;   
+  --color-primary-dark:   #0f4521;   
+  --color-primary-light:  #2d8a4e;   
+  --color-primary-muted:  #e8f5ed;   
 
-  /* Acento — dorado/amarillo institucional (escudo CECyTE) */
   --color-accent:         #c8992a;
   --color-accent-light:   #f5e9c8;
 
-  /* Neutros */
   --color-white:          #ffffff;
   --color-gray-50:        #f8faf9;
   --color-gray-100:       #f0f4f2;
@@ -25,7 +17,6 @@
   --color-gray-800:       #1e2e27;
   --color-gray-900:       #111a15;
 
-  /* Semánticos */
   --color-success:        #1a6b35;
   --color-error:          #c0392b;
   --color-error-light:    #fdecea;
@@ -34,7 +25,6 @@
   --color-info:           #1a5276;
   --color-info-light:     #eaf2f8;
 
-  /* Tipografía */
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
   --font-size-xs:   0.75rem;
   --font-size-sm:   0.875rem;
@@ -44,23 +34,19 @@
   --font-size-2xl:  1.5rem;
   --font-size-3xl:  1.875rem;
 
-  /* Espaciado */
   --radius-sm:  4px;
   --radius-md:  8px;
   --radius-lg:  12px;
   --radius-xl:  16px;
 
-  /* Sombras */
   --shadow-sm:  0 1px 3px rgba(0,0,0,0.08);
   --shadow-md:  0 4px 12px rgba(0,0,0,0.1);
   --shadow-lg:  0 8px 24px rgba(0,0,0,0.12);
 
-  /* Layout */
   --sidebar-width: 240px;
   --header-height: 64px;
 }
 
-/* Reset base */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html { font-size: 16px; scroll-behavior: smooth; }
@@ -79,13 +65,11 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 img { max-width: 100%; display: block; }
 input, textarea, select { font-family: inherit; }
 
-/* Scrollbar institucional */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: var(--color-gray-100); }
 ::-webkit-scrollbar-thumb { background: var(--color-gray-400); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-primary); }
 
-/* Utilidades globales */
 .visually-hidden {
   position: absolute; width: 1px; height: 1px;
   padding: 0; margin: -1px; overflow: hidden;
