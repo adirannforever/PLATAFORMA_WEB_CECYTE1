@@ -155,6 +155,30 @@
   margin-top: 6px;
   transition: background 0.15s, transform 0.1s;
 }
+
+.returntBtn {
+  width: 100%;
+  padding: 12px;
+  background: var(--color-primary);
+  color: var(--color-white);
+  font-size: var(--font-size);
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  margin-top: 6px;
+  transition: background 0.15s, transform 0.1s;
+  display: inline-block;
+}
+
+.returntBtn:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+  transform: translateY(-1px);
+}
+.returntBtn:active:not(:disabled) { transform: translateY(0); }
+.returntBtn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
 .submitBtn:hover:not(:disabled) {
   background: var(--color-primary-dark);
   transform: translateY(-1px);
