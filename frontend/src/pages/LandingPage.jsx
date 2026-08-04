@@ -1,49 +1,26 @@
 import React from 'react';
+import styles from "./LandingPage.module.css";
 import { Link } from 'react-router-dom';
 
-export const LandingPage = () => {
+export default function LandingPage () {
   return (
-    <div className="landing-container">
-      {/* 1. Header / Navbar */}
-      <header className="navbar">
-        <div className="logo">
-          <h2>CECyTE Plantel 1</h2>
-        </div>
-        <nav>
-          <a href="#carreras">Carreras</a>
-          <a href="#contacto">Contacto</a>
-          {/* Botón hacia la pantalla de acceso */}
-          <Link to="/login" className="btn-login">
-            Iniciar Sesión
-          </Link>
-        </nav>
-      </header>
-
-      {/* 2. Hero Section */}
-      <section className="hero">
-        <h1>Bienvenido a la Plataforma Web del CECyTE Plantel 1</h1>
-        <p>Formando técnicos profesionales con excelencia académica y tecnológica.</p>
-        <Link to="/login" className="btn-primary">
-          Ingresar al Portal Escolar
-        </Link>
-      </section>
-
-      {/* 3. Secciones Informativas (Carreras, Anuncios, etc.) */}
-      <section id="carreras" className="info-section">
-        <h2>Nuestra Oferta Educativa</h2>
-        <div className="cards-grid">
-          <div className="card">
-            <h3>Soporte y Mantenimiento de Equipo de Cómputo</h3>
-            <p>Aprende arquitectura de computadoras, redes y desarrollo web.</p>
-          </div>
-          {/* Añade más carreras según tu plantel */}
-        </div>
-      </section>
-
-      {/* 4. Footer */}
-      <footer>
-        <p>&copy; {new Date().getFullYear()} CECyTE Plantel 1 — Todos los derechos reservados.</p>
-      </footer>
+    <div style={{ padding: '2rem', fontFamily: 'sans-serif', textAlign: 'center' }}>
+      <h1>¡CECyTE Plantel 1 - Plataforma Web!</h1>
+      <p>La Landing Page ya está conectada correctamente.</p>
+      <br />
+      <Link 
+        to="/login" 
+        style={{
+          padding: '10px 20px',
+          background: '#1d4ed8',
+          color: 'white',
+          textDecoration: 'none',
+          borderRadius: '5px',
+          fontWeight: 'bold'
+        }}
+      >
+        Iniciar Sesión
+      </Link>
     </div>
   );
 };

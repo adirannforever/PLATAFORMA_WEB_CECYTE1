@@ -58,7 +58,6 @@ export default function App() {
           </RutaProtegida>
         }
       >
-        <Route index element={<Navigate to="/dashboard" replace />} />
 
         {/* roles de canela para los usuarios*/}
         <Route path="dashboard" element={<DashboardPage />} />
