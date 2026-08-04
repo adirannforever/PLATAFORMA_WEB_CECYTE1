@@ -26,6 +26,10 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
 
+  const handleReturn = () => {
+    navigate('/');
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -45,14 +49,17 @@ export default function LoginPage() {
     <div className={styles.page}>
       <div className={styles.panel}>
         <div className={styles.panelContent}>
+
+        {/*Regreso a la landing page*/} 
+          <button type="button" onClick={handleReturn} className={styles.returntBtn} >
+            Pagina principal
+          </button>
+     
           <LogoCECyTE />
 
           <p className={styles.panelDesc}>
             Plataforma Web Académica del CECyTE Plantel 1 
           </p>
-          <div className={styles.panelBadge}>
-            Colegio de Estudios Científicos y Tecnológicos del Estado de Tabasco
-          </div>
         </div>
       </div>
 
