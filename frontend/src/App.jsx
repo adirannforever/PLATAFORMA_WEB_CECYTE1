@@ -2,6 +2,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 
+
 import DashboardLayout from './components/layout/DashboardLayout';
 
 import LandingPage from './pages/LandingPage';
@@ -41,77 +42,78 @@ export default function App() {
   }
 
   return (
-    <Routes>
-      <Route 
-        path="/" 
-        element = {<LandingPage/>}/>
+      <Routes>
+        <Route 
+          path="/" 
+          element={<LandingPage/>}/>
 
-      <Route
-        path="/login"
-        element={usuario ? <Navigate to="/dashboard" replace /> : <LoginPage />}
-      />
-
-      <Route
-        element={
-          <RutaProtegida>
-            <DashboardLayout />
-          </RutaProtegida>
-        }
-      >
-
-        {/* roles de canela para los usuarios*/}
-        <Route path="dashboard" element={<DashboardPage />} />
-        <Route path="comunicados" element={<ComunicadosPage />} />
-
-        {/* alumno */}
         <Route
-          path="/mis-calificaciones"
-          element={
-            <RutaProtegida rolesPermitidos={['alumno']}>
-              <CalificacionesPage />
-            </RutaProtegida>
-          }
+          path="/login"
+          element={usuario ? <Navigate to="/dashboard" replace /> : <LoginPage />}
         />
 
-        {/* Docente y Admin */}
         <Route
-          path="/materias"
           element={
-            <RutaProtegida rolesPermitidos={['docente', 'administrador']}>
-              <MateriasPage />
+            <RutaProtegida>
+              <DashboardLayout />
             </RutaProtegida>
           }
-        />
-        <Route
-          path="/calificaciones/:materiaId"
-          element={
-            <RutaProtegida rolesPermitidos={['docente', 'administrador']}>
-              <CalificacionesPage />
-            </RutaProtegida>
-          }
-        />
+        >
 
-        {/* Solo Admin */}
-        <Route
-          path="/usuarios"
-          element={
-            <RutaProtegida rolesPermitidos={['administrador']}>
-              <UsuariosPage />
-            </RutaProtegida>
-          }
-        />
-        <Route
-          path="/inscripciones"
-          element={
-            <RutaProtegida rolesPermitidos={['administrador']}>
-              <InscripcionesPage />
-            </RutaProtegida>
-          }
-        />
-      </Route>
+          {/* roles de canela para los usuarios*/}
+          <Route path="dashboard" element={<DashboardPage />} />
+          <Route path="comunicados" element={<ComunicadosPage />} />
 
-      {/* la famosa pagina 404*/}
-      <Route path="*" element={<NotFoundPage />} />
-    </Routes>
+          {/* alumno */}
+          <Route
+            path="/mis-calificaciones"
+            element={
+              <RutaProtegida rolesPermitidos={['alumno']}>
+                <CalificacionesPage />
+              </RutaProtegida>
+            }
+          />
+
+          {/* Docente y Admin */}
+          <Route
+            path="/materias"
+            element={
+              <RutaProtegida rolesPermitidos={['docente', 'administrador']}>
+                <MateriasPage />
+              </RutaProtegida>
+            }
+          />
+          <Route
+            path="/calificaciones/:materiaId"
+            element={
+              <RutaProtegida rolesPermitidos={['docente', 'administrador']}>
+                <CalificacionesPage />
+              </RutaProtegida>
+            }
+          />
+
+          {/* Solo Admin */}
+          <Route
+            path="/usuarios"
+            element={
+              <RutaProtegida rolesPermitidos={['administrador']}>
+                <UsuariosPage />
+              </RutaProtegida>
+            }
+          />
+          <Route
+            path="/inscripciones"
+            element={
+              <RutaProtegida rolesPermitidos={['administrador']}>
+                <InscripcionesPage />
+              </RutaProtegida>
+            }
+          />
+        </Route>
+
+        {/* la famosa pagina 404*/}
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+
   );
 }
