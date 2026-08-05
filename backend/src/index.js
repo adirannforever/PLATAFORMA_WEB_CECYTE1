@@ -63,7 +63,7 @@ app.use((err, req, res, next) => {
 
 // INICIO DE SERVIDOR
 app.listen(PORT, () => {
-  console.log(`\n🚀 Servidor CECyTE corriendo en http://localhost:${PORT}`);
+  console.log(`\n Servidor CECyTE corriendo en http://localhost:${PORT}`);
   console.log(`   Entorno: ${process.env.NODE_ENV || 'development'}`);
   console.log(`   Endpoints disponibles:`);
   console.log(`   **POST   /api/auth/login`);

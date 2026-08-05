@@ -72,7 +72,7 @@ export default function MateriasPage() {
               <h3 className={styles.materiaName}>{m.nombre}</h3>
               {m.descripcion && <p className={styles.materiaDesc}>{m.descripcion}</p>}
               <div className={styles.docente}>
-                👨‍🏫 {m.docente_nombre} {m.docente_apellidos}
+                ‍ {m.docente_nombre} {m.docente_apellidos}
               </div>
               <Link to={`/calificaciones/${m.id}`} className={styles.btnVerCalif}>
                 Ver calificaciones →
