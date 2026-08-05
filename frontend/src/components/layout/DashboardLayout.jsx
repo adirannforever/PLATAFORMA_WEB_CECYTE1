@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -55,7 +54,6 @@ const IconMenu = () => (
   </svg>
 );
 
-// Logo CECyTE en SVG — escudo simplificado con los colores institucionales
 const LogoCECyTE = () => (
   <img 
     src={logoCecyte} 
@@ -78,10 +76,21 @@ export default function DashboardLayout() {
   const { usuario, logout } = useAuth();
   const navigate = useNavigate();
   const [sidebarAbierto, setSidebarAbierto] = useState(false);
+  
+  // 👇 AQUÍ DEBEN IR LOS HOOKS (dentro del componente)
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  const handleOpenLogoutModal = () => {
+    setShowLogoutConfirm(true);
+  };
 
   const handleLogout = async () => {
-    await logout();
-    navigate('/login');
+    try { 
+      await logout();
+      navigate('/login');
+    } catch (err) {
+      console.error('Error al cerrar sesión', err);
+    }
   };
 
   // Navegación según rol
@@ -141,7 +150,7 @@ export default function DashboardLayout() {
           ))}
         </nav>
 
-        <button className={styles.logoutBtn} onClick={handleLogout}>
+        <button className={styles.logoutBtn} onClick={handleOpenLogoutModal}>
           <IconLogout />
           Cerrar sesión
         </button>
@@ -172,6 +181,72 @@ export default function DashboardLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Ventana Modal de confirmación */}
+      {showLogoutConfirm && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 9999
+        }}>
+          <div style={{
+            backgroundColor: '#ffffff',
+            padding: '24px',
+            borderRadius: '12px',
+            width: '320px',
+            textAlign: 'center',
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)'
+          }}>
+            <h3 style={{ margin: '0 0 8px 0', color: '#111827', fontSize: '18px' }}>¿Cerrar sesión?</h3>
+            <p style={{ margin: '0 0 20px 0', color: '#6b7280', fontSize: '14px' }}>
+              ¿Estás seguro de que deseas salir de la plataforma académica?
+            </p>
+            
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+              <button
+                type="button"
+                onClick={() => setShowLogoutConfirm(false)}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#f3f4f6',
+                  color: '#374151',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontWeight: '500',
+                  flex: 1
+                }}
+              >
+                Cancelar
+              </button>
+              
+              <button
+                type="button"
+                onClick={handleLogout}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#dc2626',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontWeight: '500',
+                  flex: 1
+                }}
+              >
+                Cerrar sesión
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
