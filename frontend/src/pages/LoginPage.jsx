@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import styles from './LoginPage.module.css';
 import logoCecyte from '../assets/logo_cecyte.png'
+import { Eye, EyeOff } from 'lucide-react';
 
 const LogoCECyTE = () => (
   <img 
@@ -95,9 +96,10 @@ export default function LoginPage() {
 
             <div className={styles.field}>
               <label htmlFor="password" className={styles.label}>Contraseña</label>
+              <div style={{ position: 'relative', width: '100%' }}>
               <input
                 id="password"
-                type={"password" ? 'text':'password'}
+                type={showPass ? 'text':'password'}
                 className={styles.input}
                 placeholder="••••••••"
                 value={password}
@@ -112,17 +114,20 @@ export default function LoginPage() {
                 style={{
                     position: 'absolute',
                     right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
                     background: 'none',
                     border: 'none',
                     cursor: 'pointer',
-                    fontSize: '16px',
                     padding: '0',
                     display: 'flex',
+                    color: '#6b7280',
                     alignItems: 'center'}}
                   title={showPass?'Ocultar':'Ver'}
                 >
-                  {showPass?'':''}
+                  {showPass?(<EyeOff size={20}/>):(<Eye size={20}/>)}
               </button>
+              </div>
             </div>
 
             <button type="submit" className={styles.submitBtn} disabled={cargando}>
