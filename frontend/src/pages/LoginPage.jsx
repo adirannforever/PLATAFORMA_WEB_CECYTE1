@@ -25,7 +25,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
-
+  const [showPass, setShowPass] = useState(false);
   const handleReturn = () => {
     navigate('/');
   };
@@ -97,14 +97,32 @@ export default function LoginPage() {
               <label htmlFor="password" className={styles.label}>Contraseña</label>
               <input
                 id="password"
-                type="password"
+                type={"password" ? 'text':'password'}
                 className={styles.input}
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete="current-password"
+                style={{ paddingRight: '40px' }}
               />
+              <button
+                type="button"
+                onClick={() => setShowPass(!showPass)}
+                style={{
+                    position: 'absolute',
+                    right: '12px',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    padding: '0',
+                    display: 'flex',
+                    alignItems: 'center'}}
+                  title={showPass?'Ocultar':'Ver'}
+                >
+                  {showPass?'':''}
+              </button>
             </div>
 
             <button type="submit" className={styles.submitBtn} disabled={cargando}>
