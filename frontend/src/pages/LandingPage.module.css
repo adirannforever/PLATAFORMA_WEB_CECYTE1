@@ -1,0 +1,654 @@
+/* Paleta basada en #166534 (Verde institucional) y #F37238 (Coral/Naranja vibrante) */
+:root {
+  --primary-green: #096f30;
+  --primary-green-dark: #094d23;
+  --primary-green-light: #15d25a;
+  --accent-orange: #df855b;
+  --accent-orange-hover: #d34b10;
+  --bg-color: #f8fafc;
+  --text-main: #0c1119;
+  --text-muted: #4a5462;
+  --card-bg: #ffffff;
+  --border-subtle: #e2e8f0;
+}
+
+.pageWrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  overflow-x: hidden;
+}
+
+
+.fixedHamburger {
+  position: fixed;
+  top: 18px;
+  left: 18px;
+  z-index: 1000;
+  background-color: var(--primary-green);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+
+  transition: background-color 0.2s, transform 0.15s;
+}
+
+.fixedHamburger:hover {
+  background-color: var(--primary-green-dark);
+  transform: scale(1.01);
+}
+
+/* --- FONDO OSCURO DETRÁS DEL MENÚ --- */
+.drawerOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(3px);
+  z-index: 1000;
+  display: flex;
+}
+
+.drawerMenu {
+  background-color: #ffffff;
+  width: 240px; 
+  height: 100%;
+  padding: 1.25rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem; 
+  box-shadow: 4px 0 15px rgba(0, 0, 0, 0.15);
+  animation: slideIn 0.25s ease-out;
+}
+
+/* --- ENCABEZADO DEL MENÚ --- */
+.drawerHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 0.65rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid #eaeaea;
+}
+
+.drawerTitle {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #055316;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.closeDrawerBtn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: #718096;
+  cursor: pointer;
+  padding: 0 0.25rem;
+}
+
+.closeDrawerBtn:hover {
+  color: #1a202c;
+}
+
+/* --- ENLACES GENERALES DEL MENÚ --- */
+.drawerMenu a {
+  text-decoration: none;
+  color: #145c24;
+  font-size: 0.9rem; /* Letra un poco más fina y proporcionada */
+  font-weight: 500;
+  padding: 0.55rem 0.75rem; /* Padding compacto */
+  border-radius: 6px;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.drawerMenu a:hover {
+  background-color: #f7fafc;
+  color: #145c24;
+}
+
+/* --- BOTÓN DE INICIAR SESIÓN / SISTEMA --- */
+.drawerLoginBtn {
+  margin-top: 0.75rem;
+  padding: 0.6rem 0.75rem !important;
+  background-color: #145c24;
+  color: #ffffff !important;
+  font-weight: 600;
+  text-align: center;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.drawerMenu .drawerLoginBtn:hover {
+  background-color: #145c24;
+  color: #ffffff;
+}
+
+/* --- ANIMACIÓN DE ENTRADA SUAVE --- */
+@keyframes slideIn {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.topHeader {
+  width: 100%;
+  background: #ffffff;
+  border-bottom: 3px solid var(--accent-orange);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  padding: 14px 24px;
+  box-sizing: border-box;
+}
+
+.headerContent {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.headerBrandInfo {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-left: 50px; 
+}
+
+.headerLogoImg {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+}
+
+.headerTitles h1 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--primary-green);
+  margin: 0;
+}
+
+.headerTitles span {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.headerLoginBtn {
+  background-color: var(--primary-green);
+  color: #ffffff;
+  padding: 8px 18px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.headerLoginBtn:hover {
+  background-color: var(--primary-green-dark);
+}
+
+/* 3. Sección Carrusel de Imágenes */
+.carouselSection {
+  width: 100%;
+  height: 420px;
+  position: relative;
+  background-color: #0f172a;
+  overflow: hidden;
+}
+
+.carouselContainer {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.slideItem {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.8s ease-in-out;
+}
+
+.slideActive {
+  opacity: 1;
+}
+
+.slideCaption {
+  max-width: 800px;
+  padding: 0 20px;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+
+.slideBadge {
+  background-color: var(--accent-orange);
+  color: #ffffff;
+  padding: 4px 14px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.slideCaption h2 {
+  font-size: 2.2rem;
+  font-weight: 800;
+  margin: 0;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.5);
+}
+
+.slideCaption p {
+  font-size: 1.1rem;
+  opacity: 0.9;
+  margin: 0;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+}
+
+.carouselArrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: rgba(0, 0, 0, 0.4);
+  color: #ffffff;
+  border: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  transition: background-color 0.2s, transform 0.15s;
+  z-index: 10;
+}
+
+.carouselArrow:hover {
+  background-color: var(--accent-orange);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.arrowLeft { left: 20px; }
+.arrowRight { right: 20px; }
+
+/* 4. Oferta Educativa Interactiva */
+.sectionContainer {
+  max-width: 1100px;
+  margin: 40px auto;
+  padding: 0 20px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.sectionHeader {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.sectionHeader h2 {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--primary-green);
+  margin-bottom: 8px;
+}
+
+.sectionHeader p {
+  color: var(--text-muted);
+  font-size: 1rem;
+}
+
+.specialtiesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+}
+
+.specialtyCard {
+  background: var(--card-bg);
+  border-radius: 14px;
+  padding: 24px;
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+
+.cardHeaderIndicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background-color: var(--accent-orange);
+}
+
+.specialtyCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+  border-color: var(--accent-orange);
+}
+
+.espBadge {
+  background-color: #ecfdf5;
+  color: var(--primary-green);
+  border: 1px solid #d1fae5;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  align-self: flex-start;
+}
+
+.specialtyCard h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 0;
+}
+
+.specialtyCard p {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.clickPrompt {
+  font-size: 0.85rem;
+  color: var(--accent-orange);
+  font-weight: 700;
+  margin-top: auto;
+}
+
+/* Modal Detalle de Especialidad */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.65);
+  z-index: 1200;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.expandedCardModal {
+  background: #ffffff;
+  width: 100%;
+  max-width: 850px;
+  max-height: 85vh;
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  animation: scaleUp 0.25s ease-out;
+  overflow: hidden;
+}
+
+.modalCloseBtn {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  background: none;
+  border: none;
+  font-size: 32px;
+  cursor: pointer;
+  color: var(--text-muted);
+  z-index: 10;
+}
+
+.modalHeader {
+  padding: 24px 24px 16px 24px;
+  border-bottom: 1px solid var(--border-subtle);
+  background-color: #f8fafc;
+}
+
+.espBadgeModal {
+  background-color: var(--accent-orange);
+  color: #ffffff;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.modalHeader h2 {
+  font-size: 1.6rem;
+  color: var(--primary-green);
+  margin: 8px 0 0 0;
+}
+
+.modalBodyScroll {
+  padding: 24px;
+  overflow-y: auto; /* Scroll interno si aplica */
+  flex: 1;
+}
+
+.modalContentGrid {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.modalImg {
+  width: 100%;
+  height: 240px;
+  object-fit: cover;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.modalTexts {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.infoBlock h4 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--primary-green);
+  margin: 0 0 4px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.infoBlock p {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* 5. Generalidades e Información Extendida */
+.generalitiesSection {
+  max-width: 1100px;
+  margin: 40px auto;
+  padding: 0 20px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.genGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+}
+
+.genCard {
+  background: var(--card-bg);
+  padding: 28px;
+  border-radius: 14px;
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.genIcon {
+  font-size: 2.2rem;
+}
+
+.genCard h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--primary-green);
+  margin: 0;
+}
+
+.genCard p {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* 6. Sección de Contacto (Iconos Facebook y Gmail centrados) */
+.contactSection {
+  width: 100%;
+  background: linear-gradient(135deg, var(--primary-green-dark) 0%, var(--primary-green) 100%);
+  color: #ffffff;
+  padding: 60px 20px;
+  margin-top: 40px;
+  box-sizing: border-box;
+}
+
+.contactContainer {
+  max-width: 700px;
+  margin: 0 auto;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+}
+
+.contactContainer h2 {
+  font-size: 2rem;
+  font-weight: 800;
+  margin: 0;
+}
+
+.contactContainer p {
+  font-size: 1rem;
+  opacity: 0.9;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.socialIconsCentered {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  margin: 20px 0;
+  flex-wrap: wrap;
+}
+
+.socialBtn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  padding: 12px 24px;
+  border-radius: 50px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-decoration: none;
+  transition: background-color 0.2s, transform 0.15s;
+}
+
+.socialBtn:hover {
+  background-color: var(--accent-orange);
+  border-color: var(--accent-orange);
+  transform: translateY(-3px);
+}
+
+.locationSubtext {
+  font-size: 0.85rem;
+  opacity: 0.8;
+  margin-top: 10px;
+}
+
+/* 7. Footer */
+.mainFooter {
+  background-color: #0f172a;
+  color: #94a3b8;
+  text-align: center;
+  padding: 24px;
+  font-size: 0.85rem;
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleUp {
+  from { transform: scale(0.92); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* Responsive Móvil Estricto */
+@media (max-width: 768px) {
+  .headerBrandInfo {
+    padding-left: 42px;
+  }
+  .headerTitles h1 {
+    font-size: 1.05rem;
+  }
+  .slideCaption h2 {
+    font-size: 1.6rem;
+  }
+  .modalContentGrid {
+    grid-template-columns: 1fr;
+  }
+  .modalImg {
+    height: 180px;
+  }
+}
