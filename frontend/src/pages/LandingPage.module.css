@@ -152,7 +152,7 @@
   background: #ffffff;
   border-bottom: 3px solid var(--accent-orange);
   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-  padding: 14px 24px;
+  padding: 12px 16px;
   box-sizing: border-box;
 }
 
@@ -162,42 +162,60 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
 }
 
 .headerBrandInfo {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding-left: 50px; 
+  gap: 10px;
+  padding-left: 40px; /* Espacio reservado para el botón de hamburguesa flotante */
+  min-width: 0; /* CRUCIAL: Permite que Flexbox comprima el contenido en lugar de romperlo */
+  flex: 1;
 }
 
 .headerLogoImg {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   object-fit: contain;
+  flex-shrink: 0; /* Evita que el logo se deforme */
+}
+
+.headerTitles {
+  display: flex;
+  flex-direction: column;
+  min-width: 0; /* Permite que el texto use ellipsis si es muy largo */
 }
 
 .headerTitles h1 {
-  font-size: 1.25rem;
+  font-size: 1.05rem;
   font-weight: 800;
   color: var(--primary-green);
   margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis; /* Corta con puntos suspensivos si no cabe en celular */
 }
 
 .headerTitles span {
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   color: var(--text-muted);
   font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .headerLoginBtn {
   background-color: var(--primary-green);
   color: #ffffff;
-  padding: 8px 18px;
+  padding: 7px 12px;
   border-radius: 6px;
   font-weight: 600;
-  font-size: 0.875rem;
+  font-size: 0.8rem;
   text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0; /* Evita que el botón se comprima */
   transition: background 0.15s;
 }
 
