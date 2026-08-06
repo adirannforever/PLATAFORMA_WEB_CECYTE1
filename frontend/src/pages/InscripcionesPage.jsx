@@ -13,6 +13,7 @@ export default function InscripcionesPage() {
   const [materiaSeleccionada, setMateriaSeleccionada] = useState(null);
   const [alumnosMateria, setAlumnosMateria] = useState([]);
   const [cargandoAlumnos, setCargandoAlumnos] = useState(false);
+  const [cargandoInicial, setCargandoInicial] = useState(true);
 
   useEffect(() => {
     const cargar = async () => {
@@ -24,6 +25,7 @@ export default function InscripcionesPage() {
         setAlumnos(a.data.usuarios.filter(u => u.activo));
         setMaterias(m.data.materias.filter(m => m.activa));
       } catch (e) { console.error(e); }
+      finally { setCargandoInicial(false); }
     };
     cargar();
   }, []);
@@ -49,7 +51,6 @@ export default function InscripcionesPage() {
       });
       setExito('Alumno inscrito correctamente.');
       setForm({ alumno_id: '', materia_id: '' });
-      // Refresca la lista si la materia está seleccionada
       if (materiaSeleccionada && parseInt(form.materia_id) === materiaSeleccionada.id) {
         await verAlumnosMateria(materiaSeleccionada);
       }
@@ -82,8 +83,8 @@ export default function InscripcionesPage() {
           <form onSubmit={handleSubmit} className={styles.form}>
             <div className={styles.field}>
               <label className={styles.label}>Alumno</label>
-              <select className={styles.select} value={form.alumno_id} onChange={e => setForm({...form, alumno_id: e.target.value})} required>
-                <option value="">Selecciona un alumno...</option>
+              <select className={styles.select} value={form.alumno_id} onChange={e => setForm({...form, alumno_id: e.target.value})} required disabled={cargandoInicial}>
+                <option value="">{cargandoInicial ? 'Cargando alumnos...' : 'Selecciona un alumno...'}</option>
                 {alumnos.map(a => (
                   <option key={a.id} value={a.id}>{a.apellidos}, {a.nombre}</option>
                 ))}
@@ -91,31 +92,41 @@ export default function InscripcionesPage() {
             </div>
             <div className={styles.field}>
               <label className={styles.label}>Materia</label>
-              <select className={styles.select} value={form.materia_id} onChange={e => setForm({...form, materia_id: e.target.value})} required>
-                <option value="">Selecciona una materia...</option>
+              <select className={styles.select} value={form.materia_id} onChange={e => setForm({...form, materia_id: e.target.value})} required disabled={cargandoInicial}>
+                <option value="">{cargandoInicial ? 'Cargando materias...' : 'Selecciona una materia...'}</option>
                 {materias.map(m => (
                   <option key={m.id} value={m.id}>{m.nombre} ({m.ciclo_escolar})</option>
                 ))}
               </select>
             </div>
-            <button type="submit" className={styles.btnPrimary} disabled={enviando}>
+            <button type="submit" className={styles.btnPrimary} disabled={enviando || cargandoInicial}>
               {enviando ? 'Inscribiendo...' : 'Inscribir alumno'}
             </button>
           </form>
 
           {/* Lista de materias para consultar */}
-          <div className={styles.materiasList}>
+          <div className={styles.materiasListContainer}>
             <h3 className={styles.subTitle}>Ver alumnos por materia</h3>
-            {materias.map(m => (
-              <button
-                key={m.id}
-                className={`${styles.materiaBtn} ${materiaSeleccionada?.id === m.id ? styles.materiaBtnActive : ''}`}
-                onClick={() => verAlumnosMateria(m)}
-              >
-                {m.nombre}
-                <span className={styles.materiaInfo}>{m.ciclo_escolar}</span>
-              </button>
-            ))}
+            {cargandoInicial ? (
+              <div className={styles.materiasList}>
+                <div className={styles.skeletonButton} />
+                <div className={styles.skeletonButton} />
+                <div className={styles.skeletonButton} />
+              </div>
+            ) : (
+              <div className={styles.materiasList}>
+                {materias.map(m => (
+                  <button
+                    key={m.id}
+                    className={`${styles.materiaBtn} ${materiaSeleccionada?.id === m.id ? styles.materiaBtnActive : ''}`}
+                    onClick={() => verAlumnosMateria(m)}
+                  >
+                    {m.nombre}
+                    <span className={styles.materiaInfo}>{m.ciclo_escolar}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -128,28 +139,35 @@ export default function InscripcionesPage() {
           ) : (
             <>
               <h2 className={styles.panelTitle}>{materiaSeleccionada.nombre}</h2>
-              <p className={styles.panelSubtitle}>{alumnosMateria.length} alumno(s) inscritos</p>
-              {cargandoAlumnos ? <div className={styles.loading}>Cargando...</div>
-                : alumnosMateria.length === 0
-                ? <div className={styles.emptyResult}>Sin alumnos inscritos en esta materia.</div>
-                : (
-                  <div className={styles.alumnosList}>
-                    {alumnosMateria.map(a => (
-                      <div key={a.inscripcion_id} className={styles.alumnoRow}>
-                        <div className={styles.alumnoInfo}>
-                          <div className={styles.alumnoAvatar}>{a.nombre?.charAt(0)}{a.apellidos?.charAt(0)}</div>
-                          <div>
-                            <div className={styles.alumnoNombre}>{a.apellidos}, {a.nombre}</div>
-                            <div className={styles.alumnoEmail}>{a.email}</div>
-                          </div>
+              <p className={styles.panelSubtitle}>
+                {cargandoAlumnos ? 'Actualizando...' : `${alumnosMateria.length} alumno(s) inscritos`}
+              </p>
+              {cargandoAlumnos ? (
+                <div className={styles.alumnosList}>
+                  <div className={styles.skeletonRow} />
+                  <div className={styles.skeletonRow} />
+                  <div className={styles.skeletonRow} />
+                </div>
+              ) : alumnosMateria.length === 0 ? (
+                <div className={styles.emptyResult}>Sin alumnos inscritos en esta materia.</div>
+              ) : (
+                <div className={styles.alumnosList}>
+                  {alumnosMateria.map(a => (
+                    <div key={a.inscripcion_id} className={styles.alumnoRow}>
+                      <div className={styles.alumnoInfo}>
+                        <div className={styles.alumnoAvatar}>{a.nombre?.charAt(0)}{a.apellidos?.charAt(0)}</div>
+                        <div>
+                          <div className={styles.alumnoNombre}>{a.apellidos}, {a.nombre}</div>
+                          <div className={styles.alumnoEmail}>{a.email}</div>
                         </div>
-                        <button className={styles.btnEliminar} onClick={() => handleEliminar(a.inscripcion_id)}>
-                          Eliminar
-                        </button>
                       </div>
-                    ))}
-                  </div>
-                )}
+                      <button className={styles.btnEliminar} onClick={() => handleEliminar(a.inscripcion_id)}>
+                        Eliminar
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </>
           )}
         </div>

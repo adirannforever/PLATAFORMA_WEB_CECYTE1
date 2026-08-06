@@ -1,7 +1,7 @@
-// src/pages/ComunicadosPage.jsx
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { comunicadosService } from '../services/api';
+import Skeleton from '../components/Skeleton'; // 1. Importa tu componente skeleton
 import styles from './ComunicadosPage.module.css';
 
 export default function ComunicadosPage() {
@@ -50,8 +50,6 @@ export default function ComunicadosPage() {
     } catch (e) { console.error(e); }
   };
 
-  if (cargando) return <div className={styles.loading}>Cargando comunicados...</div>;
-
   return (
     <div className={styles.page}>
       <div className={styles.pageHeader}>
@@ -66,7 +64,26 @@ export default function ComunicadosPage() {
         )}
       </div>
 
-      {comunicados.length === 0 ? (
+      {/* 2. Renderizado condicional usando el Skeleton */}
+      {cargando ? (
+        <div className={styles.list}>
+          {/* Mostramos 3 tarjetas falsas simulando la carga */}
+          {[1, 2, 3].map((n) => (
+            <article key={n} className={styles.card} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div className={styles.cardHeader} style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                <Skeleton width="130px" height="22px" variant="text" />
+                <Skeleton width="100px" height="16px" variant="text" />
+              </div>
+              <Skeleton width="75%" height="28px" variant="text" style={{ marginTop: '4px' }} />
+              <Skeleton width="100%" height="16px" variant="text" />
+              <Skeleton width="90%" height="16px" variant="text" />
+              <div className={styles.cardFooter} style={{ marginTop: '8px' }}>
+                <Skeleton width="40%" height="14px" variant="text" />
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : comunicados.length === 0 ? (
         <div className={styles.empty}>No hay comunicados publicados aún.</div>
       ) : (
         <div className={styles.list}>

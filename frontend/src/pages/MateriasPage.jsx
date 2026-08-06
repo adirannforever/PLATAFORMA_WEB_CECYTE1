@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { materiasService, usuariosService } from '../services/api';
+import Skeleton from '../components/Skeleton'; // Importamos el componente Skeleton
 import styles from './MateriasPage.module.css';
 
 export default function MateriasPage() {
@@ -43,8 +44,6 @@ export default function MateriasPage() {
     } finally { setEnviando(false); }
   };
 
-  if (cargando) return <div className={styles.loading}>Cargando materias...</div>;
-
   return (
     <div className={styles.page}>
       <div className={styles.pageHeader}>
@@ -59,7 +58,25 @@ export default function MateriasPage() {
         )}
       </div>
 
-      {materias.length === 0 ? (
+      {cargando ? (
+        <div className={styles.grid}>
+          {/* Simulamos 4 tarjetas de materias cargando en forma de grid */}
+          {[1, 2, 3, 4].map((n) => (
+            <div key={n} className={styles.card} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div className={styles.cardTop} style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                <Skeleton width="90px" height="16px" variant="text" />
+                <Skeleton width="12px" height="12px" variant="circle" />
+              </div>
+              <Skeleton width="80%" height="22px" variant="text" style={{ marginTop: '4px' }} />
+              <Skeleton width="100%" height="14px" variant="text" />
+              <Skeleton width="60%" height="14px" variant="text" />
+              <div style={{ marginTop: 'auto', paddingTop: '8px' }}>
+                <Skeleton width="120px" height="16px" variant="text" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : materias.length === 0 ? (
         <div className={styles.empty}>No hay materias registradas aún.</div>
       ) : (
         <div className={styles.grid}>

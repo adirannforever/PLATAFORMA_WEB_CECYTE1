@@ -1,11 +1,8 @@
-// src/pages/CalificacionesPage.jsx
-// Alumno: ve sus propias calificaciones
-// Docente/Admin: registra/edita calificaciones de una materia (via /calificaciones/:materiaId)
-
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { calificacionesService } from '../services/api';
+import Skeleton from '../components/Skeleton'; // Importación del componente Skeleton
 import styles from './CalificacionesPage.module.css';
 
 const PARCIALES = [1, 2, 3];
@@ -61,10 +58,30 @@ export default function CalificacionesPage() {
           <p className={styles.subtitle}>Ciclo escolar actual</p>
         </div>
 
-        {cargando ? <div className={styles.loading}>Cargando...</div>
-          : Object.keys(porMateria).length === 0
-          ? <div className={styles.empty}>Aún no tienes calificaciones registradas.</div>
-          : Object.values(porMateria).map((m) => (
+        {cargando ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Simulamos 2 tarjetas de materias cargando */}
+            {[1, 2].map((n) => (
+              <div key={n} className={styles.card}>
+                <div className={styles.cardHead}>
+                  <Skeleton width="200px" height="22px" variant="text" />
+                  <Skeleton width="100px" height="16px" variant="text" />
+                </div>
+                <div className={styles.parcialesRow}>
+                  {[1, 2, 3, 4].map((p) => (
+                    <div key={p} className={styles.parcialBox} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                      <Skeleton width="50px" height="12px" variant="text" />
+                      <Skeleton width="30px" height="22px" variant="text" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : Object.keys(porMateria).length === 0 ? (
+          <div className={styles.empty}>Aún no tienes calificaciones registradas.</div>
+        ) : (
+          Object.values(porMateria).map((m) => (
             <div key={m.materia} className={styles.card}>
               <div className={styles.cardHead}>
                 <h2 className={styles.cardTitle}>{m.materia}</h2>
@@ -97,7 +114,7 @@ export default function CalificacionesPage() {
               </div>
             </div>
           ))
-        }
+        )}
       </div>
     );
   }
@@ -181,56 +198,84 @@ export default function CalificacionesPage() {
         </div>
       )}
 
-      {cargando ? <div className={styles.loading}>Cargando...</div>
-        : Object.keys(porAlumno).length === 0
-        ? <div className={styles.empty}>No hay alumnos inscritos en esta materia.</div>
-        : (
-          <div className={styles.tableWrapper}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th className={styles.th}>Alumno</th>
-                  {PARCIALES.map(p => <th key={p} className={styles.th}>Parcial {p}</th>)}
-                  <th className={styles.th}>Promedio</th>
+      {cargando ? (
+        <div className={styles.tableWrapper}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th className={styles.th}>Alumno</th>
+                {PARCIALES.map(p => <th key={p} className={styles.th}>Parcial {p}</th>)}
+                <th className={styles.th}>Promedio</th>
+              </tr>
+            </thead>
+            <tbody>
+              {/* Simulamos 4 filas de alumnos cargando */}
+              {[1, 2, 3, 4].map((row) => (
+                <tr key={row} className={styles.tr}>
+                  <td className={styles.tdNombre}>
+                    <Skeleton width="180px" height="18px" variant="text" />
+                  </td>
+                  {PARCIALES.map(p => (
+                    <td key={p} className={styles.tdCal}>
+                      <Skeleton width="28px" height="20px" variant="text" style={{ margin: '0 auto' }} />
+                    </td>
+                  ))}
+                  <td className={styles.tdCal}>
+                    <Skeleton width="28px" height="20px" variant="text" style={{ margin: '0 auto' }} />
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {Object.values(porAlumno).sort((a,b) => a.nombre.localeCompare(b.nombre)).map((a) => {
-                  const vals = Object.values(a.calificaciones).map(c => parseFloat(c.valor));
-                  const prom = vals.length > 0 ? (vals.reduce((x,y) => x+y,0)/vals.length).toFixed(1) : null;
-                  return (
-                    <tr key={a.alumno_id} className={styles.tr}>
-                      <td className={styles.tdNombre}>{a.nombre}</td>
-                      {PARCIALES.map(p => {
-                        const cal = a.calificaciones[p];
-                        return (
-                          <td key={p} className={styles.tdCal}
-                            onClick={() => {
-                              setError('');
-                              if (cal) { setEditando({ id: cal.id }); setRegistrando(null); }
-                              else { setRegistrando({ inscripcion_id: a.inscripcion_id, parcial: p }); setEditando(null); }
-                              setValorNuevo(cal ? cal.valor : '');
-                            }}
-                          >
-                            <span className={styles.calCell} style={{ color: cal ? COLOR_CALIF(cal.valor) : 'var(--color-gray-300)' }}>
-                              {cal ? cal.valor : '+'}
-                            </span>
-                          </td>
-                        );
-                      })}
-                      <td className={styles.tdCal}>
-                        <span style={{ fontWeight: 700, color: prom ? COLOR_CALIF(prom) : 'var(--color-gray-400)' }}>
-                          {prom ?? '—'}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )
-      }
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : Object.keys(porAlumno).length === 0 ? (
+        <div className={styles.empty}>No hay alumnos inscritos en esta materia.</div>
+      ) : (
+        <div className={styles.tableWrapper}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th className={styles.th}>Alumno</th>
+                {PARCIALES.map(p => <th key={p} className={styles.th}>Parcial {p}</th>)}
+                <th className={styles.th}>Promedio</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.values(porAlumno).sort((a,b) => a.nombre.localeCompare(b.nombre)).map((a) => {
+                const vals = Object.values(a.calificaciones).map(c => parseFloat(c.valor));
+                const prom = vals.length > 0 ? (vals.reduce((x,y) => x+y,0)/vals.length).toFixed(1) : null;
+                return (
+                  <tr key={a.alumno_id} className={styles.tr}>
+                    <td className={styles.tdNombre}>{a.nombre}</td>
+                    {PARCIALES.map(p => {
+                      const cal = a.calificaciones[p];
+                      return (
+                        <td key={p} className={styles.tdCal}
+                          onClick={() => {
+                            setError('');
+                            if (cal) { setEditando({ id: cal.id }); setRegistrando(null); }
+                            else { setRegistrando({ inscripcion_id: a.inscripcion_id, parcial: p }); setEditando(null); }
+                            setValorNuevo(cal ? cal.valor : '');
+                          }}
+                        >
+                          <span className={styles.calCell} style={{ color: cal ? COLOR_CALIF(cal.valor) : 'var(--color-gray-300)' }}>
+                            {cal ? cal.valor : '+'}
+                          </span>
+                        </td>
+                      );
+                    })}
+                    <td className={styles.tdCal}>
+                      <span style={{ fontWeight: 700, color: prom ? COLOR_CALIF(prom) : 'var(--color-gray-400)' }}>
+                        {prom ?? '—'}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

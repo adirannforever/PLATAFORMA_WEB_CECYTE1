@@ -1,6 +1,6 @@
-// src/pages/UsuariosPage.jsx
 import { useEffect, useState } from 'react';
 import { usuariosService } from '../services/api';
+import Skeleton from '../components/Skeleton'; // Importamos el componente Skeleton
 import styles from './UsuariosPage.module.css';
 
 const ROLES = ['todos', 'alumno', 'docente', 'administrador'];
@@ -76,66 +76,110 @@ export default function UsuariosPage() {
         ))}
       </div>
 
-      {cargando ? <div className={styles.loading}>Cargando...</div>
-        : usuarios.length === 0
-        ? <div className={styles.empty}>No hay usuarios en esta categoría.</div>
-        : (
-          <div className={styles.tableWrapper}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th className={styles.th}>Nombre</th>
-                  <th className={styles.th}>Email</th>
-                  <th className={styles.th}>Rol</th>
-                  <th className={styles.th}>Estado</th>
-                  <th className={styles.th}>Registro</th>
-                  <th className={styles.th}>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {usuarios.map(u => (
-                  <tr key={u.id} className={`${styles.tr} ${!u.activo ? styles.trInactivo : ''}`}>
-                    <td className={styles.td}>
-                      <div className={styles.userCell}>
-                        <div className={`${styles.avatar} ${styles[`avatar_${COLOR_ROL[u.rol]}`]}`}>
-                          {u.nombre?.charAt(0)}{u.apellidos?.charAt(0)}
-                        </div>
-                        <div>
-                          <div className={styles.userName}>{u.apellidos}, {u.nombre}</div>
-                          <div className={styles.userId}>ID #{u.id}</div>
-                        </div>
+      {cargando ? (
+        <div className={styles.tableWrapper}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th className={styles.th}>Nombre</th>
+                <th className={styles.th}>Email</th>
+                <th className={styles.th}>Rol</th>
+                <th className={styles.th}>Estado</th>
+                <th className={styles.th}>Registro</th>
+                <th className={styles.th}>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {/* Simulamos 4 filas de esqueleto para la tabla */}
+              {[1, 2, 3, 4].map((row) => (
+                <tr key={row} className={styles.tr}>
+                  <td className={styles.td}>
+                    <div className={styles.userCell} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <Skeleton width="36px" height="36px" variant="circle" />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <Skeleton width="140px" height="15px" variant="text" />
+                        <Skeleton width="50px" height="11px" variant="text" />
                       </div>
-                    </td>
-                    <td className={styles.td}><span className={styles.email}>{u.email}</span></td>
-                    <td className={styles.td}>
-                      <span className={`${styles.rolBadge} ${styles[`rol_${COLOR_ROL[u.rol]}`]}`}>
-                        {ETIQUETA[u.rol]}
-                      </span>
-                    </td>
-                    <td className={styles.td}>
-                      <span className={u.activo ? styles.estadoActivo : styles.estadoInactivo}>
-                        {u.activo ? '● Activo' : '○ Inactivo'}
-                      </span>
-                    </td>
-                    <td className={styles.td}>
-                      <span className={styles.fecha}>
-                        {new Date(u.fecha_registro).toLocaleDateString('es-MX')}
-                      </span>
-                    </td>
-                    <td className={styles.td}>
-                      {u.activo && (
-                        <button className={styles.btnDesactivar} onClick={() => handleDesactivar(u.id)}>
-                          Desactivar
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )
-      }
+                    </div>
+                  </td>
+                  <td className={styles.td}>
+                    <Skeleton width="160px" height="15px" variant="text" />
+                  </td>
+                  <td className={styles.td}>
+                    <Skeleton width="70px" height="22px" variant="text" />
+                  </td>
+                  <td className={styles.td}>
+                    <Skeleton width="60px" height="15px" variant="text" />
+                  </td>
+                  <td className={styles.td}>
+                    <Skeleton width="80px" height="15px" variant="text" />
+                  </td>
+                  <td className={styles.td}>
+                    <Skeleton width="70px" height="24px" variant="text" />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : usuarios.length === 0 ? (
+        <div className={styles.empty}>No hay usuarios en esta categoría.</div>
+      ) : (
+        <div className={styles.tableWrapper}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th className={styles.th}>Nombre</th>
+                <th className={styles.th}>Email</th>
+                <th className={styles.th}>Rol</th>
+                <th className={styles.th}>Estado</th>
+                <th className={styles.th}>Registro</th>
+                <th className={styles.th}>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {usuarios.map(u => (
+                <tr key={u.id} className={`${styles.tr} ${!u.activo ? styles.trInactivo : ''}`}>
+                  <td className={styles.td}>
+                    <div className={styles.userCell}>
+                      <div className={`${styles.avatar} ${styles[`avatar_${COLOR_ROL[u.rol]}`]}`}>
+                        {u.nombre?.charAt(0)}{u.apellidos?.charAt(0)}
+                      </div>
+                      <div>
+                        <div className={styles.userName}>{u.apellidos}, {u.nombre}</div>
+                        <div className={styles.userId}>ID #{u.id}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className={styles.td}><span className={styles.email}>{u.email}</span></td>
+                  <td className={styles.td}>
+                    <span className={`${styles.rolBadge} ${styles[`rol_${COLOR_ROL[u.rol]}`]}`}>
+                      {ETIQUETA[u.rol]}
+                    </span>
+                  </td>
+                  <td className={styles.td}>
+                    <span className={u.activo ? styles.estadoActivo : styles.estadoInactivo}>
+                      {u.activo ? '● Activo' : '○ Inactivo'}
+                    </span>
+                  </td>
+                  <td className={styles.td}>
+                    <span className={styles.fecha}>
+                      {new Date(u.fecha_registro).toLocaleDateString('es-MX')}
+                    </span>
+                  </td>
+                  <td className={styles.td}>
+                    {u.activo && (
+                      <button className={styles.btnDesactivar} onClick={() => handleDesactivar(u.id)}>
+                        Desactivar
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Modal crear usuario */}
       {modalAbierto && (

@@ -1,3 +1,4 @@
+// src/pages/LandingPage.jsx
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Map } from "lucide-react";
@@ -5,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import logoCecyte from '../assets/logo_cecyte.png';
 import styles from './LandingPage.module.css';
 
-// Imágenes para el Carrusel (puedes cambiarlas por fotos reales del plantel)
+// Imágenes para el Carrusel
 const slidesData = [
   {
     id: 1,
@@ -49,7 +50,7 @@ const slidesData = [
     title: 'Proyectos Colaborativos',
     subtitle: 'Trabajo en equipo y desarrollo de habilidades'
   }
-]
+];
 
 // Datos de las Especialidades
 const especialidadesData = [
@@ -107,7 +108,6 @@ export default function LandingPage() {
 
   return (
     <div className={styles.pageWrapper}>
-      
       <button 
         className={styles.fixedHamburger} 
         onClick={() => setMenuAbierto(true)}
@@ -143,7 +143,7 @@ export default function LandingPage() {
         </div>
       )}
 
-      {/* 2. HEADER GENÉRICO DE ANCHO COMPLETO CON LÍNEAS RECTAS */}
+      {/* Header General */}
       <header className={styles.topHeader}>
         <div className={styles.headerContent}>
           <div className={styles.headerBrandInfo}>
@@ -157,14 +157,14 @@ export default function LandingPage() {
             <Link 
               to={usuario ? "/dashboard" : "/login"} 
               className={styles.headerLoginBtn}
-              >
+            >
               {usuario ? "Entrar al Sistema →" : "Iniciar Sesión"}
             </Link>
           </div>
         </div>
       </header>
 
-      {/* 3. SECCIÓN HERO / CARRUSEL DE IMÁGENES INTERactivo */}
+      {/* Sección Hero / Carrusel */}
       <section id="carrusel" className={styles.carouselSection}>
         <div className={styles.carouselContainer}>
           {slidesData.map((slide, index) => (
@@ -181,7 +181,6 @@ export default function LandingPage() {
             </div>
           ))}
 
-          {/* Flechas de navegación manual */}
           <button className={`${styles.carouselArrow} ${styles.arrowLeft}`} onClick={prevSlide} aria-label="Anterior">
             &#10094;
           </button>
@@ -191,7 +190,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* 4. OFERTA EDUCATIVA INTERACTIVA */}
+      {/* Oferta Educativa */}
       <section id="oferta" className={styles.sectionContainer}>
         <div className={styles.sectionHeader}>
           <h2>Nuestra Oferta Educativa</h2>
@@ -214,7 +213,7 @@ export default function LandingPage() {
           ))}
         </div>
 
-        {/* Modal / Vista Expandida y Centrada de la Especialidad */}
+        {/* Modal de Especialidad */}
         {especialidadSeleccionada && (
           <div className={styles.modalOverlay} onClick={() => setEspecialidadSeleccionada(null)}>
             <div className={styles.expandedCardModal} onClick={(e) => e.stopPropagation()}>
@@ -249,7 +248,7 @@ export default function LandingPage() {
         )}
       </section>
 
-      {/* 5. GENERALIDADES E INFORMACIÓN EXTENDIDA DE LA PREPARATORIA */}
+      {/* Generalidades */}
       <section id="generalidades" className={styles.generalitiesSection}>
         <div className={styles.sectionHeader}>
           <h2>¿Por qué estudiar en el CECyTE Plantel 1?</h2>
@@ -275,14 +274,13 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* 6. SECCIÓN DE CONTACTO CON 2 ICONOS CENTRADOS (FACEBOOK Y GMAIL) */}
+      {/* Sección de Contacto */}
       <section id="contacto" className={styles.contactSection}>
         <div className={styles.contactContainer}>
           <h2>Contáctanos</h2>
           <p>¿Tienes dudas sobre fichas de admisión o inscripciones? Comunícate con nosotros a través de nuestros canales oficiales:</p>
           
           <div className={styles.socialIconsCentered}>
-            {/* Enlace a Facebook */}
             <a 
               href="https://www.facebook.com/people/Cecyte-Tabasco-Plantel-1-Aquiles-Serd%C3%A1n-Macuspana/100064800004242/" 
               target="_blank" 
@@ -296,7 +294,6 @@ export default function LandingPage() {
               <span>Facebook Oficial</span>
             </a>
 
-            {/* Enlace a Gmail / Correo */}
             <a 
               href="https://mail.google.com/mail/?view=cm&fs=1&to=contacto.dirpla01@cecytab.edu.mx&su=Consulta+sobre+Inscripciones+y+Fichas" 
               target="_blank" 
@@ -311,32 +308,30 @@ export default function LandingPage() {
             </a>
           </div>
 
-           <a
-                href={urlMap}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={styles.mapIconLink}
-                aria-label="Ver ubicación de la institución en Google Maps"
-                title="Abrir ubicación en Google Maps"
-            >
+          <a
+            href={urlMap}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.mapIconLink}
+            aria-label="Ver ubicación de la institución en Google Maps"
+            title="Abrir ubicación en Google Maps"
+          >
             <span className={styles.locationSubtext}>
-           
-                <Map
-                  size={20} // Tamaño en píxeles
-                  color="#007bff" // Color del icono
-                  style={{ verticalAlign: "middle", marginRight: "6px" }} // Alineación y espacio
-                /> Ubicación: Carretera Benito Juárez - Tepetitan - 20 de Noviembre 85 Macuspana, Tabasco
-              
+              <Map
+                size={20}
+                color="#007bff"
+                style={{ verticalAlign: "middle", marginRight: "6px" }}
+              /> 
+              Ubicación: Carretera Benito Juárez - Tepetitan - 20 de Noviembre 85 Macuspana, Tabasco
             </span>
           </a>
         </div>
       </section>
 
-      {/* 7. FOOTER */}
+      {/* Footer */}
       <footer className={styles.mainFooter}>
         <p>&copy; {new Date().getFullYear()} CECyTE Plantel 1 — Todos los derechos reservados.</p>
       </footer>
-
     </div>
   );
 }

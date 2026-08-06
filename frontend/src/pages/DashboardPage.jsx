@@ -1,5 +1,3 @@
-// src/pages/DashboardPage.jsx
-// Página de inicio — muestra un resumen según el rol del usuario
 
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -66,9 +64,38 @@ export default function DashboardPage() {
     return <div className={styles.loading}>Verificando sesión...</div>;
   }
 
-  // 2. Pantalla de carga
+  // 2. Pantalla de carga (Skeleton)
   if (cargando) {
-    return <div className={styles.loading}>Cargando...</div>;
+    return (
+      <div className={styles.page}>
+        <div className={styles.welcome}>
+          <div style={{ width: '100%' }}>
+            <div className={styles.skeletonTitle} style={{ width: '300px', height: '32px', marginBottom: '8px', background: '#e5e7eb', borderRadius: '6px' }} />
+            <div className={styles.skeletonDesc} style={{ width: '450px', height: '18px', background: '#e5e7eb', borderRadius: '4px' }} />
+          </div>
+        </div>
+
+        <div className={styles.statsGrid}>
+          <div className={styles.skeletonStatCard} style={{ height: '100px', background: '#e5e7eb', borderRadius: '12px' }} />
+          <div className={styles.skeletonStatCard} style={{ height: '100px', background: '#e5e7eb', borderRadius: '12px' }} />
+          <div className={styles.skeletonStatCard} style={{ height: '100px', background: '#e5e7eb', borderRadius: '12px' }} />
+          <div className={styles.skeletonStatCard} style={{ height: '100px', background: '#e5e7eb', borderRadius: '12px' }} />
+        </div>
+
+        <section className={styles.section}>
+          <div className={styles.sectionHeader}>
+            <div style={{ width: '200px', height: '24px', background: '#e5e7eb', borderRadius: '4px' }} />
+            <div style={{ width: '80px', height: '18px', background: '#e5e7eb', borderRadius: '4px' }} />
+          </div>
+
+          <div className={styles.comunicadosList}>
+            <div className={styles.skeletonCard} style={{ height: '90px', background: '#e5e7eb', borderRadius: '10px', marginBottom: '1rem' }} />
+            <div className={styles.skeletonCard} style={{ height: '90px', background: '#e5e7eb', borderRadius: '10px', marginBottom: '1rem' }} />
+            <div className={styles.skeletonCard} style={{ height: '90px', background: '#e5e7eb', borderRadius: '10px' }} />
+          </div>
+        </section>
+      </div>
+    );
   }
 
   return (
@@ -158,9 +185,9 @@ export default function DashboardPage() {
 function StatCard({ label, value, to, color }) {
   const colorMap = {
     green: { bg: 'var(--color-primary-muted)', accent: 'var(--color-primary)' },
-    blue:  { bg: 'var(--color-info-light)',    accent: 'var(--color-info)' },
-    gold:  { bg: 'var(--color-accent-light)',  accent: 'var(--color-accent)' },
-    gray:  { bg: 'var(--color-gray-100)',      accent: 'var(--color-gray-600)' },
+    blue:  { bg: 'var(--color-info-light)',     accent: 'var(--color-info)' },
+    gold:  { bg: 'var(--color-accent-light)',   accent: 'var(--color-accent)' },
+    gray:  { bg: 'var(--color-gray-100)',       accent: 'var(--color-gray-600)' },
   };
   const c = colorMap[color] || colorMap.green;
 
