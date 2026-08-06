@@ -21,10 +21,15 @@ export default function DashboardPage() {
   const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
+    // Si aún no hay usuario cargado, no ejecutamos la petición
+    if (!usuario?.rol) return;
+
     const cargar = async () => {
       try {
         const comRes = await comunicadosService.getAll();
-        setComunicados(comRes.data.comunicados.slice(0, 3));
+        // Blindamos por si la API devuelve directamente un array en .data o en .comunicados
+        const listaComunicados = comRes?.data?.comunicados || (Array.isArray(comRes?.data) ? comRes.data : []);
+        setComunicados(listaComunicados.slice(0, 3));
 
         // Stats según rol
         if (usuario.rol === 'administrador') {
@@ -34,28 +39,37 @@ export default function DashboardPage() {
             materiasService.getAll(),
           ]);
           setStats({
-            alumnos: alumnos.data.usuarios.length,
-            docentes: docentes.data.usuarios.length,
-            materias: materias.data.materias.length,
-            comunicados: comRes.data.comunicados.length,
+            alumnos: alumnos?.data?.usuarios?.length ?? 0,
+            docentes: docentes?.data?.usuarios?.length ?? 0,
+            materias: materias?.data?.materias?.length ?? 0,
+            comunicados: listaComunicados.length,
           });
         } else if (usuario.rol === 'docente') {
           const materias = await materiasService.getAll();
-          setStats({ materias: materias.data.materias.length });
+          setStats({ materias: materias?.data?.materias?.length ?? 0 });
         } else {
           const califs = await calificacionesService.misCalificaciones();
-          setStats({ calificaciones: califs.data.calificaciones.length });
+          setStats({ calificaciones: califs?.data?.calificaciones?.length ?? 0 });
         }
       } catch (err) {
-        console.error(err);
+        console.error('Error al cargar datos del Dashboard:', err);
       } finally {
         setCargando(false);
       }
     };
-    cargar();
-  }, [usuario.rol]);
 
-  if (cargando) return <div className={styles.loading}>Cargando...</div>;
+    cargar();
+  }, [usuario?.rol]);
+
+  // 1. Guarda de seguridad por si el usuario aún no está listo en el contexto
+  if (!usuario) {
+    return <div className={styles.loading}>Verificando sesión...</div>;
+  }
+
+  // 2. Pantalla de carga
+  if (cargando) {
+    return <div className={styles.loading}>Cargando...</div>;
+  }
 
   return (
     <div className={styles.page}>
@@ -63,7 +77,7 @@ export default function DashboardPage() {
       <div className={styles.welcome}>
         <div>
           <h1 className={styles.welcomeTitle}>
-            {SALUDO()}, {usuario.nombre}
+            {SALUDO()}, {usuario.nombre || 'Usuario'}
           </h1>
           <p className={styles.welcomeDesc}>
             Bienvenido a la plataforma académica del CECyTE Plantel 1.
@@ -109,22 +123,31 @@ export default function DashboardPage() {
           <div className={styles.empty}>No hay comunicados publicados aún.</div>
         ) : (
           <div className={styles.comunicadosList}>
-            {comunicados.map((c) => (
-              <div key={c.id} className={styles.comunicadoCard}>
-                <div className={styles.comunicadoDot} />
-                <div className={styles.comunicadoBody}>
-                  <h3 className={styles.comunicadoTitulo}>{c.titulo}</h3>
-                  <p className={styles.comunicadoContenido}>
-                    {c.contenido.length > 120 ? c.contenido.slice(0, 120) + '...' : c.contenido}
-                  </p>
-                  <span className={styles.comunicadoMeta}>
-                    {new Date(c.fecha_publicacion).toLocaleDateString('es-MX', {
-                      day: 'numeric', month: 'long', year: 'numeric'
-                    })} · {c.autor_nombre} {c.autor_apellidos}
-                  </span>
+            {comunicados.map((c) => {
+              // Blindaje para evitar que un contenido null o undefined rompa el .length
+              const textoContenido = c?.contenido || '';
+              const fechaSegura = c?.fecha_publicacion ? new Date(c.fecha_publicacion) : new Date();
+
+              return (
+                <div key={c.id || Math.random()} className={styles.comunicadoCard}>
+                  <div className={styles.comunicadoDot} />
+                  <div className={styles.comunicadoBody}>
+                    <h3 className={styles.comunicadoTitulo}>{c.titulo || 'Sin título'}</h3>
+                    <p className={styles.comunicadoContenido}>
+                      {textoContenido.length > 120 ? textoContenido.slice(0, 120) + '...' : textoContenido}
+                    </p>
+                    <span className={styles.comunicadoMeta}>
+                      {!isNaN(fechaSegura) 
+                        ? fechaSegura.toLocaleDateString('es-MX', {
+                            day: 'numeric', month: 'long', year: 'numeric'
+                          })
+                        : 'Fecha no disponible'}{' '}
+                      · {c.autor_nombre || ''} {c.autor_apellidos || ''}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>
@@ -137,13 +160,13 @@ function StatCard({ label, value, to, color }) {
     green: { bg: 'var(--color-primary-muted)', accent: 'var(--color-primary)' },
     blue:  { bg: 'var(--color-info-light)',    accent: 'var(--color-info)' },
     gold:  { bg: 'var(--color-accent-light)',  accent: 'var(--color-accent)' },
-    gray:  { bg: 'var(--color-gray-100)',       accent: 'var(--color-gray-600)' },
+    gray:  { bg: 'var(--color-gray-100)',      accent: 'var(--color-gray-600)' },
   };
   const c = colorMap[color] || colorMap.green;
 
   return (
     <Link to={to} className={styles.statCard} style={{ '--card-bg': c.bg, '--card-accent': c.accent }}>
-      <span className={styles.statValue}>{value ?? '—'}</span>
+      <span className={styles.statValue}>{value ?? '0'}</span>
       <span className={styles.statLabel}>{label}</span>
     </Link>
   );

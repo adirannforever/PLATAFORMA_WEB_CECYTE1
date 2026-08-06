@@ -4,6 +4,12 @@ import { useAuth } from '../../context/AuthContext';
 import styles from './DashboardLayout.module.css';
 import logoCecyte from '../../assets/logo_cecyte.png';
 
+const IconPortal = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M19 12H5"/>
+    <polyline points="12 19 5 12 12 5"/>
+  </svg>
+);
 const IconDashboard = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
@@ -54,6 +60,7 @@ const IconMenu = () => (
   </svg>
 );
 
+// Logo CECyTE en SVG — escudo simplificado con los colores institucionales
 const LogoCECyTE = () => (
   <img 
     src={logoCecyte} 
@@ -75,14 +82,10 @@ const ETIQUETA_ROL = {
 export default function DashboardLayout() {
   const { usuario, logout } = useAuth();
   const navigate = useNavigate();
-  const [sidebarAbierto, setSidebarAbierto] = useState(false);
   
-  // 👇 AQUÍ DEBEN IR LOS HOOKS (dentro del componente)
+  // ── ESTADOS CORREGIDOS ──
+  const [sidebarAbierto, setSidebarAbierto] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-
-  const handleOpenLogoutModal = () => {
-    setShowLogoutConfirm(true);
-  };
 
   const handleLogout = async () => {
     try { 
@@ -132,7 +135,7 @@ export default function DashboardLayout() {
           </div>
         </div>
 
-        {/* Navegación */}
+{/* Navegación */}
         <nav className={styles.nav}>
           <span className={styles.navLabel}>Menú principal</span>
           {navItems.map((item) => (
@@ -150,10 +153,25 @@ export default function DashboardLayout() {
           ))}
         </nav>
 
-        <button className={styles.logoutBtn} onClick={handleOpenLogoutModal}>
-          <IconLogout />
-          Cerrar sesión
-        </button>
+        {/* Zona inferior del Sidebar */}
+        <div className={styles.sidebarFooter}>
+          <NavLink
+            to="/"
+            className={styles.navItem}
+            onClick={() => setSidebarAbierto(false)}
+          >
+            <span className={styles.navIcon}><IconPortal /></span>
+            Volver al Portal
+          </NavLink>
+
+          <button 
+            className={styles.logoutBtn} 
+            onClick={() => setShowLogoutConfirm(true)}
+          >
+            <span className={styles.navIcon}><IconLogout /></span>
+            Cerrar sesión
+          </button>
+        </div>
       </aside>
 
       <div className={styles.main}>
@@ -182,7 +200,6 @@ export default function DashboardLayout() {
         </main>
       </div>
 
-      {/* Ventana Modal de confirmación */}
       {showLogoutConfirm && (
         <div style={{
           position: 'fixed',
