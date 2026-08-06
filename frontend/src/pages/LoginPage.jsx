@@ -1,22 +1,9 @@
-// src/pages/LoginPage.jsx
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import styles from './LoginPage.module.css';
 import logoCecyte from '../assets/logo_cecyte.png';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
-
-const LogoCECyTE = () => (
-  <img 
-    src={logoCecyte} 
-    alt="Logo CECyTE" 
-    style={{ 
-      width: '308px', 
-      height: '308px', 
-      objectFit: 'cover',
-    }} 
-  />
-);
+import { Eye, EyeOff, Loader2, ArrowLeft } from 'lucide-react';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -49,21 +36,27 @@ export default function LoginPage() {
 
   return (
     <div className={styles.page}>
+      {/* Panel Lateral (Branding / Bienvenida) */}
       <div className={styles.panel}>
-        <div className={styles.panelContent}>
-          {/* Regreso a la landing page */}
-          <button type="button" onClick={handleReturn} className={styles.returntBtn}>
-            Página principal
-          </button>
-        
-          <LogoCECyTE />
+        <button type="button" onClick={handleReturn} className={styles.returnBtn}>
+          <ArrowLeft size={18} />
+          <span>Página principal</span>
+        </button>
 
+        <div className={styles.panelContent}>
+          <img 
+            src={logoCecyte} 
+            alt="Logo CECyTE" 
+            className={styles.logoImg} 
+          />
+          <h1 className={styles.panelTitle}>CECyTE Plantel 1</h1>
           <p className={styles.panelDesc}>
-            Plataforma Web Académica del CECyTE Plantel 1
+            Plataforma Web Académica y de Gestión Institucional
           </p>
         </div>
       </div>
 
+      {/* Lado del Formulario */}
       <div className={styles.formSide}>
         <div className={styles.formCard}>
           <div className={styles.formHeader}>
@@ -73,12 +66,12 @@ export default function LoginPage() {
 
           {error && (
             <div className={styles.errorMsg} role="alert">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="12" cy="12" r="10"/>
                 <line x1="12" y1="8" x2="12" y2="12"/>
                 <line x1="12" y1="16" x2="12.01" y2="16"/>
               </svg>
-              {error}
+              <span>{error}</span>
             </div>
           )}
 
@@ -89,7 +82,7 @@ export default function LoginPage() {
                 id="email"
                 type="email"
                 className={styles.input}
-                placeholder="correo@cecyte1.edu.mx"
+                placeholder="correo@cecytab.edu.mx"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -101,36 +94,23 @@ export default function LoginPage() {
 
             <div className={styles.field}>
               <label htmlFor="password" className={styles.label}>Contraseña</label>
-              <div style={{ position: 'relative', width: '100%' }}>
+              <div className={styles.passwordWrapper}>
                 <input
                   id="password"
                   type={showPass ? 'text' : 'password'}
-                  className={styles.input}
+                  className={`${styles.input} ${styles.inputPassword}`}
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   autoComplete="current-password"
-                  style={{ paddingRight: '40px' }}
                   disabled={cargando}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPass(!showPass)}
                   disabled={cargando}
-                  style={{
-                    position: 'absolute',
-                    right: '12px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: '0',
-                    display: 'flex',
-                    color: '#6b7280',
-                    alignItems: 'center'
-                  }}
+                  className={styles.togglePassBtn}
                   title={showPass ? 'Ocultar' : 'Ver'}
                   aria-label={showPass ? 'Ocultar contraseña' : 'Ver contraseña'}
                 >
@@ -141,23 +121,23 @@ export default function LoginPage() {
 
             <button type="submit" className={styles.submitBtn} disabled={cargando}>
               {cargando ? (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-                  <Loader2 size={18} className="animate-spin" /> Verificando...
+                <span className={styles.loadingState}>
+                  <Loader2 size={20} className={styles.spinner} /> Verificando...
                 </span>
               ) : (
-                'Entrar'
+                'Entrar al Sistema'
               )}
             </button>
           </form>
 
           <p className={styles.helpText}>
-            ¿Problemas para acceder? Contacta al administrador del plantel.
+            ¿Problemas para acceder? Contacta al área de control escolar o al administrador del plantel.
           </p>
         </div>
 
-        <p className={styles.footer}>
-          {new Date().getFullYear()} CECyTE Tabasco Plantel 1 · Todos los derechos reservados
-        </p>
+        <footer className={styles.footer}>
+          © {new Date().getFullYear()} CECyTE Tabasco Plantel 1 · Todos los derechos reservados
+        </footer>
       </div>
     </div>
   );
