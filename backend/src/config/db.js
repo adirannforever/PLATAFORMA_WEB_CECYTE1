@@ -7,7 +7,9 @@ const { Pool } = pg;
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: true,
+  ssl: {
+    rejectUnauthorized: false
+  },
   connectionTimeoutMillis: 10000,
   idleTimeoutMillis: 30000,
   max: 10,
@@ -15,11 +17,15 @@ const pool = new Pool({
 
 pool.connect((err, client, release) => {
   if (err) {
-    console.error('Error al conectar a la base de datos:', err.message);
-    process.exit(1);
+    console.error(' Error crítico al conectar a Neon:', err.message);
+  } else {
+    console.log(' Conexión a PostgreSQL (Neon) establecida correctamente');
   }
   release();
-  console.log('Conexión a PostgreSQL (Neon) establecida correctamente');
+});
+
+pool.on('error', (err) => {
+  console.error(' Error inesperado en el cliente de PostgreSQL:', err.message);
 });
 
 export const query = (text, params) => pool.query(text, params);

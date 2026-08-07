@@ -136,7 +136,7 @@ export default function LoginPage() {
         </div>
 
         <footer className={styles.footer}>
-          © {new Date().getFullYear()} CECyTE Tabasco Plantel 1 · Todos los derechos reservados
+           {new Date().getFullYear()} CECyTE Tabasco Plantel 1 · Todos los derechos reservados
         </footer>
       </div>
     </div>
