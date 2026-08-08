@@ -2,7 +2,10 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { query } from '../config/db.js';
 
+
 export const login = async (req, res) => {
+  console.log('Body recibido:', req.body);
+  console.log('Email:', req.body.email);
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -14,12 +17,7 @@ export const login = async (req, res) => {
 
   try {
     const result = await query(
-      `SELECT u.id, u.nombre, u.apellidos, u.email, u.password_hash, u.rol, u.activo,
-              a.id AS alumno_id, d.id AS docente_id
-       FROM usuarios u
-       LEFT JOIN alumnos a ON u.id = a.usuario_id
-       LEFT JOIN docentes d ON u.id = d.usuario_id
-       WHERE u.email = $1`,
+      'SELECT id, nombre, apellidos, email, password_hash, rol, activo FROM usuarios WHERE email = $1',
       [email.toLowerCase().trim()]
     );
 
@@ -47,20 +45,17 @@ export const login = async (req, res) => {
       });
     }
 
-    // Identificador específico según el rol para las consultas relacionales posteriores
-    const entidadId = usuario.rol === 'alumno' ? usuario.alumno_id : 
-                      usuario.rol === 'docente' ? usuario.docente_id : usuario.id;
-
     const token = jwt.sign(
       {
         id: usuario.id,
-        entidadId,
         nombre: usuario.nombre,
         rol: usuario.rol,
       },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );
+    console.log('Token generado:', token);
+    console.log('Cookie establecida');
 
     res.cookie('token', token, {
       httpOnly: true,
@@ -105,12 +100,7 @@ export const logout = (req, res) => {
 export const me = async (req, res) => {
   try {
     const result = await query(
-      `SELECT u.id, u.nombre, u.apellidos, u.email, u.rol,
-              a.id AS alumno_id, d.id AS docente_id
-       FROM usuarios u
-       LEFT JOIN alumnos a ON u.id = a.usuario_id
-       LEFT JOIN docentes d ON u.id = d.usuario_id
-       WHERE u.id = $1 AND u.activo = TRUE`,
+      'SELECT id, nombre, apellidos, email, rol FROM usuarios WHERE id = $1 AND activo = TRUE',
       [req.user.id]
     );
 
@@ -119,19 +109,9 @@ export const me = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Usuario no encontrado.' });
     }
 
-    const usuario = result.rows[0];
-
     return res.status(200).json({
       success: true,
-      usuario: {
-        id: usuario.id,
-        nombre: usuario.nombre,
-        apellidos: usuario.apellidos,
-        email: usuario.email,
-        rol: usuario.rol,
-        entidadId: usuario.rol === 'alumno' ? usuario.alumno_id : 
-                   usuario.rol === 'docente' ? usuario.docente_id : usuario.id
-      },
+      usuario: result.rows[0],
     });
   } catch (err) {
     console.error('Error en /me:', err);

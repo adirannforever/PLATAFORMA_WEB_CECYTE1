@@ -11,10 +11,8 @@ const router = Router();
 
 router.use(verifyToken);
 
-// Alumno consulta sus materias inscritas
 router.get('/mis-materias', requireRole('alumno'), misMaterias);
 
-// Solo admin gestiona inscripciones
 router.post('/', requireRole('administrador'), inscribirAlumno);
 router.delete('/:id', requireRole('administrador'), eliminarInscripcion);
 

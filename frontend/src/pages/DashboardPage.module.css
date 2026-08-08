@@ -1,87 +1,285 @@
-.page { display: flex; flex-direction: column; gap: 28px; max-width: 960px; }
-.loading { color: var(--color-gray-600); padding: 20px 0; }
+/* ============================================
+   FUENTES PROFESIONALES
+   ============================================ */
+@import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Roboto:wght@400;500;700&display=swap');
 
+.page {
+  font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  color: #1e293b;
+  background-color: #f4f6f9;
+  min-height: 100vh;
+  padding: 2rem 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* ============================================
+   LOADING
+   ============================================ */
+.loading {
+  color: #475569;
+  padding: 3rem 0;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+/* ============================================
+   ENCABEZADO DE BIENVENIDA
+   ============================================ */
 .welcome {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 24px 28px;
-  background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary) 100%);
-  border-radius: var(--radius-xl);
-  color: white;
-}
-.welcomeTitle { font-size: var(--font-size-2xl); font-weight: 700; margin-bottom: 4px; }
-.welcomeDesc { font-size: var(--font-size-sm); opacity: 0.75; }
-.welcomeBadge {
-  background: rgba(255,255,255,0.15);
-  border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 20px;
-  padding: 6px 14px;
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  white-space: nowrap;
+  gap: 1rem;
+  background: #1A6B35; /* Verde institucional */
+  padding: 1.5rem 2rem;
+  border: 2px solid #135228;
+  border-radius: 2px; /* Muy poco redondeado */
+  color: #ffffff;
 }
 
+.welcomeTitle {
+  font-family: 'Merriweather', Georgia, serif;
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.welcomeTitle::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 28px;
+  background: #F37238; /* Naranja institucional */
+  border-radius: 0;
+  margin-right: 12px;
+  vertical-align: middle;
+}
+
+.welcomeDesc {
+  font-size: 0.95rem;
+  color: #cfe2d4;
+  margin: 0.25rem 0 0 0;
+  font-weight: 300;
+}
+
+.welcomeBadge {
+  background: #135228;
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  padding: 0.4rem 1.2rem;
+  border: 1px solid #2a7a4a;
+  border-radius: 2px;
+  white-space: nowrap;
+  font-family: 'Roboto', sans-serif;
+}
+
+/* ============================================
+   TARJETAS DE ESTADÍSTICAS
+   ============================================ */
 .statsGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
+  gap: 1rem;
 }
+
 .statCard {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 24px 16px;
-  background: var(--card-bg);
-  border-radius: var(--radius-lg);
-  border: 1px solid rgba(0,0,0,0.05);
-  text-align: center;
-  transition: transform 0.15s, box-shadow 0.15s;
-  gap: 6px;
+  padding: 1.5rem 1rem;
+  background: #ffffff;
+  border: 2px solid #d1d9e6;
+  border-radius: 2px;
+  text-decoration: none;
+  transition: border-color 0.2s, background-color 0.2s;
+  gap: 0.25rem;
+  box-shadow: none;
 }
-.statCard:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
-.statValue { font-size: var(--font-size-3xl); font-weight: 700; color: var(--card-accent); }
-.statLabel { font-size: var(--font-size-xs); color: var(--color-gray-600); font-weight: 500; text-align: center; }
 
-.section { display: flex; flex-direction: column; gap: 16px; }
-.sectionHeader { display: flex; align-items: center; justify-content: space-between; }
-.sectionTitle { font-size: var(--font-size-xl); font-weight: 700; color: var(--color-gray-900); }
-.verTodos { font-size: var(--font-size-sm); color: var(--color-primary); font-weight: 600; }
-.verTodos:hover { text-decoration: underline; }
+.statCard:hover {
+  border-color: #1A6B35;
+  background-color: #f8fcf9;
+}
+
+.statValue {
+  font-family: 'Merriweather', Georgia, serif;
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #1A6B35;
+  line-height: 1.2;
+}
+
+.statLabel {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  font-family: 'Roboto', sans-serif;
+}
+
+/* ============================================
+   SECCIÓN DE COMUNICADOS
+   ============================================ */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2px solid #d1d9e6;
+  padding-bottom: 0.5rem;
+}
+
+.sectionTitle {
+  font-family: 'Merriweather', Georgia, serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #1A6B35;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.verTodos {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1A6B35;
+  text-decoration: none;
+  transition: color 0.15s;
+  font-family: 'Roboto', sans-serif;
+}
+
+.verTodos:hover {
+  color: #135228;
+  text-decoration: underline;
+}
 
 .empty {
-  padding: 32px;
+  padding: 2rem 1rem;
   text-align: center;
-  color: var(--color-gray-400);
-  background: var(--color-white);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-gray-200);
-  font-size: var(--font-size-sm);
+  color: #94a3b8;
+  background: #ffffff;
+  border: 2px solid #d1d9e6;
+  border-radius: 2px;
+  font-size: 0.95rem;
+  font-family: 'Roboto', sans-serif;
 }
-.comunicadosList { display: flex; flex-direction: column; gap: 12px; }
+
+.comunicadosList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
 .comunicadoCard {
   display: flex;
-  gap: 14px;
-  padding: 18px 20px;
-  background: var(--color-white);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-gray-200);
-  transition: box-shadow 0.15s;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  background: #ffffff;
+  border: 2px solid #d1d9e6;
+  border-radius: 2px;
+  transition: border-color 0.2s, background-color 0.2s;
 }
-.comunicadoCard:hover { box-shadow: var(--shadow-sm); }
-.comunicadoDot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: var(--color-primary);
-  flex-shrink: 0; margin-top: 7px;
-}
-.comunicadoBody { display: flex; flex-direction: column; gap: 4px; }
-.comunicadoTitulo { font-size: var(--font-size-base); font-weight: 600; color: var(--color-gray-900); }
-.comunicadoContenido { font-size: var(--font-size-sm); color: var(--color-gray-600); line-height: 1.6; }
-.comunicadoMeta { font-size: var(--font-size-xs); color: var(--color-gray-400); margin-top: 4px; }
 
+.comunicadoDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 0;
+  background: #F37238; /* Naranja */
+  flex-shrink: 0;
+  margin-top: 0.6rem;
+}
+
+.comunicadoBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.comunicadoTitulo {
+  font-family: 'Merriweather', Georgia, serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1A6B35;
+  margin: 0;
+}
+
+.comunicadoContenido {
+  font-size: 0.9rem;
+  color: #334155;
+  line-height: 1.6;
+  margin: 0;
+  font-family: 'Roboto', sans-serif;
+}
+
+.comunicadoMeta {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-top: 0.25rem;
+  border-top: 1px solid #e9edf2;
+  padding-top: 0.4rem;
+  font-family: 'Roboto', sans-serif;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
 @media (max-width: 640px) {
-  .welcome { flex-direction: column; }
-  .welcomeTitle { font-size: var(--font-size-xl); }
+  .page {
+    padding: 1rem;
+    gap: 1.5rem;
+  }
+
+  .welcome {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 1.25rem 1.5rem;
+  }
+
+  .welcomeTitle {
+    font-size: 1.3rem;
+  }
+
+  .welcomeTitle::before {
+    display: none;
+  }
+
+  .statsGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .statCard {
+    padding: 1rem 0.5rem;
+  }
+
+  .statValue {
+    font-size: 1.6rem;
+  }
+
+  .comunicadoCard {
+    padding: 1rem;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .comunicadoDot {
+    display: none;
+  }
 }

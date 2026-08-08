@@ -1,0 +1,217 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-gray-900, #111827);
+  margin: 0 0 0.25rem;
+}
+
+.subtitle {
+  font-size: 0.9rem;
+  color: var(--color-gray-600, #4b5563);
+  margin: 0;
+}
+
+.selectorCard {
+  background: #fff;
+  border: 1px solid var(--color-gray-200, #e5e7eb);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 420px;
+}
+
+.selectorLabel {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-gray-600, #4b5563);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.select {
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-gray-300, #d1d5db);
+  font-size: 0.95rem;
+  font-family: var(--font-sans);
+  color: var(--color-gray-900, #111827);
+  background: #fff;
+}
+
+.select:focus {
+  outline: none;
+  border-color: var(--color-primary, #1A6B35);
+  box-shadow: 0 0 0 3px var(--color-primary-muted, rgba(26, 107, 53, 0.12));
+}
+
+.errorBanner {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+}
+
+.empty {
+  padding: 2rem;
+  text-align: center;
+  color: var(--color-gray-500, #6b7280);
+  background: var(--color-gray-50, #f9fafb);
+  border-radius: 12px;
+  border: 1px dashed var(--color-gray-200, #e5e7eb);
+}
+
+.resumenCard {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  background: var(--color-primary-muted, rgba(26, 107, 53, 0.08));
+  border: 1px solid var(--color-primary, #1A6B35);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+}
+
+.resumenLabel {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-primary, #1A6B35);
+}
+
+.resumenValor {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--color-primary, #1A6B35);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sectionTitle {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-gray-900, #111827);
+  margin: 0;
+}
+
+.docList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.docCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  background: #fff;
+  border: 1px solid var(--color-gray-200, #e5e7eb);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+}
+
+.checkbox {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  border: 2px solid var(--color-gray-300, #d1d5db);
+  background: #fff;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.checkbox:disabled {
+  cursor: default;
+}
+
+.checkboxChecked {
+  background: var(--color-primary, #1A6B35);
+  border-color: var(--color-primary, #1A6B35);
+}
+
+.docBody {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.docHeaderRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.docNombre {
+  font-weight: 600;
+  color: var(--color-gray-900, #111827);
+  font-size: 0.95rem;
+}
+
+.badgeObligatorio {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-accent, #C8992A);
+  background: var(--color-accent-light, rgba(200, 153, 42, 0.12));
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.docMeta {
+  font-size: 0.82rem;
+  color: var(--color-gray-500, #6b7280);
+}
+
+.docObs {
+  font-size: 0.82rem;
+  color: var(--color-gray-600, #4b5563);
+  font-style: italic;
+  margin-top: 0.15rem;
+}
+
+.skeletonSelect {
+  height: 40px;
+  border-radius: 8px;
+  background: #e5e7eb;
+}
+
+.skeletonList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.skeletonCard {
+  height: 70px;
+  border-radius: 10px;
+  background: #e5e7eb;
+}

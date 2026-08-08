@@ -3,25 +3,71 @@ import { query } from '../config/db.js';
 
 export const getUsuarios = async (req, res) => {
   try {
-    const { rol } = req.query;
-    let sql = 'SELECT id, nombre, apellidos, email, rol, activo, fecha_registro FROM usuarios';
-    const params = [];
+    const { rol, search, activo, semestre } = req.query;
 
-    if (rol) {
-      sql += ' WHERE rol = $1';
-      params.push(rol);
+    let sql = `
+      SELECT 
+        u.id, u.nombre, u.apellidos, u.email, u.rol, u.activo, u.fecha_registro,
+        a.semestre_actual AS semestre,
+        g.nombre AS grupo_nombre,
+        t.nombre AS turno_nombre,
+        e.nombre AS especialidad_nombre,
+        a.matricula
+      FROM usuarios u
+      LEFT JOIN alumnos a ON a.usuario_id = u.id
+      LEFT JOIN (
+        SELECT DISTINCT ON (alumno_id) 
+          alumno_id, grupo_id, ciclo_id, semestre
+        FROM historial_grupos_alumno
+        WHERE activo = TRUE
+        ORDER BY alumno_id, fecha_asignacion DESC
+      ) h ON h.alumno_id = a.id
+      LEFT JOIN grupos g ON g.id = h.grupo_id
+      LEFT JOIN turnos t ON t.id = g.turno_id
+      LEFT JOIN especialidades e ON e.id = g.especialidad_id
+    `;
+    const conditions = [];
+    const values = [];
+
+    if (semestre) {
+      conditions.push(`a.semestre_actual = $${values.length + 1}`);
+      values.push(parseInt(semestre));
+      if (!rol) {
+        conditions.push(`u.rol = 'alumno'`);
+      }
     }
 
-    sql += ' ORDER BY apellidos, nombre';
+    if (rol) {
+      conditions.push(`u.rol = $${values.length + 1}`);
+      values.push(rol);
+    }
 
-    const result = await query(sql, params);
+    if (search) {
+      const searchTerm = `%${search}%`;
+      conditions.push(`(u.nombre ILIKE $${values.length + 1} OR u.apellidos ILIKE $${values.length + 2} OR u.email ILIKE $${values.length + 3})`);
+      values.push(searchTerm, searchTerm, searchTerm);
+    }
+
+    if (activo !== undefined) {
+      const isActive = activo === 'true';
+      conditions.push(`u.activo = $${values.length + 1}`);
+      values.push(isActive);
+    }
+
+    if (conditions.length > 0) {
+      sql += ' WHERE ' + conditions.join(' AND ');
+    }
+
+    sql += ' ORDER BY u.apellidos, u.nombre';
+
+
+    const result = await query(sql, values);
     return res.json({ success: true, usuarios: result.rows });
   } catch (err) {
     console.error('Error en getUsuarios:', err);
     return res.status(500).json({ success: false, message: 'Error interno.' });
   }
 };
-
 export const getUsuarioById = async (req, res) => {
   try {
     const result = await query(
@@ -41,13 +87,12 @@ export const getUsuarioById = async (req, res) => {
 };
 
 export const crearUsuario = async (req, res) => {
-  const { nombre, apellidos, email, password, rol } = req.body;
+  const { nombre, apellidos, email, password, rol, matricula } = req.body;
 
-  // Validación
   if (!nombre || !apellidos || !email || !password || !rol) {
     return res.status(400).json({
       success: false,
-      message: 'Todos los campos son requeridos: nombre, apellidos, email, password, rol.',
+      message: 'Todos los campos obligatorios son requeridos: nombre, apellidos, email, password, rol.',
     });
   }
 
@@ -76,16 +121,25 @@ export const crearUsuario = async (req, res) => {
       [nombre.trim(), apellidos.trim(), email.toLowerCase().trim(), hash, rol]
     );
 
+    const nuevoUsuario = result.rows[0];
+
+    if (rol === 'alumno') {
+      await query(
+        `INSERT INTO alumnos (usuario_id, matricula) VALUES ($1, $2)`,
+        [nuevoUsuario.id, matricula || null]
+      );
+    }
+
     return res.status(201).json({
       success: true,
       message: 'Usuario creado correctamente.',
-      usuario: result.rows[0],
+      usuario: nuevoUsuario,
     });
   } catch (err) {
     if (err.code === '23505') {
       return res.status(409).json({
         success: false,
-        message: 'Ya existe un usuario con ese correo electrónico.',
+        message: 'Ya existe un usuario con ese correo electrónico o matrícula.',
       });
     }
     console.error('Error en crearUsuario:', err);
@@ -98,6 +152,17 @@ export const actualizarUsuario = async (req, res) => {
   const { id } = req.params;
 
   try {
+    // Validar rol si viene
+    if (rol) {
+      const rolesValidos = ['alumno', 'docente', 'administrador'];
+      if (!rolesValidos.includes(rol)) {
+        return res.status(400).json({
+          success: false,
+          message: `Rol inválido. Valores permitidos: ${rolesValidos.join(', ')}`,
+        });
+      }
+    }
+
     const result = await query(
       `UPDATE usuarios
        SET nombre    = COALESCE($1, nombre),
@@ -131,7 +196,6 @@ export const actualizarUsuario = async (req, res) => {
 export const desactivarUsuario = async (req, res) => {
   const { id } = req.params;
 
-  // Evita que el admin se desactive a sí mismo
   if (parseInt(id) === req.user.id) {
     return res.status(400).json({
       success: false,

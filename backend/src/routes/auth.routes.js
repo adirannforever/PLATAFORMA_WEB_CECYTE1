@@ -1,4 +1,3 @@
-// src/routes/auth.routes.js
 import { Router } from 'express';
 import { login, logout, me } from '../controllers/auth.controller.js';
 import { verifyToken } from '../middlewares/auth.js';

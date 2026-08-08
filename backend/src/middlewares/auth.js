@@ -40,3 +40,22 @@ export const requireRole = (...roles) => {
     next();
   };
 };
+
+export const requireTutor = async (req, res, next) => {
+  try {
+    const { query } = await import('../config/db.js');
+    const result = await query(
+      'SELECT id FROM grupos WHERE tutor_id = $1 AND activo = TRUE LIMIT 1',
+      [req.user.id]
+    );
+    if (!result.rows[0]) {
+      return res.status(403).json({
+        success: false,
+        message: 'Esta acción requiere ser tutor de un grupo activo.',
+      });
+    }
+    next();
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Error interno.' });
+  }
+};

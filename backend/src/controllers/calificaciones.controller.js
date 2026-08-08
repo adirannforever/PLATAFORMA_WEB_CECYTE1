@@ -1,28 +1,34 @@
 import { query } from '../config/db.js';
 
-const docenteOwnsInscripcion = async (inscripcion_id, docente_id) => {
+// Verificar si un docente es responsable de una materia_grupo
+const docenteOwnsMateriaGrupo = async (materia_grupo_id, docente_id) => {
   const result = await query(
-    `SELECT i.id
-     FROM inscripciones i
-     JOIN materias m ON m.id = i.materia_id
-     WHERE i.id = $1 AND m.docente_id = $2`,
-    [inscripcion_id, docente_id]
+    `SELECT id FROM materias_grupo WHERE id = $1 AND docente_id = $2 AND activa = TRUE`,
+    [materia_grupo_id, docente_id]
   );
   return result.rows.length > 0;
 };
 
+// Obtener las calificaciones del alumno autenticado
 export const misCalificaciones = async (req, res) => {
   try {
+    const alumno = await query('SELECT id FROM alumnos WHERE usuario_id = $1', [req.user.id]);
+    if (!alumno.rows[0]) {
+      return res.status(404).json({ success: false, message: 'Alumno no encontrado.' });
+    }
+    const alumnoId = alumno.rows[0].id;
+
     const result = await query(
-      `SELECT m.nombre AS materia, m.ciclo_escolar,
+      `SELECT mc.nombre AS materia, ce.nombre AS ciclo_escolar,
               c.parcial, c.calificacion, c.fecha_registro,
-              i.id AS inscripcion_id
+              mg.id AS materia_grupo_id
        FROM calificaciones c
-       JOIN inscripciones i ON i.id = c.inscripcion_id
-       JOIN materias m ON m.id = i.materia_id
-       WHERE i.alumno_id = $1
-       ORDER BY m.nombre, c.parcial`,
-      [req.user.id]
+       JOIN materias_grupo mg ON mg.id = c.materia_grupo_id
+       JOIN materias_catalogo mc ON mc.id = mg.materia_catalogo_id
+       JOIN ciclos_escolares ce ON ce.id = mg.ciclo_id
+       WHERE c.alumno_id = $1
+       ORDER BY mc.nombre, c.parcial`,
+      [alumnoId]
     );
 
     return res.json({ success: true, calificaciones: result.rows });
@@ -32,30 +38,33 @@ export const misCalificaciones = async (req, res) => {
   }
 };
 
+// Obtener calificaciones de todos los alumnos en una materia_grupo específica
 export const calificacionesPorMateria = async (req, res) => {
-  const { materia_id } = req.params;
+  const { materia_grupo_id } = req.params; // Cambiamos a materia_grupo_id
 
   try {
+    // Verificar permisos: docente debe ser el responsable de esa materia_grupo
     if (req.user.rol === 'docente') {
-      const owns = await query(
-        'SELECT id FROM materias WHERE id = $1 AND docente_id = $2',
-        [materia_id, req.user.id]
-      );
-      if (!owns.rows[0]) {
+      const owns = await docenteOwnsMateriaGrupo(materia_grupo_id, req.user.id);
+      if (!owns) {
         return res.status(403).json({ success: false, message: 'Acceso denegado.' });
       }
+    } else if (req.user.rol !== 'administrador') {
+      return res.status(403).json({ success: false, message: 'Acceso denegado.' });
     }
 
     const result = await query(
       `SELECT u.id AS alumno_id, u.nombre, u.apellidos,
-              i.id AS inscripcion_id,
+              a.id AS alumno_id_interno,
               c.id AS calificacion_id, c.parcial, c.calificacion
-       FROM inscripciones i
-       JOIN usuarios u ON u.id = i.alumno_id
-       LEFT JOIN calificaciones c ON c.inscripcion_id = i.id
-       WHERE i.materia_id = $1
+       FROM alumnos a
+       JOIN usuarios u ON u.id = a.usuario_id
+       LEFT JOIN calificaciones c ON c.alumno_id = a.id AND c.materia_grupo_id = $1
+       WHERE a.grupo_actual_id = (
+         SELECT grupo_id FROM materias_grupo WHERE id = $1
+       )
        ORDER BY u.apellidos, u.nombre, c.parcial`,
-      [materia_id]
+      [materia_grupo_id]
     );
 
     return res.json({ success: true, calificaciones: result.rows });
@@ -65,13 +74,14 @@ export const calificacionesPorMateria = async (req, res) => {
   }
 };
 
+// Registrar una calificación para un alumno en una materia_grupo
 export const registrarCalificacion = async (req, res) => {
-  const { inscripcion_id, parcial, calificacion } = req.body;
+  const { alumno_id, materia_grupo_id, parcial, calificacion } = req.body;
 
-  if (!inscripcion_id || !parcial || calificacion === undefined) {
+  if (!alumno_id || !materia_grupo_id || !parcial || calificacion === undefined) {
     return res.status(400).json({
       success: false,
-      message: 'inscripcion_id, parcial y calificacion son requeridos.',
+      message: 'alumno_id, materia_grupo_id, parcial y calificacion son requeridos.',
     });
   }
 
@@ -87,20 +97,29 @@ export const registrarCalificacion = async (req, res) => {
   }
 
   try {
+    // Verificar que el docente tiene permiso sobre esta materia_grupo
     if (req.user.rol === 'docente') {
-      const owns = await docenteOwnsInscripcion(inscripcion_id, req.user.id);
+      const owns = await docenteOwnsMateriaGrupo(materia_grupo_id, req.user.id);
       if (!owns) {
-        return res.status(403).json({
-          success: false,
-          message: 'No tienes permisos sobre esta inscripción.',
-        });
+        return res.status(403).json({ success: false, message: 'No tienes permisos sobre esta materia.' });
       }
     }
 
+    // Verificar que el alumno pertenece al grupo de esa materia
+    const grupoCheck = await query(
+      `SELECT a.id FROM alumnos a
+       JOIN materias_grupo mg ON mg.grupo_id = a.grupo_actual_id
+       WHERE a.id = $1 AND mg.id = $2`,
+      [alumno_id, materia_grupo_id]
+    );
+    if (!grupoCheck.rows[0]) {
+      return res.status(400).json({ success: false, message: 'El alumno no pertenece al grupo de esta materia.' });
+    }
+
     const result = await query(
-      `INSERT INTO calificaciones (inscripcion_id, parcial, calificacion)
-       VALUES ($1, $2, $3) RETURNING *`,
-      [inscripcion_id, parcialNum, calNum]
+      `INSERT INTO calificaciones (alumno_id, materia_grupo_id, parcial, calificacion, tipo_evaluacion, registrado_por)
+       VALUES ($1, $2, $3, $4, 'ordinaria', $5) RETURNING *`,
+      [alumno_id, materia_grupo_id, parcialNum, calNum, req.user.id]
     );
 
     return res.status(201).json({
@@ -120,6 +139,7 @@ export const registrarCalificacion = async (req, res) => {
   }
 };
 
+// Actualizar una calificación existente
 export const actualizarCalificacion = async (req, res) => {
   const { calificacion } = req.body;
   const { id } = req.params;
@@ -130,20 +150,28 @@ export const actualizarCalificacion = async (req, res) => {
   }
 
   try {
+    // Obtener la calificación para verificar permisos
+    const calRow = await query(
+      `SELECT c.id, c.materia_grupo_id, c.alumno_id
+       FROM calificaciones c
+       WHERE c.id = $1`,
+      [id]
+    );
+    if (!calRow.rows[0]) {
+      return res.status(404).json({ success: false, message: 'Calificación no encontrada.' });
+    }
+
     if (req.user.rol === 'docente') {
-      const calRow = await query('SELECT inscripcion_id FROM calificaciones WHERE id = $1', [id]);
-      if (!calRow.rows[0]) {
-        return res.status(404).json({ success: false, message: 'Calificación no encontrada.' });
-      }
-      const owns = await docenteOwnsInscripcion(calRow.rows[0].inscripcion_id, req.user.id);
+      const owns = await docenteOwnsMateriaGrupo(calRow.rows[0].materia_grupo_id, req.user.id);
       if (!owns) {
-        return res.status(403).json({ success: false, message: 'No tienes permisos.' });
+        return res.status(403).json({ success: false, message: 'No tienes permisos sobre esta calificación.' });
       }
     }
 
     const result = await query(
-      'UPDATE calificaciones SET calificacion = $1 WHERE id = $2 RETURNING *',
-      [calNum, id]
+      `UPDATE calificaciones SET calificacion = $1, registrado_por = $2
+       WHERE id = $3 RETURNING *`,
+      [calNum, req.user.id, id]
     );
 
     if (!result.rows[0]) {

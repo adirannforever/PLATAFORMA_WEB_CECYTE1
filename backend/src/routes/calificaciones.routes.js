@@ -1,24 +1,22 @@
-// src/routes/calificaciones.routes.js
 import { Router } from 'express';
 import { verifyToken, requireRole } from '../middlewares/auth.js';
 import {
   misCalificaciones,
   calificacionesPorMateria,
   registrarCalificacion,
-  actualizarCalificacion,
+  actualizarCalificacion
 } from '../controllers/calificaciones.controller.js';
 
 const router = Router();
-
 router.use(verifyToken);
 
-// Alumno: sus propias calificaciones
+// Alumno ve sus calificaciones
 router.get('/mis-calificaciones', requireRole('alumno'), misCalificaciones);
 
-// Docente y Admin: calificaciones de una materia
-router.get('/materia/:materia_id', requireRole('administrador', 'docente'), calificacionesPorMateria);
+// Docente/Admin ven calificaciones de una materia_grupo específica
+router.get('/materia/:materia_grupo_id', requireRole('administrador', 'docente'), calificacionesPorMateria);
 
-// Docente y Admin: registrar y actualizar
+// Registrar/actualizar calificaciones (docente/admin)
 router.post('/', requireRole('administrador', 'docente'), registrarCalificacion);
 router.put('/:id', requireRole('administrador', 'docente'), actualizarCalificacion);
 

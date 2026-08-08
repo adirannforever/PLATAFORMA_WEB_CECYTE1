@@ -28,7 +28,7 @@ const IconCalif = () => (
     <line x1="16" y1="17" x2="8" y2="17"/><polyline points="10,9 9,9 8,9"/>
   </svg>
 );
-const IconMaterias = () => (
+const IconGrupos = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
     <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
@@ -101,7 +101,7 @@ export default function DashboardLayout() {
     { to: '/dashboard', label: 'Inicio', icon: <IconDashboard />, roles: ['administrador', 'docente', 'alumno'] },
     { to: '/comunicados', label: 'Comunicados', icon: <IconComunicados />, roles: ['administrador', 'docente', 'alumno'] },
     { to: '/mis-calificaciones', label: 'Mis Calificaciones', icon: <IconCalif />, roles: ['alumno'] },
-    { to: '/materias', label: 'Materias', icon: <IconMaterias />, roles: ['administrador', 'docente'] },
+    { to: '/grupos', label: 'Grupos', icon: <IconGrupos />, roles: ['administrador', 'docente'] },
     { to: '/usuarios', label: 'Usuarios', icon: <IconUsuarios />, roles: ['administrador'] },
     { to: '/inscripciones', label: 'Inscripciones', icon: <IconInscripciones />, roles: ['administrador'] },
   ].filter(item => item.roles.includes(usuario?.rol));
@@ -196,7 +196,8 @@ export default function DashboardLayout() {
         </header>
 
         <main className={styles.content}>
-          <Outlet />
+             <Outlet />
+           
         </main>
       </div>
 

@@ -1,21 +1,26 @@
 // src/controllers/inscripciones.controller.js
-
 import { query } from '../config/db.js';
 
-// ── GET /api/inscripciones/mis-materias ───────────────────────
-// Para un alumno: lista las materias en las que está inscrito
 export const misMaterias = async (req, res) => {
   try {
+    const alumnoRes = await query('SELECT id FROM alumnos WHERE usuario_id = $1', [req.user.id]);
+    if (!alumnoRes.rows[0]) {
+      return res.status(404).json({ success: false, message: 'Perfil de alumno no encontrado.' });
+    }
+    const alumnoId = alumnoRes.rows[0].id;
+
     const result = await query(
       `SELECT i.id AS inscripcion_id, i.fecha_inscripcion,
-              m.id AS materia_id, m.nombre AS materia, m.descripcion, m.ciclo_escolar,
+              mg.id AS materia_grupo_id, m.nombre AS materia, m.descripcion,
               u.nombre AS docente_nombre, u.apellidos AS docente_apellidos
-       FROM inscripciones i
-       JOIN materias m ON m.id = i.materia_id
-       JOIN usuarios u ON u.id = m.docente_id
+       FROM inscripciones_grupo i
+       JOIN materias_grupo mg ON mg.id = i.materia_grupo_id
+       JOIN materias m ON m.id = mg.materia_id
+       JOIN docentes d ON d.id = mg.docente_id
+       JOIN usuarios u ON u.id = d.usuario_id
        WHERE i.alumno_id = $1
-       ORDER BY m.ciclo_escolar DESC, m.nombre`,
-      [req.user.id]
+       ORDER BY m.nombre`,
+      [alumnoId]
     );
 
     return res.json({ success: true, materias: result.rows });
@@ -26,36 +31,17 @@ export const misMaterias = async (req, res) => {
 };
 
 export const inscribirAlumno = async (req, res) => {
-  const { alumno_id, materia_id } = req.body;
+  const { alumno_id, materia_grupo_id } = req.body;
 
-  if (!alumno_id || !materia_id) {
-    return res.status(400).json({
-      success: false,
-      message: 'alumno_id y materia_id son requeridos.',
-    });
+  if (!alumno_id || !materia_grupo_id) {
+    return res.status(400).json({ success: false, message: 'alumno_id y materia_grupo_id son requeridos.' });
   }
 
   try {
-    const alumno = await query(
-      "SELECT id FROM usuarios WHERE id = $1 AND rol = 'alumno' AND activo = TRUE",
-      [alumno_id]
-    );
-    if (!alumno.rows[0]) {
-      return res.status(400).json({ success: false, message: 'alumno_id inválido.' });
-    }
-
-    const materia = await query(
-      'SELECT id FROM materias WHERE id = $1 AND activa = TRUE',
-      [materia_id]
-    );
-    if (!materia.rows[0]) {
-      return res.status(400).json({ success: false, message: 'materia_id inválido o inactiva.' });
-    }
-
     const result = await query(
-      `INSERT INTO inscripciones (alumno_id, materia_id)
+      `INSERT INTO inscripciones_grupo (alumno_id, materia_grupo_id)
        VALUES ($1, $2) RETURNING *`,
-      [alumno_id, materia_id]
+      [alumno_id, materia_grupo_id]
     );
 
     return res.status(201).json({
@@ -65,10 +51,7 @@ export const inscribirAlumno = async (req, res) => {
     });
   } catch (err) {
     if (err.code === '23505') {
-      return res.status(409).json({
-        success: false,
-        message: 'El alumno ya está inscrito en esta materia.',
-      });
+      return res.status(409).json({ success: false, message: 'El alumno ya está inscrito en este grupo.' });
     }
     console.error('Error en inscribirAlumno:', err);
     return res.status(500).json({ success: false, message: 'Error interno.' });
@@ -78,7 +61,7 @@ export const inscribirAlumno = async (req, res) => {
 export const eliminarInscripcion = async (req, res) => {
   try {
     const result = await query(
-      'DELETE FROM inscripciones WHERE id = $1 RETURNING id',
+      'DELETE FROM inscripciones_grupo WHERE id = $1 RETURNING id',
       [req.params.id]
     );
 
@@ -86,7 +69,7 @@ export const eliminarInscripcion = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Inscripción no encontrada.' });
     }
 
-    return res.json({ success: true, message: 'Inscripción eliminada (y sus calificaciones).' });
+    return res.json({ success: true, message: 'Inscripción eliminada.' });
   } catch (err) {
     console.error('Error en eliminarInscripcion:', err);
     return res.status(500).json({ success: false, message: 'Error interno.' });

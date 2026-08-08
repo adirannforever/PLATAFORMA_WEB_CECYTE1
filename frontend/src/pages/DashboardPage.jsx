@@ -1,8 +1,7 @@
-
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom'; 
 import { useAuth } from '../context/AuthContext';
-import { comunicadosService, calificacionesService, materiasService, usuariosService } from '../services/api';
+import { comunicadosService, calificacionesService, catalogosService } from '../services/api';
 import styles from './DashboardPage.module.css';
 
 const SALUDO = () => {
@@ -14,57 +13,72 @@ const SALUDO = () => {
 
 export default function DashboardPage() {
   const { usuario } = useAuth();
+  const location = useLocation(); 
   const [comunicados, setComunicados] = useState([]);
   const [stats, setStats] = useState({});
   const [cargando, setCargando] = useState(true);
 
-  useEffect(() => {
-    // Si aún no hay usuario cargado, no ejecutamos la petición
+  
+  const cargar = async () => {
     if (!usuario?.rol) return;
+    
+    try {
+      const comRes = await comunicadosService.getAll();
+      const listaComunicados = comRes?.data || [];
+      setComunicados(listaComunicados.slice(0, 3));
 
-    const cargar = async () => {
-      try {
-        const comRes = await comunicadosService.getAll();
-        // Blindamos por si la API devuelve directamente un array en .data o en .comunicados
-        const listaComunicados = comRes?.data?.comunicados || (Array.isArray(comRes?.data) ? comRes.data : []);
-        setComunicados(listaComunicados.slice(0, 3));
+      if (usuario.rol === 'administrador') {
+        const [alumnos, docentes, materias] = await Promise.all([
+          catalogosService.getAlumnos(),
+          catalogosService.getDocentes(),
+          catalogosService.getMaterias(),
+        ]);
+        setStats({
+          alumnos: alumnos?.data?.length ?? 0,
+          docentes: docentes?.data?.length ?? 0,
+          materias: materias?.data?.length ?? 0,
+          comunicados: listaComunicados.length,
+        });
+      } else if (usuario.rol === 'docente') {
+        const materias = await catalogosService.getMaterias();
+        setStats({ materias: materias?.data?.length ?? 0 });
+      } else if (usuario.rol === 'alumno') {
+        const califs = await calificacionesService.misCalificaciones();
+        setStats({ calificaciones: califs?.data?.calificaciones?.length ?? 0 });
+      }
+    } catch (err) {
+      console.error('Error al cargar datos del Dashboard:', err);
+    } finally {
+      setCargando(false);
+    }
+  };
 
-        // Stats según rol
-        if (usuario.rol === 'administrador') {
-          const [alumnos, docentes, materias] = await Promise.all([
-            usuariosService.getAll('alumno'),
-            usuariosService.getAll('docente'),
-            materiasService.getAll(),
-          ]);
-          setStats({
-            alumnos: alumnos?.data?.usuarios?.length ?? 0,
-            docentes: docentes?.data?.usuarios?.length ?? 0,
-            materias: materias?.data?.materias?.length ?? 0,
-            comunicados: listaComunicados.length,
-          });
-        } else if (usuario.rol === 'docente') {
-          const materias = await materiasService.getAll();
-          setStats({ materias: materias?.data?.materias?.length ?? 0 });
-        } else {
-          const califs = await calificacionesService.misCalificaciones();
-          setStats({ calificaciones: califs?.data?.calificaciones?.length ?? 0 });
-        }
-      } catch (err) {
-        console.error('Error al cargar datos del Dashboard:', err);
-      } finally {
-        setCargando(false);
+  
+  useEffect(() => {
+    cargar();
+
+    
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        cargar();
       }
     };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    cargar();
-  }, [usuario?.rol]);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [usuario?.rol, location.pathname]); 
 
-  // 1. Guarda de seguridad por si el usuario aún no está listo en el contexto
+  
+  
+
+  
   if (!usuario) {
     return <div className={styles.loading}>Verificando sesión...</div>;
   }
 
-  // 2. Pantalla de carga (Skeleton)
+  
   if (cargando) {
     return (
       <div className={styles.page}>
@@ -117,7 +131,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Tarjetas de estadísticas — según rol */}
+      {/* Tarjetas de estadísticas y accesos directos — según rol */}
       {usuario.rol === 'administrador' && (
         <div className={styles.statsGrid}>
           <StatCard label="Alumnos registrados" value={stats.alumnos} to="/usuarios" color="green" />
@@ -136,6 +150,8 @@ export default function DashboardPage() {
       {usuario.rol === 'alumno' && (
         <div className={styles.statsGrid}>
           <StatCard label="CALIFICACIONES REGISTRADAS" value={stats.calificaciones} to="/mis-calificaciones" color="green" />
+          {/* Acceso directo al expediente personal del alumno usando su id */}
+          <StatCard label="MI EXPEDIENTE ESCOLAR" value="Ver" to={`/expediente/${usuario.id}`} color="blue" />
         </div>
       )}
 
@@ -151,7 +167,6 @@ export default function DashboardPage() {
         ) : (
           <div className={styles.comunicadosList}>
             {comunicados.map((c) => {
-              // Blindaje para evitar que un contenido null o undefined rompa el .length
               const textoContenido = c?.contenido || '';
               const fechaSegura = c?.fecha_publicacion ? new Date(c.fecha_publicacion) : new Date();
 

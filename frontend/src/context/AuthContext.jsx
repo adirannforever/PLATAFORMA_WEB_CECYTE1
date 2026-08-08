@@ -1,5 +1,3 @@
-
-
 import { createContext, useContext, useState, useEffect } from 'react';
 import { authService } from '../services/api';
 
@@ -7,19 +5,19 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [usuario, setUsuario] = useState(null);
-  const [cargando, setCargando] = useState(true); 
+  const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
     authService.me()
-      .then((res) => setUsuario(res.data.usuario))
+      .then((res) => setUsuario(res.usuario)) 
       .catch(() => setUsuario(null))
       .finally(() => setCargando(false));
   }, []);
 
   const login = async (email, password) => {
     const res = await authService.login(email, password);
-    setUsuario(res.data.usuario);
-    return res.data.usuario;
+    setUsuario(res.usuario);  
+    return res.usuario;
   };
 
   const logout = async () => {
@@ -35,7 +33,9 @@ export const AuthProvider = ({ children }) => {
 };
 
 export const useAuth = () => {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth debe usarse dentro de AuthProvider');
-  return ctx;
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth debe ser usado dentro de un AuthProvider');
+  }
+  return context;
 };

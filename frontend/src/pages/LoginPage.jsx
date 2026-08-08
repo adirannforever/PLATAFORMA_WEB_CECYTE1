@@ -24,15 +24,15 @@ export default function LoginPage() {
     setError('');
     setCargando(true);
 
-    try {
-      await login(email, password);
-      navigate('/dashboard');
-    } catch (err) {
-      setError(err.response?.data?.message || 'Error al iniciar sesión. Verifica tus datos.');
-    } finally {
-      setCargando(false);
-    }
-  };
+      try {
+        const resultado = await login(email, password);
+        navigate('/dashboard');
+      } catch (err) {
+        setError(err.response?.data?.message || 'Error al iniciar sesión. Verifica tus datos.');
+      } finally {
+        setCargando(false);
+      }
+    };
 
   return (
     <div className={styles.page}>
