@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { reportesService, catalogosService, usuariosService, gruposService } from '../services/api';
-import { FileText, Download, Users, BarChart3, CheckCircle, Search, X } from 'lucide-react';
-import Skeleton from '../components/Skeleton';
+import { FileText, Download, Users, BarChart3, CheckCircle, Search, X, Eye, Printer } from 'lucide-react';
 import styles from './ReportesPage.module.css';
 
 export default function ReportesPage() {
@@ -12,17 +11,22 @@ export default function ReportesPage() {
   const [error, setError] = useState('');
   const [exito, setExito] = useState('');
 
-  
+  // Estado para el visor PDF
+  const [visorPdf, setVisorPdf] = useState({
+    open: false,
+    blob: null,
+    filename: '',
+    tipo: '', // 'boleta' | 'constancia'
+  });
+
   const [ciclos, setCiclos] = useState([]);
   const [grupos, setGrupos] = useState([]);
   const [especialidades, setEspecialidades] = useState([]);
   const [alumnos, setAlumnos] = useState([]);
 
-  
   const [alumnoId, setAlumnoId] = useState('');
   const [cicloId, setCicloId] = useState('');
 
-  
   const [busquedaAlumno, setBusquedaAlumno] = useState('');
   const [filtroGrupoAlumno, setFiltroGrupoAlumno] = useState('');
   const [filtroEspecialidadAlumno, setFiltroEspecialidadAlumno] = useState('');
@@ -30,17 +34,14 @@ export default function ReportesPage() {
   const [alumnosFiltrados, setAlumnosFiltrados] = useState([]);
   const [buscandoAlumnos, setBuscandoAlumnos] = useState(false);
 
-  
   const [filtroGrupo, setFiltroGrupo] = useState('');
   const [filtroEspecialidad, setFiltroEspecialidad] = useState('');
   const [filtroSemestre, setFiltroSemestre] = useState('');
   const [filtroEstatus, setFiltroEstatus] = useState('');
 
-  
   const [estadisticasCicloId, setEstadisticasCicloId] = useState('');
   const [estadisticasGrupoId, setEstadisticasGrupoId] = useState('');
 
-  
   const letrasUnicas = useMemo(() => {
     const letras = grupos.map(g => g.letra).filter(Boolean);
     return [...new Set(letras)].sort();
@@ -59,7 +60,6 @@ export default function ReportesPage() {
         setGrupos(gruposRes.data || []);
         setEspecialidades(espRes.data || []);
         setAlumnos(alumnosRes.usuarios || []);
-        
         const activo = ciclosRes.data?.find(c => c.activo);
         if (activo) {
           setCicloId(String(activo.id));
@@ -72,7 +72,6 @@ export default function ReportesPage() {
     cargarCatalogos();
   }, []);
 
-  
   const buscarAlumnos = useCallback(async () => {
     setBuscandoAlumnos(true);
     try {
@@ -90,7 +89,6 @@ export default function ReportesPage() {
     }
   }, [busquedaAlumno, filtroGrupoAlumno, filtroEspecialidadAlumno, filtroSemestreAlumno]);
 
-  
   useEffect(() => {
     const handler = setTimeout(() => {
       if (busquedaAlumno || filtroGrupoAlumno || filtroEspecialidadAlumno || filtroSemestreAlumno) {
@@ -108,58 +106,70 @@ export default function ReportesPage() {
     setAlumnosFiltrados([]);
   };
 
-    const handleDescargar = async (tipo, params, baseName) => {
+  const generarNombreArchivo = (tipo, params) => {
+    const now = new Date();
+    const timestamp =
+      now.getFullYear() +
+      '-' +
+      String(now.getMonth() + 1).padStart(2, '0') +
+      '-' +
+      String(now.getDate()).padStart(2, '0') +
+      '_' +
+      String(now.getHours()).padStart(2, '0') +
+      '-' +
+      String(now.getMinutes()).padStart(2, '0');
+
+    let nombreAlumno = '';
+    if (['boleta', 'constancia'].includes(tipo) && busquedaAlumno) {
+      const match = busquedaAlumno.match(/^([^\(]+)/);
+      if (match) {
+        nombreAlumno = match[1].trim().replace(/\s+/g, '_').replace(/,/g, '');
+      }
+    }
+
+    const ext = tipo === 'listado' || tipo === 'estadisticas' ? 'xlsx' : 'pdf';
+    if (nombreAlumno) {
+      return `${tipo}_${nombreAlumno}_${timestamp}.${ext}`;
+    }
+    return `${tipo}_${timestamp}.${ext}`;
+  };
+
+  const handleGenerar = async (tipo, params) => {
     setCargando(true);
     setError('');
     try {
-        let blob;
-        switch (tipo) {
+      let blob;
+      switch (tipo) {
         case 'boleta':
-            blob = await reportesService.generarBoleta(params);
-            break;
+          blob = await reportesService.generarBoleta(params);
+          break;
         case 'constancia':
-            blob = await reportesService.generarConstancia(params);
-            break;
+          blob = await reportesService.generarConstancia(params);
+          break;
         case 'listado':
-            blob = await reportesService.generarListadoAlumnos(params);
-            break;
+          blob = await reportesService.generarListadoAlumnos(params);
+          break;
         case 'estadisticas':
-            blob = await reportesService.generarEstadisticas(params);
-            break;
+          blob = await reportesService.generarEstadisticas(params);
+          break;
         default:
-            throw new Error('Tipo de reporte inválido');
-        }
+          throw new Error('Tipo de reporte inválido');
+      }
 
-        
-        const now = new Date();
-        const timestamp =
-        now.getFullYear() +
-        '-' +
-        String(now.getMonth() + 1).padStart(2, '0') +
-        '-' +
-        String(now.getDate()).padStart(2, '0') +
-        '_' +
-        String(now.getHours()).padStart(2, '0') +
-        '-' +
-        String(now.getMinutes()).padStart(2, '0');
+      const filename = generarNombreArchivo(tipo, params);
 
-        
-        let nombreAlumno = '';
-        if (['boleta', 'constancia'].includes(tipo) && busquedaAlumno) {
-        
-        const match = busquedaAlumno.match(/^([^\(]+)/);
-        if (match) {
-            nombreAlumno = match[1].trim().replace(/\s+/g, '_').replace(/,/g, '');
-        }
-        }
-
-        let filename;
-        if (nombreAlumno) {
-        filename = `${tipo}_${nombreAlumno}_${timestamp}.${tipo === 'listado' || tipo === 'estadisticas' ? 'xlsx' : 'pdf'}`;
-        } else {
-        filename = `${baseName || tipo}_${timestamp}.${tipo === 'listado' || tipo === 'estadisticas' ? 'xlsx' : 'pdf'}`;
-        }
-
+      // Si es PDF, abrir visor. Si es Excel, descargar directamente.
+      if (tipo === 'boleta' || tipo === 'constancia') {
+        setVisorPdf({
+          open: true,
+          blob,
+          filename,
+          tipo,
+        });
+        setExito(`Reporte generado: ${filename}`);
+        setTimeout(() => setExito(''), 4000);
+      } else {
+        // Excel: descarga directa
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
@@ -168,15 +178,44 @@ export default function ReportesPage() {
         link.click();
         document.body.removeChild(link);
         window.URL.revokeObjectURL(url);
-
         setExito(`Reporte descargado: ${filename}`);
-        setTimeout(() => setExito(''), 5000);
+        setTimeout(() => setExito(''), 4000);
+      }
     } catch (err) {
-        setError(err.response?.data?.message || 'Error al generar el reporte');
+      setError(err.response?.data?.message || 'Error al generar el reporte');
     } finally {
-        setCargando(false);
+      setCargando(false);
     }
-    };
+  };
+
+  const descargarDesdeVisor = () => {
+    if (!visorPdf.blob) return;
+    const url = window.URL.createObjectURL(visorPdf.blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = visorPdf.filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  };
+
+  const imprimirDesdeVisor = () => {
+    if (!visorPdf.blob) return;
+    const url = window.URL.createObjectURL(visorPdf.blob);
+    const ventana = window.open(url, '_blank');
+    if (ventana) {
+      ventana.focus();
+      ventana.print();
+    }
+  };
+
+  const cerrarVisor = () => {
+    if (visorPdf.blob) {
+      URL.revokeObjectURL(URL.createObjectURL(visorPdf.blob));
+    }
+    setVisorPdf({ open: false, blob: null, filename: '', tipo: '' });
+  };
 
   const limpiarBusquedaAlumno = () => {
     setBusquedaAlumno('');
@@ -300,10 +339,10 @@ export default function ReportesPage() {
         <div className={styles.actions}>
           <button
             className={styles.btnPrimary}
-            onClick={() => handleDescargar('boleta', { alumno_id: alumnoId, ciclo_id: cicloId }, `boleta_${alumnoId}.pdf`)}
+            onClick={() => handleGenerar('boleta', { alumno_id: alumnoId, ciclo_id: cicloId })}
             disabled={!alumnoId || !cicloId || cargando}
           >
-            <Download size={16} /> {cargando ? 'Generando...' : 'Generar PDF'}
+            <Eye size={16} /> {cargando ? 'Generando...' : 'Ver PDF'}
           </button>
           {alumnoId && cicloId && (
             <span className={styles.helpText}>
@@ -405,10 +444,10 @@ export default function ReportesPage() {
         <div className={styles.actions}>
           <button
             className={styles.btnPrimary}
-            onClick={() => handleDescargar('constancia', { alumno_id: alumnoId }, `constancia_${alumnoId}.pdf`)}
+            onClick={() => handleGenerar('constancia', { alumno_id: alumnoId })}
             disabled={!alumnoId || cargando}
           >
-            <Download size={16} /> {cargando ? 'Generando...' : 'Generar PDF'}
+            <Eye size={16} /> {cargando ? 'Generando...' : 'Ver PDF'}
           </button>
           {alumnoId && (
             <span className={styles.helpText}>
@@ -488,7 +527,7 @@ export default function ReportesPage() {
               if (filtroEspecialidad) params.especialidad_id = filtroEspecialidad;
               if (filtroSemestre) params.semestre = filtroSemestre;
               if (filtroEstatus) params.estatus = filtroEstatus;
-              handleDescargar('listado', params, `listado_alumnos.xlsx`);
+              handleGenerar('listado', params);
             }}
             disabled={cargando}
           >
@@ -543,7 +582,7 @@ export default function ReportesPage() {
             onClick={() => {
               const params = { ciclo_id: estadisticasCicloId };
               if (estadisticasGrupoId) params.grupo_id = estadisticasGrupoId;
-              handleDescargar('estadisticas', params, `estadisticas.xlsx`);
+              handleGenerar('estadisticas', params);
             }}
             disabled={!estadisticasCicloId || cargando}
           >
@@ -590,6 +629,56 @@ export default function ReportesPage() {
         {tabActiva === 'listado' && renderListado()}
         {tabActiva === 'estadisticas' && renderEstadisticas()}
       </div>
+
+      {/* ===== VISOR PDF ===== */}
+      {visorPdf.open && visorPdf.blob && (
+        <div className={styles.modalOverlay} onClick={cerrarVisor}>
+          <div className={styles.visorModal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.visorHeader}>
+              <h3 className={styles.visorTitle}>
+                <FileText size={18} /> {visorPdf.tipo === 'boleta' ? 'Boleta de calificaciones' : 'Constancia de estudios'}
+              </h3>
+              <div className={styles.visorActions}>
+                <button
+                  className={styles.visorBtn}
+                  onClick={imprimirDesdeVisor}
+                  title="Imprimir"
+                >
+                  <Printer size={16} />
+                </button>
+                <button
+                  className={styles.visorBtn}
+                  onClick={descargarDesdeVisor}
+                  title="Descargar"
+                >
+                  <Download size={16} />
+                </button>
+                <button
+                  className={styles.visorBtnClose}
+                  onClick={cerrarVisor}
+                  title="Cerrar"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+            <div className={styles.visorBody}>
+              <iframe
+                src={URL.createObjectURL(visorPdf.blob)}
+                className={styles.visorIframe}
+                title="Visor PDF"
+                frameBorder="0"
+              />
+            </div>
+            <div className={styles.visorFooter}>
+              <span className={styles.visorFilename}>{visorPdf.filename}</span>
+              <button className={styles.visorBtnCerrar} onClick={cerrarVisor}>
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
