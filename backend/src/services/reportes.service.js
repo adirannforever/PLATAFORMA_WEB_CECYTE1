@@ -2,18 +2,24 @@ import { query } from '../config/db.js';
 import PDFDocument from 'pdfkit';
 import ExcelJS from 'exceljs';
 
+// ============================================================
+// SERVICIO: Boleta de calificaciones (PDF)
+// ============================================================
 export async function generarBoletaPDF(alumnoId, cicloId) {
+  // Obtener datos del alumno
   const alumno = await query(
     `SELECT a.id, a.matricula, a.semestre_actual, a.estatus,
             u.nombre, u.apellidos,
             g.nombre AS grupo_nombre, g.letra AS grupo_letra,
-            e.nombre AS especialidad_nombre
+            e.nombre AS especialidad_nombre,
+            c.nombre AS ciclo_nombre
      FROM alumnos a
      JOIN usuarios u ON u.id = a.usuario_id
      LEFT JOIN grupos g ON g.id = a.grupo_actual_id
      LEFT JOIN especialidades e ON e.id = g.especialidad_id
+     LEFT JOIN ciclos_escolares c ON c.id = $2
      WHERE a.id = $1`,
-    [alumnoId]
+    [alumnoId, cicloId]
   );
 
   if (!alumno.rows[0]) {
@@ -22,7 +28,7 @@ export async function generarBoletaPDF(alumnoId, cicloId) {
 
   const alumnoData = alumno.rows[0];
 
-  
+  // Obtener calificaciones del alumno en este ciclo
   const calificaciones = await query(
     `SELECT 
       mc.nombre AS materia_nombre,
@@ -36,7 +42,7 @@ export async function generarBoletaPDF(alumnoId, cicloId) {
     [alumnoId, cicloId]
   );
 
-  
+  // Agrupar por materia
   const materiasMap = {};
   calificaciones.rows.forEach(row => {
     if (!materiasMap[row.materia_nombre]) {
@@ -50,7 +56,7 @@ export async function generarBoletaPDF(alumnoId, cicloId) {
 
   const materias = Object.values(materiasMap);
 
-  
+  // Calcular promedios
   materias.forEach(m => {
     const valores = Object.values(m.parciales);
     m.promedio = valores.length > 0 
@@ -62,13 +68,12 @@ export async function generarBoletaPDF(alumnoId, cicloId) {
     ? Math.round((materias.reduce((a, b) => a + b.promedio, 0) / materias.length) * 10) / 10
     : 0;
 
-  
+  // Generar PDF
   const doc = new PDFDocument({ margin: 50 });
   const buffers = [];
   doc.on('data', buffers.push.bind(buffers));
-  doc.on('end', () => {});
 
-  
+  // Header
   doc.fontSize(16).text('BOLETA DE CALIFICACIONES', { align: 'center' });
   doc.moveDown();
   doc.fontSize(10);
@@ -77,15 +82,26 @@ export async function generarBoletaPDF(alumnoId, cicloId) {
   doc.text(`Semestre: ${alumnoData.semestre_actual}°`);
   doc.text(`Grupo: ${alumnoData.grupo_nombre || 'Sin grupo'}`);
   doc.text(`Especialidad: ${alumnoData.especialidad_nombre || 'Sin especialidad'}`);
+  doc.text(`Ciclo: ${alumnoData.ciclo_nombre || 'Sin ciclo'}`);
   doc.text(`Estatus: ${alumnoData.estatus}`);
   doc.moveDown();
 
-  
+  if (materias.length === 0) {
+    doc.fontSize(12).text('El alumno no tiene calificaciones registradas en este ciclo.', { align: 'center' });
+    doc.end();
+    return new Promise((resolve) => {
+      doc.on('end', () => {
+        const pdfBuffer = Buffer.concat(buffers);
+        resolve(pdfBuffer);
+      });
+    });
+  }
+
+  // Tabla de materias
   const tableTop = doc.y;
   let y = tableTop;
 
   doc.fontSize(9);
-  
   doc.text('Materia', 50, y, { width: 200 });
   doc.text('P1', 250, y, { width: 40, align: 'center' });
   doc.text('P2', 290, y, { width: 40, align: 'center' });
@@ -93,7 +109,6 @@ export async function generarBoletaPDF(alumnoId, cicloId) {
   doc.text('Promedio', 370, y, { width: 80, align: 'right' });
   y += 20;
 
-  
   materias.forEach(m => {
     doc.text(m.nombre.substring(0, 30), 50, y, { width: 200 });
     doc.text(m.parciales[1]?.toString() || '-', 250, y, { width: 40, align: 'center' });
@@ -117,9 +132,9 @@ export async function generarBoletaPDF(alumnoId, cicloId) {
   });
 }
 
-
-
-
+// ============================================================
+// SERVICIO: Constancia de estudios (PDF)
+// ============================================================
 export async function generarConstanciaPDF(alumnoId) {
   const alumno = await query(
     `SELECT a.id, a.matricula, a.semestre_actual,
@@ -144,7 +159,6 @@ export async function generarConstanciaPDF(alumnoId) {
   const buffers = [];
   doc.on('data', buffers.push.bind(buffers));
 
-  
   doc.fontSize(16).text('CONSTANCIA DE ESTUDIOS', { align: 'center' });
   doc.moveDown(2);
   doc.fontSize(12);
@@ -170,9 +184,9 @@ export async function generarConstanciaPDF(alumnoId) {
   });
 }
 
-
-
-
+// ============================================================
+// SERVICIO: Listado de alumnos (Excel)
+// ============================================================
 export async function generarListadoAlumnosExcel(filtros = {}) {
   const { grupo_id, especialidad_id, semestre, estatus } = filtros;
 
@@ -218,7 +232,6 @@ export async function generarListadoAlumnosExcel(filtros = {}) {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Alumnos');
 
-  
   worksheet.columns = [
     { header: 'Matrícula', key: 'matricula', width: 15 },
     { header: 'Apellidos', key: 'apellidos', width: 25 },
@@ -230,7 +243,6 @@ export async function generarListadoAlumnosExcel(filtros = {}) {
     { header: 'Estatus', key: 'estatus', width: 15 },
   ];
 
-  
   alumnos.forEach(alumno => {
     worksheet.addRow(alumno);
   });
@@ -239,9 +251,9 @@ export async function generarListadoAlumnosExcel(filtros = {}) {
   return buffer;
 }
 
-
-
-
+// ============================================================
+// SERVICIO: Estadísticas de rendimiento (Excel)
+// ============================================================
 export async function generarEstadisticasExcel(cicloId, grupoId = null) {
   let sql = `
     SELECT 
@@ -250,14 +262,14 @@ export async function generarEstadisticasExcel(cicloId, grupoId = null) {
       g.letra AS grupo_letra,
       mc.nombre AS materia_nombre,
       COUNT(DISTINCT c.alumno_id) AS total_alumnos,
-      AVG(c.calificacion) AS promedio_materia,
+      ROUND(AVG(c.calificacion), 2) AS promedio_materia,
       COUNT(CASE WHEN c.calificacion >= 6 THEN 1 END) AS aprobados,
       COUNT(CASE WHEN c.calificacion < 6 THEN 1 END) AS reprobados
     FROM calificaciones c
     JOIN materias_grupo mg ON mg.id = c.materia_grupo_id
     JOIN grupos g ON g.id = mg.grupo_id
     JOIN materias_catalogo mc ON mc.id = mg.materia_catalogo_id
-    WHERE c.ciclo_id = $1
+    WHERE c.ciclo_id = $1 AND c.tipo_evaluacion = 'ordinaria'
   `;
   const params = [cicloId];
 
