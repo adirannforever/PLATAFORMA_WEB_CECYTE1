@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { horariosService, catalogosService, usuariosService } from '../services/api';
+import { horariosService, catalogosService, usuariosService, gruposService } from '../services/api';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { Settings, Users, User, FlaskConical, RefreshCw, Save, AlertCircle, X, Plus } from 'lucide-react';
@@ -165,7 +165,6 @@ export default function HorariosPage() {
   const [bloques, setBloques] = useState([]);
   const [horasGrid, setHorasGrid] = useState([]);
 
-  // Estado para el modal de agregar materia
   const [addModal, setAddModal] = useState({ open: false });
   const [materiasDisponibles, setMateriasDisponibles] = useState([]);
   const [nuevoBloque, setNuevoBloque] = useState({
@@ -175,19 +174,20 @@ export default function HorariosPage() {
     duracion_minutos: 50,
   });
 
-  // Obtener materias del grupo seleccionado (las que no tienen bloques)
+  // Obtener materias del grupo seleccionado usando gruposService
   const cargarMateriasDisponibles = useCallback(async () => {
     if (!grupoSeleccionado) return;
     try {
-      // Obtener todas las materias_grupo del grupo
-      const res = await catalogosService.getMateriasGrupo(grupoSeleccionado);
-      const todas = res.data || [];
+      const res = await gruposService.getMaterias(grupoSeleccionado);
+      // La respuesta viene como { success: true, materias: [...] }
+      const materias = res.materias || [];
       // Filtrar las que ya tienen bloques asignados
       const idsConBloque = bloques.map(b => b.materia_grupo_id);
-      const disponibles = todas.filter(m => !idsConBloque.includes(m.id));
+      const disponibles = materias.filter(m => !idsConBloque.includes(m.id));
       setMateriasDisponibles(disponibles);
     } catch (e) {
       console.error('Error cargando materias disponibles:', e);
+      setError('No se pudieron cargar las materias del grupo');
     }
   }, [grupoSeleccionado, bloques]);
 
@@ -335,7 +335,6 @@ export default function HorariosPage() {
     }
   };
 
-  // Agregar nuevo bloque
   const handleAgregarBloque = () => {
     const { materia_grupo_id, dia_semana, hora_inicio, duracion_minutos } = nuevoBloque;
     if (!materia_grupo_id || !hora_inicio) {
@@ -343,9 +342,11 @@ export default function HorariosPage() {
       return;
     }
 
-    // Buscar la materia seleccionada para obtener su nombre
     const materia = materiasDisponibles.find(m => m.id === parseInt(materia_grupo_id));
-    if (!materia) return;
+    if (!materia) {
+      setError('Materia no encontrada');
+      return;
+    }
 
     const horaFin = new Date(`2000-01-01T${hora_inicio}`);
     horaFin.setMinutes(horaFin.getMinutes() + parseInt(duracion_minutos));
@@ -353,8 +354,8 @@ export default function HorariosPage() {
     const nuevoBloqueObj = {
       id: Date.now(), // temporal
       materia_grupo_id: parseInt(materia_grupo_id),
-      materia_nombre: materia.materia_nombre,
-      materia_clave: materia.materia_clave,
+      materia_nombre: materia.materia_nombre || materia.nombre || 'Materia',
+      materia_clave: materia.clave || materia.materia_clave || '',
       docente_apellidos: materia.docente_apellidos || '',
       dia_semana,
       hora_inicio,
@@ -367,13 +368,11 @@ export default function HorariosPage() {
     setTimeout(() => setExito(''), 3000);
   };
 
-  // Abrir modal para agregar bloque
   const abrirModalAgregar = () => {
     if (!grupoSeleccionado) {
       setError('Primero selecciona un grupo');
       return;
     }
-    // Establecer hora de inicio por defecto (primera hora disponible)
     const primeraHora = horasGrid[0]?.time || '07:00';
     setNuevoBloque({
       materia_grupo_id: '',
@@ -475,9 +474,12 @@ export default function HorariosPage() {
               >
                 <option value="">Seleccionar materia...</option>
                 {materiasDisponibles.map((m) => (
-                  <option key={m.id} value={m.id}>{m.materia_nombre}</option>
+                  <option key={m.id} value={m.id}>{m.materia_nombre || m.nombre || 'Sin nombre'}</option>
                 ))}
               </select>
+              {materiasDisponibles.length === 0 && (
+                <span className={styles.helpText}>No hay materias disponibles para este grupo</span>
+              )}
             </div>
             <div className={styles.row2}>
               <div className={styles.field}>
@@ -700,7 +702,11 @@ export default function HorariosPage() {
                 <Save size={16} /> {cargando ? 'Guardando...' : 'Guardar horario'}
               </button>
               {tabActiva === 'grupos' && (
-                <button className={styles.btnPrimary} onClick={abrirModalAgregar} style={{ background: '#2563eb', borderColor: '#1d4ed8' }}>
+                <button
+                  className={styles.btnPrimary}
+                  onClick={abrirModalAgregar}
+                  style={{ backgroundColor: '#2563eb', borderColor: '#1d4ed8' }}
+                >
                   <Plus size={16} /> Agregar materia
                 </button>
               )}

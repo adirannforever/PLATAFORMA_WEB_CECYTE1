@@ -1,5 +1,35 @@
 import { query } from '../config/db.js';
 
+
+export const getMateriasByGrupo = async (req, res) => {
+  try {
+    const { grupo_id } = req.query;
+    if (!grupo_id) {
+      return res.status(400).json({ success: false, message: 'Se requiere grupo_id' });
+    }
+
+    const result = await query(
+      `SELECT 
+        mg.id,
+        mg.grupo_id,
+        mg.materia_catalogo_id,
+        mc.nombre AS materia_nombre,
+        mc.clave AS materia_clave,
+        u.apellidos AS docente_apellidos,
+        u.nombre AS docente_nombre
+       FROM materias_grupo mg
+       JOIN materias_catalogo mc ON mc.id = mg.materia_catalogo_id
+       LEFT JOIN usuarios u ON u.id = mg.docente_id
+       WHERE mg.grupo_id = $1 AND mg.activa = TRUE`,
+      [grupo_id]
+    );
+
+    return res.json({ success: true, data: result.rows });
+  } catch (err) {
+    console.error('Error en getMateriasByGrupo:', err);
+    return res.status(500).json({ success: false, message: 'Error interno' });
+  }
+};
 // OBTENER MATERIAS (según rol)
 export const getMaterias = async (req, res) => {
   try {
