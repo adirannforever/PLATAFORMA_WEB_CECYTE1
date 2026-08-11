@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { reportesService, catalogosService, usuariosService, gruposService } from '../services/api';
-import { FileText, Download, Printer, Users, BarChart3, CheckCircle, AlertCircle } from 'lucide-react';
+import { FileText, Download, Users, BarChart3, CheckCircle, Search, X } from 'lucide-react';
+import Skeleton from '../components/Skeleton';
 import styles from './ReportesPage.module.css';
 
 export default function ReportesPage() {
@@ -21,6 +22,14 @@ export default function ReportesPage() {
   const [alumnoId, setAlumnoId] = useState('');
   const [cicloId, setCicloId] = useState('');
 
+  // Búsqueda de alumnos para boleta/constancia
+  const [busquedaAlumno, setBusquedaAlumno] = useState('');
+  const [filtroGrupoAlumno, setFiltroGrupoAlumno] = useState('');
+  const [filtroEspecialidadAlumno, setFiltroEspecialidadAlumno] = useState('');
+  const [filtroSemestreAlumno, setFiltroSemestreAlumno] = useState('');
+  const [alumnosFiltrados, setAlumnosFiltrados] = useState([]);
+  const [buscandoAlumnos, setBuscandoAlumnos] = useState(false);
+
   // Filtros listado
   const [filtroGrupo, setFiltroGrupo] = useState('');
   const [filtroEspecialidad, setFiltroEspecialidad] = useState('');
@@ -30,6 +39,12 @@ export default function ReportesPage() {
   // Filtros estadísticas
   const [estadisticasCicloId, setEstadisticasCicloId] = useState('');
   const [estadisticasGrupoId, setEstadisticasGrupoId] = useState('');
+
+  // Memo: letras únicas de grupos
+  const letrasUnicas = useMemo(() => {
+    const letras = grupos.map(g => g.letra).filter(Boolean);
+    return [...new Set(letras)].sort();
+  }, [grupos]);
 
   useEffect(() => {
     const cargarCatalogos = async () => {
@@ -45,7 +60,6 @@ export default function ReportesPage() {
         setEspecialidades(espRes.data || []);
         setAlumnos(alumnosRes.usuarios || []);
         
-        // Seleccionar ciclo activo por defecto
         const activo = ciclosRes.data?.find(c => c.activo);
         if (activo) {
           setCicloId(String(activo.id));
@@ -57,6 +71,42 @@ export default function ReportesPage() {
     };
     cargarCatalogos();
   }, []);
+
+  // Buscar alumnos con filtros (para boleta/constancia)
+  const buscarAlumnos = useCallback(async () => {
+    setBuscandoAlumnos(true);
+    try {
+      const params = { rol: 'alumno' };
+      if (busquedaAlumno) params.search = busquedaAlumno;
+      if (filtroGrupoAlumno) params.grupo_letra = filtroGrupoAlumno;
+      if (filtroEspecialidadAlumno) params.especialidad_id = filtroEspecialidadAlumno;
+      if (filtroSemestreAlumno) params.semestre = filtroSemestreAlumno;
+      const res = await usuariosService.getAll(params);
+      setAlumnosFiltrados(res.usuarios || []);
+    } catch (e) {
+      console.error('Error buscando alumnos:', e);
+    } finally {
+      setBuscandoAlumnos(false);
+    }
+  }, [busquedaAlumno, filtroGrupoAlumno, filtroEspecialidadAlumno, filtroSemestreAlumno]);
+
+  // Debounce para búsqueda
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      if (busquedaAlumno || filtroGrupoAlumno || filtroEspecialidadAlumno || filtroSemestreAlumno) {
+        buscarAlumnos();
+      } else {
+        setAlumnosFiltrados([]);
+      }
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [busquedaAlumno, filtroGrupoAlumno, filtroEspecialidadAlumno, filtroSemestreAlumno, buscarAlumnos]);
+
+  const seleccionarAlumno = (alumno) => {
+    setAlumnoId(String(alumno.alumno_id || alumno.id));
+    setBusquedaAlumno(`${alumno.apellidos}, ${alumno.nombre} (${alumno.matricula || 'sin matrícula'})`);
+    setAlumnosFiltrados([]);
+  };
 
   const handleDescargar = async (tipo, params, filename) => {
     setCargando(true);
@@ -98,13 +148,13 @@ export default function ReportesPage() {
     }
   };
 
-  const formatDate = (date) => {
-    if (!date) return '—';
-    return new Date(date).toLocaleDateString('es-MX', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
+  const limpiarBusquedaAlumno = () => {
+    setBusquedaAlumno('');
+    setAlumnoId('');
+    setFiltroGrupoAlumno('');
+    setFiltroEspecialidadAlumno('');
+    setFiltroSemestreAlumno('');
+    setAlumnosFiltrados([]);
   };
 
   const tabs = [
@@ -117,38 +167,106 @@ export default function ReportesPage() {
   const renderBoleta = () => (
     <div className={styles.tabContent}>
       <div className={styles.reportCard}>
-        <div className={styles.row2}>
-          <div className={styles.field}>
-            <label className={styles.label}>Alumno <span className={styles.required}>*</span></label>
-            <select
-              className={styles.select}
-              value={alumnoId}
-              onChange={(e) => setAlumnoId(e.target.value)}
-            >
-              <option value="">Seleccionar alumno...</option>
-              {alumnos.map((a) => (
-                <option key={a.id} value={a.alumno_id || a.id}>
-                  {a.apellidos}, {a.nombre} ({a.matricula || 'sin matrícula'})
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className={styles.field}>
-            <label className={styles.label}>Ciclo escolar <span className={styles.required}>*</span></label>
-            <select
-              className={styles.select}
-              value={cicloId}
-              onChange={(e) => setCicloId(e.target.value)}
-            >
-              <option value="">Seleccionar ciclo...</option>
-              {ciclos.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nombre} {c.activo ? '(Activo)' : ''}
-                </option>
-              ))}
-            </select>
+        <div className={styles.field}>
+          <label className={styles.label}>Buscar alumno <span className={styles.required}>*</span></label>
+          <div className={styles.alumnoSearchContainer}>
+            <div className={styles.searchWrapper}>
+              <Search size={16} className={styles.searchIcon} />
+              <input
+                type="text"
+                className={styles.inputSearch}
+                placeholder="Buscar por nombre, apellido o matrícula..."
+                value={busquedaAlumno}
+                onChange={(e) => setBusquedaAlumno(e.target.value)}
+              />
+              {busquedaAlumno && (
+                <button className={styles.clearBtn} onClick={limpiarBusquedaAlumno}>
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+            <div className={styles.filtrosAlumno}>
+              <select
+                className={styles.selectSmall}
+                value={filtroGrupoAlumno}
+                onChange={(e) => setFiltroGrupoAlumno(e.target.value)}
+              >
+                <option value="">Todos los grupos</option>
+                {letrasUnicas.map((letra) => (
+                  <option key={letra} value={letra}>Grupo {letra}</option>
+                ))}
+              </select>
+              <select
+                className={styles.selectSmall}
+                value={filtroEspecialidadAlumno}
+                onChange={(e) => setFiltroEspecialidadAlumno(e.target.value)}
+              >
+                <option value="">Todas las especialidades</option>
+                {especialidades.map((e) => (
+                  <option key={e.id} value={e.id}>{e.nombre}</option>
+                ))}
+              </select>
+              <select
+                className={styles.selectSmall}
+                value={filtroSemestreAlumno}
+                onChange={(e) => setFiltroSemestreAlumno(e.target.value)}
+              >
+                <option value="">Todos los semestres</option>
+                {[1,2,3,4,5,6].map((s) => (
+                  <option key={s} value={s}>{s}°</option>
+                ))}
+              </select>
+              <button
+                className={styles.btnBuscar}
+                onClick={buscarAlumnos}
+                disabled={buscandoAlumnos}
+              >
+                {buscandoAlumnos ? 'Buscando...' : 'Buscar'}
+              </button>
+            </div>
+            {alumnosFiltrados.length > 0 && (
+              <div className={styles.resultadosAlumnos}>
+                {alumnosFiltrados.map((a) => (
+                  <div
+                    key={a.id}
+                    className={styles.resultadoAlumno}
+                    onClick={() => seleccionarAlumno(a)}
+                  >
+                    <span><strong>{a.apellidos}, {a.nombre}</strong></span>
+                    <span className={styles.resultadoDetalle}>
+                      {a.matricula || 'sin matrícula'} • {a.semestre ? `${a.semestre}°` : '—'} • Grupo {a.grupo_letra || '—'} • {a.especialidad_nombre || '—'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {alumnoId && busquedaAlumno && (
+              <div className={styles.alumnoSeleccionado}>
+                <span>Alumno seleccionado: <strong>{busquedaAlumno}</strong></span>
+                <button className={styles.btnQuitar} onClick={limpiarBusquedaAlumno}>
+                  <X size={14} />
+                </button>
+              </div>
+            )}
           </div>
         </div>
+
+        <div className={styles.field}>
+          <label className={styles.label}>Ciclo escolar <span className={styles.required}>*</span></label>
+          <select
+            className={styles.select}
+            value={cicloId}
+            onChange={(e) => setCicloId(e.target.value)}
+          >
+            <option value="">Seleccionar ciclo...</option>
+            {ciclos.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nombre} {c.activo ? '(Activo)' : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <div className={styles.actions}>
           <button
             className={styles.btnPrimary}
@@ -171,20 +289,89 @@ export default function ReportesPage() {
     <div className={styles.tabContent}>
       <div className={styles.reportCard}>
         <div className={styles.field}>
-          <label className={styles.label}>Alumno <span className={styles.required}>*</span></label>
-          <select
-            className={styles.select}
-            value={alumnoId}
-            onChange={(e) => setAlumnoId(e.target.value)}
-          >
-            <option value="">Seleccionar alumno...</option>
-            {alumnos.map((a) => (
-              <option key={a.id} value={a.alumno_id || a.id}>
-                {a.apellidos}, {a.nombre} ({a.matricula || 'sin matrícula'})
-              </option>
-            ))}
-          </select>
+          <label className={styles.label}>Buscar alumno <span className={styles.required}>*</span></label>
+          <div className={styles.alumnoSearchContainer}>
+            <div className={styles.searchWrapper}>
+              <Search size={16} className={styles.searchIcon} />
+              <input
+                type="text"
+                className={styles.inputSearch}
+                placeholder="Buscar por nombre, apellido o matrícula..."
+                value={busquedaAlumno}
+                onChange={(e) => setBusquedaAlumno(e.target.value)}
+              />
+              {busquedaAlumno && (
+                <button className={styles.clearBtn} onClick={limpiarBusquedaAlumno}>
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+            <div className={styles.filtrosAlumno}>
+              <select
+                className={styles.selectSmall}
+                value={filtroGrupoAlumno}
+                onChange={(e) => setFiltroGrupoAlumno(e.target.value)}
+              >
+                <option value="">Todos los grupos</option>
+                {letrasUnicas.map((letra) => (
+                  <option key={letra} value={letra}>Grupo {letra}</option>
+                ))}
+              </select>
+              <select
+                className={styles.selectSmall}
+                value={filtroEspecialidadAlumno}
+                onChange={(e) => setFiltroEspecialidadAlumno(e.target.value)}
+              >
+                <option value="">Todas las especialidades</option>
+                {especialidades.map((e) => (
+                  <option key={e.id} value={e.id}>{e.nombre}</option>
+                ))}
+              </select>
+              <select
+                className={styles.selectSmall}
+                value={filtroSemestreAlumno}
+                onChange={(e) => setFiltroSemestreAlumno(e.target.value)}
+              >
+                <option value="">Todos los semestres</option>
+                {[1,2,3,4,5,6].map((s) => (
+                  <option key={s} value={s}>{s}°</option>
+                ))}
+              </select>
+              <button
+                className={styles.btnBuscar}
+                onClick={buscarAlumnos}
+                disabled={buscandoAlumnos}
+              >
+                {buscandoAlumnos ? 'Buscando...' : 'Buscar'}
+              </button>
+            </div>
+            {alumnosFiltrados.length > 0 && (
+              <div className={styles.resultadosAlumnos}>
+                {alumnosFiltrados.map((a) => (
+                  <div
+                    key={a.id}
+                    className={styles.resultadoAlumno}
+                    onClick={() => seleccionarAlumno(a)}
+                  >
+                    <span><strong>{a.apellidos}, {a.nombre}</strong></span>
+                    <span className={styles.resultadoDetalle}>
+                      {a.matricula || 'sin matrícula'} • {a.semestre ? `${a.semestre}°` : '—'} • Grupo {a.grupo_letra || '—'} • {a.especialidad_nombre || '—'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {alumnoId && busquedaAlumno && (
+              <div className={styles.alumnoSeleccionado}>
+                <span>Alumno seleccionado: <strong>{busquedaAlumno}</strong></span>
+                <button className={styles.btnQuitar} onClick={limpiarBusquedaAlumno}>
+                  <X size={14} />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
+
         <div className={styles.actions}>
           <button
             className={styles.btnPrimary}
@@ -354,7 +541,6 @@ export default function ReportesPage() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className={styles.tabsContainer}>
         {tabs.map((tab) => (
           <button
@@ -368,7 +554,6 @@ export default function ReportesPage() {
         ))}
       </div>
 
-      {/* Contenido dinámico */}
       <div className={styles.tabContentWrapper}>
         {tabActiva === 'boleta' && renderBoleta()}
         {tabActiva === 'constancia' && renderConstancia()}
