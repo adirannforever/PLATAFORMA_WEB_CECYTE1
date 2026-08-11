@@ -3,7 +3,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import { query } from './config/db.js';
-import { crearCiclosFuturos } from './utils/ciclos.js'; //  IMPORTACIÓN NOMBRADA
+import { crearCiclosFuturos } from './utils/ciclos.js';
 
 import authRoutes from './routes/auth.routes.js';
 import usuariosRoutes from './routes/usuarios.routes.js';
@@ -27,6 +27,7 @@ import periodosRoutes from './routes/periodos.routes.js';
 import ciclosRoutes from './routes/ciclos.routes.js';
 import materiasCatalogoRoutes from './routes/materiasCatalogo.routes.js';
 import auditoriaRoutes from './routes/auditoria.routes.js';
+import { auditoriaGlobal } from './middlewares/auditoriaGlobal.js'; 
 
 dotenv.config();
 
@@ -40,7 +41,7 @@ app.use(cors({
 app.use(cookieParser());
 app.use(express.json());
 
-// Rutas
+
 app.use('/api/auth', authRoutes);
 app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/materias', materiasRoutes);
@@ -64,18 +65,25 @@ app.use('/api/ciclos', ciclosRoutes);
 app.use('/api/materias-catalogo', materiasCatalogoRoutes);
 app.use('/api/auditoria', auditoriaRoutes);
 
-// Ruta de prueba
+
+app.use(auditoriaGlobal);
+
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-// Iniciar servidor
+app.use((err, req, res, next) => {
+  console.error('Error no manejado:', err);
+  res.status(500).json({ success: false, message: 'Error interno del servidor' });
+});
+
 app.listen(PORT, async () => {
-  console.log(` Servidor corriendo en http://localhost:${PORT}`);
+  console.log(`Servidor corriendo en http://localhost:${PORT}`);
   try {
-    await crearCiclosFuturos(); //  ahora funciona
-    console.log(' Ciclos futuros verificados');
+    await crearCiclosFuturos();
+    console.log('Ciclos futuros verificados');
   } catch (err) {
-    console.error(' Error al verificar ciclos:', err);
+    console.error('Error al verificar ciclos:', err);
   }
 });

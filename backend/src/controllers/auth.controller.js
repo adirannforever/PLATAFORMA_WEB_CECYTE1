@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { query } from '../config/db.js';
+import { registrarAuditoria } from '../middlewares/auditoria.js';
 
 
 export const login = async (req, res) => {
@@ -74,6 +75,13 @@ export const login = async (req, res) => {
         email: usuario.email,
         rol: usuario.rol,
       },
+    });
+    await registrarAuditoria({
+      req,
+      accion: 'LOGIN',
+      tabla: 'usuarios',
+      registroId: usuario.id,
+      datosNuevos: { email: usuario.email },
     });
   } catch (err) {
     console.error('Error en login:', err);
