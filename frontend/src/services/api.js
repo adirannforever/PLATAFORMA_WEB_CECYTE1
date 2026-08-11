@@ -350,6 +350,30 @@ export const horariosService = {
     const response = await api.post('/horarios/regenerar/laboratorios');
     return response.data;
   },
+  solicitarUpload: async (nombre, tipo) => {
+    const response = await api.post('/horarios/upload/solicitar', { nombre, tipo });
+    return response.data;
+  },
+
+  subirArchivo: async (uploadUrl, file) => {
+    const response = await fetch(uploadUrl, {
+      method: 'PUT',
+      body: file,
+      headers: {
+        'Content-Type': file.type,
+      },
+    });
+    if (!response.ok) {
+      throw new Error('Error al subir el archivo');
+    }
+    return response;
+  },
+
+  listarHorarios: async () => {
+    const response = await api.get('/horarios/listar');
+    return response.data;
+  },
+
 };
 
 export const incidenciasService = {

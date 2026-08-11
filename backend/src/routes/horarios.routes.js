@@ -3,6 +3,11 @@ import { verifyToken, requireRole } from '../middlewares/auth.js';
 import {
   getConfiguracion,
   actualizarConfiguracion,
+  solicitarUpload,
+  confirmarUpload,
+  listarHorarios,
+  solicitarDescarga,
+  eliminarHorario,
   getHorarioGrupo,
   guardarHorarioGrupo,
   getHorarioMaestro,
@@ -20,17 +25,20 @@ router.use(requireRole('administrador'));
 router.get('/configuracion', getConfiguracion);
 router.put('/configuracion', actualizarConfiguracion);
 
-// Grupos
+// Upload y archivos
+router.post('/upload/solicitar', solicitarUpload);
+router.post('/upload/confirmar', confirmarUpload);
+router.get('/listar', listarHorarios);
+router.post('/download/solicitar', solicitarDescarga);
+router.delete('/:id', eliminarHorario);
+
+// Grupos (archivos asociados)
 router.get('/grupos/:grupo_id', getHorarioGrupo);
 router.post('/grupos/:grupo_id', guardarHorarioGrupo);
 
-// Maestros
+// Maestros y laboratorios (placeholder)
 router.get('/maestros/:docente_id', getHorarioMaestro);
-
-// Laboratorios
 router.get('/laboratorios/:laboratorio_id', getHorarioLaboratorio);
-
-// Regenerar automáticos
 router.post('/regenerar/maestros', regenerarMaestros);
 router.post('/regenerar/laboratorios', regenerarLaboratorios);
 

@@ -1,9 +1,9 @@
 import { query } from '../config/db.js';
-import { generateUploadUrl } from '../services/s3.service.js';
+import { generateUploadUrl, generateDownloadUrl } from '../services/s3.service.js';
 
-
-
-
+// ============================================================
+// CONFIGURACIÓN GLOBAL
+// ============================================================
 export const getConfiguracion = async (req, res) => {
   try {
     const result = await query(
@@ -78,226 +78,21 @@ export const actualizarConfiguracion = async (req, res) => {
   }
 };
 
-
-
-
-export const getHorarioGrupo = async (req, res) => {
-  try {
-    const { grupo_id } = req.params;
-    const result = await query(
-      `SELECT 
-        hg.id,
-        hg.grupo_id,
-        hg.materia_grupo_id,
-        hg.dia_semana,
-        hg.hora_inicio,
-        hg.hora_fin,
-        mc.nombre AS materia_nombre,
-        mc.clave AS materia_clave,
-        u.nombre AS docente_nombre,
-        u.apellidos AS docente_apellidos
-      FROM horario_grupos hg
-      JOIN materias_grupo mg ON mg.id = hg.materia_grupo_id
-      JOIN materias_catalogo mc ON mc.id = mg.materia_catalogo_id
-      LEFT JOIN usuarios u ON u.id = mg.docente_id
-      WHERE hg.grupo_id = $1
-      ORDER BY hg.dia_semana, hg.hora_inicio`,
-      [grupo_id]
-    );
-    return res.json({ success: true, data: result.rows });
-  } catch (err) {
-    console.error('Error en getHorarioGrupo:', err);
-    return res.status(500).json({ success: false, message: 'Error interno' });
-  }
-};
-
-export const guardarHorarioGrupo = async (req, res) => {
-  const { grupo_id } = req.params;
-  const { bloques } = req.body;
-
-  if (!bloques || !Array.isArray(bloques)) {
-    return res.status(400).json({ success: false, message: 'Se requiere un array de bloques' });
-  }
-
+// ============================================================
+// SUBIDA DE ARCHIVOS CON PRESIGNED URL
+// ============================================================
+export const solicitarUpload = async (req, res) => {
   try {
     if (req.user.rol !== 'administrador') {
       return res.status(403).json({ success: false, message: 'Acceso denegado' });
     }
 
-    await query('BEGIN');
-
-    
-    await query('DELETE FROM horario_grupos WHERE grupo_id = $1', [grupo_id]);
-
-    
-    for (const bloque of bloques) {
-      
-      
-      if (!bloque.materia_grupo_id) continue;
-
-      await query(
-        `INSERT INTO horario_grupos 
-         (grupo_id, materia_grupo_id, dia_semana, hora_inicio, hora_fin, creado_por)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [grupo_id, bloque.materia_grupo_id, bloque.dia_semana, bloque.hora_inicio, bloque.hora_fin, req.user.id]
-      );
-    }
-
-    await query('COMMIT');
-    return res.json({ success: true, message: 'Horario guardado correctamente' });
-  } catch (err) {
-    await query('ROLLBACK');
-    console.error('Error en guardarHorarioGrupo:', err);
-    return res.status(500).json({ success: false, message: 'Error interno' });
-  }
-};
-
-
-
-
-export const getHorarioMaestro = async (req, res) => {
-  try {
-    const { docente_id } = req.params;
-    const result = await query(
-      `SELECT 
-        hm.id,
-        hm.docente_id,
-        hm.materia_grupo_id,
-        hm.dia_semana,
-        hm.hora_inicio,
-        hm.hora_fin,
-        hm.es_automatico,
-        mc.nombre AS materia_nombre,
-        mc.clave AS materia_clave,
-        g.nombre AS grupo_nombre,
-        g.letra AS grupo_letra
-      FROM horario_maestros hm
-      JOIN materias_grupo mg ON mg.id = hm.materia_grupo_id
-      JOIN materias_catalogo mc ON mc.id = mg.materia_catalogo_id
-      JOIN grupos g ON g.id = mg.grupo_id
-      WHERE hm.docente_id = $1
-      ORDER BY hm.dia_semana, hm.hora_inicio`,
-      [docente_id]
-    );
-    return res.json({ success: true, data: result.rows });
-  } catch (err) {
-    console.error('Error en getHorarioMaestro:', err);
-    return res.status(500).json({ success: false, message: 'Error interno' });
-  }
-};
-
-
-
-
-export const getHorarioLaboratorio = async (req, res) => {
-  try {
-    const { laboratorio_id } = req.params;
-    const result = await query(
-      `SELECT 
-        hl.id,
-        hl.laboratorio_id,
-        hl.materia_grupo_id,
-        hl.dia_semana,
-        hl.hora_inicio,
-        hl.hora_fin,
-        hl.es_automatico,
-        mc.nombre AS materia_nombre,
-        mc.clave AS materia_clave,
-        g.nombre AS grupo_nombre,
-        g.letra AS grupo_letra
-      FROM horario_laboratorios hl
-      JOIN materias_grupo mg ON mg.id = hl.materia_grupo_id
-      JOIN materias_catalogo mc ON mc.id = mg.materia_catalogo_id
-      JOIN grupos g ON g.id = mg.grupo_id
-      WHERE hl.laboratorio_id = $1
-      ORDER BY hl.dia_semana, hl.hora_inicio`,
-      [laboratorio_id]
-    );
-    return res.json({ success: true, data: result.rows });
-  } catch (err) {
-    console.error('Error en getHorarioLaboratorio:', err);
-    return res.status(500).json({ success: false, message: 'Error interno' });
-  }
-};
-
-
-
-
-export const regenerarMaestros = async (req, res) => {
-  try {
-    if (req.user.rol !== 'administrador') {
-      return res.status(403).json({ success: false, message: 'Acceso denegado' });
-    }
-
-    await query('BEGIN');
-    await query('DELETE FROM horario_maestros WHERE es_automatico = TRUE');
-
-    await query(`
-      INSERT INTO horario_maestros (docente_id, materia_grupo_id, dia_semana, hora_inicio, hora_fin, es_automatico)
-      SELECT 
-        mg.docente_id,
-        hg.materia_grupo_id,
-        hg.dia_semana,
-        hg.hora_inicio,
-        hg.hora_fin,
-        TRUE
-      FROM horario_grupos hg
-      JOIN materias_grupo mg ON mg.id = hg.materia_grupo_id
-      WHERE mg.docente_id IS NOT NULL
-    `);
-
-    await query('COMMIT');
-    return res.json({ success: true, message: 'Horarios de maestros regenerados correctamente' });
-  } catch (err) {
-    await query('ROLLBACK');
-    console.error('Error en regenerarMaestros:', err);
-    return res.status(500).json({ success: false, message: 'Error interno' });
-  }
-};
-
-export const regenerarLaboratorios = async (req, res) => {
-  try {
-    if (req.user.rol !== 'administrador') {
-      return res.status(403).json({ success: false, message: 'Acceso denegado' });
-    }
-
-    await query('BEGIN');
-    await query('DELETE FROM horario_laboratorios WHERE es_automatico = TRUE');
-
-    await query(`
-      INSERT INTO horario_laboratorios (laboratorio_id, materia_grupo_id, dia_semana, hora_inicio, hora_fin, es_automatico)
-      SELECT 
-        mg.laboratorio_id,
-        hg.materia_grupo_id,
-        hg.dia_semana,
-        hg.hora_inicio,
-        hg.hora_fin,
-        TRUE
-      FROM horario_grupos hg
-      JOIN materias_grupo mg ON mg.id = hg.materia_grupo_id
-      WHERE mg.laboratorio_id IS NOT NULL
-    `);
-
-    await query('COMMIT');
-    return res.json({ success: true, message: 'Horarios de laboratorios regenerados correctamente' });
-  } catch (err) {
-    await query('ROLLBACK');
-    console.error('Error en regenerarLaboratorios:', err);
-    return res.status(500).json({ success: false, message: 'Error interno' });
-  }
-};
-
-export const solicitarUploadHorario = async (req, res) => {
-  try {
-    if (req.user.rol !== 'administrador') {
-      return res.status(403).json({ success: false, message: 'Acceso denegado' });
-    }
-
-    const { nombre, tipo } = req.body;
+    const { nombre, tipo, grupo_id } = req.body;
     if (!nombre || !tipo) {
       return res.status(400).json({ success: false, message: 'Nombre y tipo son requeridos' });
     }
 
+    // Validar tipo
     const tiposPermitidos = [
       'application/pdf',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -309,30 +104,187 @@ export const solicitarUploadHorario = async (req, res) => {
 
     const { url, key } = await generateUploadUrl(nombre, tipo);
 
+    // Guardar metadata en BD (tamaño se actualizará después de subir)
+    // Por ahora guardamos con tamaño 0 y luego lo actualizamos
+    const result = await query(
+      `INSERT INTO horario_archivos (nombre, key, tipo_mime, tamaño, grupo_id, subido_por)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+      [nombre, key, tipo, 0, grupo_id || null, req.user.id]
+    );
+
     return res.json({
       success: true,
       data: {
         uploadUrl: url,
         key,
+        id: result.rows[0].id,
         expiresIn: 300,
       },
     });
   } catch (err) {
-    console.error('Error en solicitarUploadHorario:', err);
+    console.error('Error en solicitarUpload:', err);
     return res.status(500).json({ success: false, message: 'Error interno' });
   }
 };
 
+export const confirmarUpload = async (req, res) => {
+  try {
+    if (req.user.rol !== 'administrador') {
+      return res.status(403).json({ success: false, message: 'Acceso denegado' });
+    }
+
+    const { id, tamaño } = req.body;
+    if (!id) {
+      return res.status(400).json({ success: false, message: 'ID es requerido' });
+    }
+
+    await query(
+      `UPDATE horario_archivos SET tamaño = $1 WHERE id = $2`,
+      [tamaño, id]
+    );
+
+    return res.json({ success: true, message: 'Archivo confirmado' });
+  } catch (err) {
+    console.error('Error en confirmarUpload:', err);
+    return res.status(500).json({ success: false, message: 'Error interno' });
+  }
+};
+
+// ============================================================
+// LISTAR Y DESCARGAR ARCHIVOS
+// ============================================================
 export const listarHorarios = async (req, res) => {
   try {
-    
-    
-    return res.json({
-      success: true,
-      data: [],
-    });
+    const { grupo_id } = req.query;
+    let sql = `
+      SELECT 
+        h.id,
+        h.nombre,
+        h.key,
+        h.tipo_mime,
+        h.tamaño,
+        h.grupo_id,
+        h.fecha,
+        g.nombre AS grupo_nombre,
+        u.nombre AS usuario_nombre,
+        u.apellidos AS usuario_apellidos
+      FROM horario_archivos h
+      LEFT JOIN grupos g ON g.id = h.grupo_id
+      LEFT JOIN usuarios u ON u.id = h.subido_por
+      WHERE 1=1
+    `;
+    const params = [];
+    if (grupo_id) {
+      sql += ` AND h.grupo_id = $${params.length + 1}`;
+      params.push(grupo_id);
+    }
+    sql += ` ORDER BY h.fecha DESC`;
+
+    const result = await query(sql, params);
+    return res.json({ success: true, data: result.rows });
   } catch (err) {
     console.error('Error en listarHorarios:', err);
     return res.status(500).json({ success: false, message: 'Error interno' });
   }
+};
+
+export const solicitarDescarga = async (req, res) => {
+  try {
+    if (req.user.rol !== 'administrador') {
+      return res.status(403).json({ success: false, message: 'Acceso denegado' });
+    }
+
+    const { key } = req.body;
+    if (!key) {
+      return res.status(400).json({ success: false, message: 'Key es requerida' });
+    }
+
+    const url = await generateDownloadUrl(key);
+    return res.json({
+      success: true,
+      data: { downloadUrl: url },
+    });
+  } catch (err) {
+    console.error('Error en solicitarDescarga:', err);
+    return res.status(500).json({ success: false, message: 'Error interno' });
+  }
+};
+
+export const eliminarHorario = async (req, res) => {
+  try {
+    if (req.user.rol !== 'administrador') {
+      return res.status(403).json({ success: false, message: 'Acceso denegado' });
+    }
+
+    const { id } = req.params;
+    if (!id) {
+      return res.status(400).json({ success: false, message: 'ID es requerido' });
+    }
+
+    // Obtener la key para eliminar de S3 (opcional, pero buena práctica)
+    const result = await query('SELECT key FROM horario_archivos WHERE id = $1', [id]);
+    if (!result.rows[0]) {
+      return res.status(404).json({ success: false, message: 'Archivo no encontrado' });
+    }
+
+    // Eliminar de BD
+    await query('DELETE FROM horario_archivos WHERE id = $1', [id]);
+
+    // (Opcional) Eliminar de S3
+    // const { DeleteObjectCommand } = await import('@aws-sdk/client-s3');
+    // const command = new DeleteObjectCommand({ Bucket: BUCKET, Key: result.rows[0].key });
+    // await s3Client.send(command);
+
+    return res.json({ success: true, message: 'Archivo eliminado correctamente' });
+  } catch (err) {
+    console.error('Error en eliminarHorario:', err);
+    return res.status(500).json({ success: false, message: 'Error interno' });
+  }
+};
+
+// ============================================================
+// HORARIO DE GRUPOS (PARA COMPATIBILIDAD)
+// ============================================================
+export const getHorarioGrupo = async (req, res) => {
+  try {
+    const { grupo_id } = req.params;
+    const result = await query(
+      `SELECT 
+        h.id,
+        h.nombre,
+        h.key,
+        h.tipo_mime,
+        h.tamaño,
+        h.fecha
+      FROM horario_archivos h
+      WHERE h.grupo_id = $1
+      ORDER BY h.fecha DESC`,
+      [grupo_id]
+    );
+    return res.json({ success: true, data: result.rows });
+  } catch (err) {
+    console.error('Error en getHorarioGrupo:', err);
+    return res.status(500).json({ success: false, message: 'Error interno' });
+  }
+};
+
+// No usamos guardarHorarioGrupo porque ahora subimos archivos
+export const guardarHorarioGrupo = async (req, res) => {
+  return res.status(501).json({ success: false, message: 'No implementado - usa subida de archivos' });
+};
+
+export const getHorarioMaestro = async (req, res) => {
+  return res.json({ success: true, data: [] });
+};
+
+export const getHorarioLaboratorio = async (req, res) => {
+  return res.json({ success: true, data: [] });
+};
+
+export const regenerarMaestros = async (req, res) => {
+  return res.json({ success: true, message: 'No implementado' });
+};
+
+export const regenerarLaboratorios = async (req, res) => {
+  return res.json({ success: true, message: 'No implementado' });
 };
