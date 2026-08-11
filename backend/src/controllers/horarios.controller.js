@@ -1,8 +1,9 @@
 import { query } from '../config/db.js';
+import { generateUploadUrl } from '../services/s3.service.js';
 
-// ============================================================
-// CONFIGURACIÓN GLOBAL
-// ============================================================
+
+
+
 export const getConfiguracion = async (req, res) => {
   try {
     const result = await query(
@@ -77,9 +78,9 @@ export const actualizarConfiguracion = async (req, res) => {
   }
 };
 
-// ============================================================
-// HORARIO DE GRUPOS
-// ============================================================
+
+
+
 export const getHorarioGrupo = async (req, res) => {
   try {
     const { grupo_id } = req.params;
@@ -125,13 +126,13 @@ export const guardarHorarioGrupo = async (req, res) => {
 
     await query('BEGIN');
 
-    // Eliminar bloques existentes del grupo
+    
     await query('DELETE FROM horario_grupos WHERE grupo_id = $1', [grupo_id]);
 
-    // Insertar nuevos bloques (solo los que tienen ID válido, los temporales no se guardan)
+    
     for (const bloque of bloques) {
-      // Si el bloque tiene un ID numérico y no es temporal (no es timestamp), intentamos actualizar
-      // Pero como simplificamos, solo insertamos los que tienen materia_grupo_id
+      
+      
       if (!bloque.materia_grupo_id) continue;
 
       await query(
@@ -151,9 +152,9 @@ export const guardarHorarioGrupo = async (req, res) => {
   }
 };
 
-// ============================================================
-// HORARIO DE MAESTROS (automático)
-// ============================================================
+
+
+
 export const getHorarioMaestro = async (req, res) => {
   try {
     const { docente_id } = req.params;
@@ -185,9 +186,9 @@ export const getHorarioMaestro = async (req, res) => {
   }
 };
 
-// ============================================================
-// HORARIO DE LABORATORIOS (automático)
-// ============================================================
+
+
+
 export const getHorarioLaboratorio = async (req, res) => {
   try {
     const { laboratorio_id } = req.params;
@@ -219,9 +220,9 @@ export const getHorarioLaboratorio = async (req, res) => {
   }
 };
 
-// ============================================================
-// REGENERAR HORARIOS AUTOMÁTICOS
-// ============================================================
+
+
+
 export const regenerarMaestros = async (req, res) => {
   try {
     if (req.user.rol !== 'administrador') {
@@ -282,6 +283,56 @@ export const regenerarLaboratorios = async (req, res) => {
   } catch (err) {
     await query('ROLLBACK');
     console.error('Error en regenerarLaboratorios:', err);
+    return res.status(500).json({ success: false, message: 'Error interno' });
+  }
+};
+
+export const solicitarUploadHorario = async (req, res) => {
+  try {
+    if (req.user.rol !== 'administrador') {
+      return res.status(403).json({ success: false, message: 'Acceso denegado' });
+    }
+
+    const { nombre, tipo } = req.body;
+    if (!nombre || !tipo) {
+      return res.status(400).json({ success: false, message: 'Nombre y tipo son requeridos' });
+    }
+
+    const tiposPermitidos = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel',
+    ];
+    if (!tiposPermitidos.includes(tipo)) {
+      return res.status(400).json({ success: false, message: 'Formato no permitido. Solo PDF o Excel' });
+    }
+
+    const { url, key } = await generateUploadUrl(nombre, tipo);
+
+    return res.json({
+      success: true,
+      data: {
+        uploadUrl: url,
+        key,
+        expiresIn: 300,
+      },
+    });
+  } catch (err) {
+    console.error('Error en solicitarUploadHorario:', err);
+    return res.status(500).json({ success: false, message: 'Error interno' });
+  }
+};
+
+export const listarHorarios = async (req, res) => {
+  try {
+    
+    
+    return res.json({
+      success: true,
+      data: [],
+    });
+  } catch (err) {
+    console.error('Error en listarHorarios:', err);
     return res.status(500).json({ success: false, message: 'Error interno' });
   }
 };
