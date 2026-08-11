@@ -3,7 +3,17 @@ import { query } from '../config/db.js';
 
 export const getUsuarios = async (req, res) => {
   try {
-    const { rol, search, activo, ciclo_id, semestre, especialidad_id, turno_id, grupo_id, excluir_titulados } = req.query;
+    const {
+      rol,
+      search,
+      activo,
+      ciclo_id,
+      semestre,
+      especialidad_id,
+      turno_id,
+      grupo_id,
+      grupo_letra, 
+    } = req.query;
 
     let sql = `
       SELECT 
@@ -46,36 +56,30 @@ export const getUsuarios = async (req, res) => {
       params.push(activo === 'true');
     }
 
-    if (semestre && semestre !== '') {
-      const semestreNum = parseInt(semestre, 10);
-      if (!isNaN(semestreNum) && semestreNum >= 1 && semestreNum <= 6) {
-        conditions.push(`a.semestre_actual = $${params.length + 1}`);
-        params.push(semestreNum);
-      }
+
+    if (semestre) {
+      conditions.push(`a.semestre_actual = $${params.length + 1}`);
+      params.push(parseInt(semestre));
     }
 
     if (especialidad_id) {
       conditions.push(`g.especialidad_id = $${params.length + 1}`);
-      params.push(parseInt(especialidad_id, 10));
+      params.push(parseInt(especialidad_id));
     }
 
     if (turno_id) {
       conditions.push(`g.turno_id = $${params.length + 1}`);
-      params.push(parseInt(turno_id, 10));
+      params.push(parseInt(turno_id));
     }
 
     if (grupo_id) {
       conditions.push(`a.grupo_actual_id = $${params.length + 1}`);
-      params.push(parseInt(grupo_id, 10));
+      params.push(parseInt(grupo_id));
     }
 
     if (grupo_letra) {
-        conditions.push(`g.letra = $${params.length + 1}`);
-        params.push(grupo_letra.toUpperCase());
-      }
-
-    if (excluir_titulados === 'true' && rol === 'alumno') {
-      conditions.push(`NOT EXISTS (SELECT 1 FROM titulacion t WHERE t.alumno_id = a.id)`);
+      conditions.push(`g.letra = $${params.length + 1}`);
+      params.push(grupo_letra.toUpperCase());
     }
 
     if (conditions.length > 0) {
@@ -91,7 +95,7 @@ export const getUsuarios = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Error interno al obtener usuarios.',
-      error: err.message
+      error: err.message,
     });
   }
 };
@@ -154,10 +158,11 @@ export const crearUsuario = async (req, res) => {
     const nuevoUsuario = result.rows[0];
 
     if (rol === 'alumno') {
-      const matriculaFinal = matricula && matricula.trim() !== '' 
-        ? matricula.trim() 
-        : `A${String(nuevoUsuario.id).padStart(4, '0')}`;
-      
+      const matriculaFinal =
+        matricula && matricula.trim() !== ''
+          ? matricula.trim()
+          : `A${String(nuevoUsuario.id).padStart(4, '0')}`;
+
       await query(
         `INSERT INTO alumnos (usuario_id, matricula, estatus) VALUES ($1, $2, 'activo')`,
         [nuevoUsuario.id, matriculaFinal]
