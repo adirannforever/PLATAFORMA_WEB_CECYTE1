@@ -509,6 +509,7 @@ export default function IncidenciasPage() {
               <tr>
                 <th>Alumno</th>
                 <th>Matrícula</th>
+                <th>Semestre</th>
                 <th>Grupo</th>
                 <th>Tipo</th>
                 <th>Subtipo</th>
@@ -523,6 +524,7 @@ export default function IncidenciasPage() {
                 <tr key={n}>
                   <td><Skeleton width="150px" height="16px" variant="text" /></td>
                   <td><Skeleton width="100px" height="16px" variant="text" /></td>
+                  <td><Skeleton width="50px" height="16px" variant="text" /></td>
                   <td><Skeleton width="60px" height="16px" variant="text" /></td>
                   <td><Skeleton width="100px" height="16px" variant="text" /></td>
                   <td><Skeleton width="100px" height="16px" variant="text" /></td>
@@ -544,6 +546,7 @@ export default function IncidenciasPage() {
               <tr>
                 <th>Alumno</th>
                 <th>Matrícula</th>
+                <th>Semestre</th>
                 <th>Grupo</th>
                 <th>Tipo</th>
                 <th>Subtipo</th>
@@ -560,6 +563,7 @@ export default function IncidenciasPage() {
                     {i.alumno_apellidos}, {i.alumno_nombre}
                   </td>
                   <td>{i.matricula || '—'}</td>
+                  <td>{i.semestre ? `${i.semestre}°` : '—'}</td>
                   <td>{i.grupo_letra || '—'}</td>
                   <td>
                     <span
@@ -581,7 +585,7 @@ export default function IncidenciasPage() {
                   <td>{formatDate(i.fecha)}</td>
                   <td>
                     <span className={i.resuelta ? styles.estadoResuelto : styles.estadoPendiente}>
-                      {i.resuelta ? '✅ Resuelta' : '⏳ Pendiente'}
+                      {i.resuelta ? ' Resuelta' : ' Pendiente'}
                     </span>
                   </td>
                   <td>
@@ -736,6 +740,7 @@ export default function IncidenciasPage() {
                           </span>
                           <span className={styles.resultadoDetalle}>
                             {a.matricula || 'sin matrícula'} •{' '}
+                            {a.semestre ? `${a.semestre}° Ssemestre` : '—'} •{' '}
                             {a.grupo_letra ? `Grupo ${a.grupo_letra}` : 'sin grupo'} •{' '}
                             {a.especialidad_nombre || 'sin especialidad'}
                           </span>
