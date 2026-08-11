@@ -355,6 +355,11 @@ export const horariosService = {
     return response.data;
   },
 
+  solicitarUpload: async (nombre, tipo, grupo_id = null) => {
+    const response = await api.post('/horarios/upload/solicitar', { nombre, tipo, grupo_id });
+    return response.data;
+  },
+
   subirArchivo: async (uploadUrl, file) => {
     const response = await fetch(uploadUrl, {
       method: 'PUT',
@@ -364,17 +369,27 @@ export const horariosService = {
       },
     });
     if (!response.ok) {
-      throw new Error('Error al subir el archivo');
+      throw new Error(`Error al subir el archivo: ${response.status}`);
     }
     return response;
   },
 
-  listarHorarios: async () => {
-    const response = await api.get('/horarios/listar');
+  listarHorarios: async (params = {}) => {
+    const response = await api.get('/horarios/listar', { params });
     return response.data;
   },
 
+  solicitarDescarga: async (key) => {
+    const response = await api.post('/horarios/download/solicitar', { key });
+    return response.data;
+  },
+
+  eliminarHorario: async (id) => {
+    const response = await api.delete(`/horarios/${id}`);
+    return response.data;
+  },
 };
+
 
 export const incidenciasService = {
   getAll: async (params = {}) => {

@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { horariosService, catalogosService, usuariosService } from '../services/api';
-import { Users, User, FlaskConical, RefreshCw, AlertCircle, Download, FileText, Upload } from 'lucide-react';
+import { Settings, Users, User, FlaskConical, RefreshCw, Save, AlertCircle, Download, FileText, Upload } from 'lucide-react';
 import styles from './HorariosPage.module.css';
+
+const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
 
 export default function HorariosPage() {
   const { usuario } = useAuth();
@@ -13,6 +15,10 @@ export default function HorariosPage() {
   const [error, setError] = useState('');
   const [exito, setExito] = useState('');
 
+  const [configuracion, setConfiguracion] = useState(null);
+  const [configModal, setConfigModal] = useState(false);
+  const [configForm, setConfigForm] = useState({});
+
   const [grupos, setGrupos] = useState([]);
   const [docentes, setDocentes] = useState([]);
   const [laboratorios, setLaboratorios] = useState([]);
@@ -21,25 +27,25 @@ export default function HorariosPage() {
   const [docenteSeleccionado, setDocenteSeleccionado] = useState('');
   const [laboratorioSeleccionado, setLaboratorioSeleccionado] = useState('');
 
-  // Estado para subida de archivos
   const [archivosSubidos, setArchivosSubidos] = useState([]);
   const [subiendo, setSubiendo] = useState(false);
   const [descargando, setDescargando] = useState(false);
 
-  // Cargar catálogos
   useEffect(() => {
     const cargarDatos = async () => {
       try {
-        const [gruposRes, docentesRes, labsRes] = await Promise.all([
+        const [configRes, gruposRes, docentesRes, labsRes] = await Promise.all([
+          horariosService.getConfiguracion(),
           catalogosService.getGrupos(),
           usuariosService.getAll({ rol: 'docente' }),
           catalogosService.getAulas(),
         ]);
+        setConfiguracion(configRes.data);
+        setConfigForm(configRes.data || {});
         setGrupos(gruposRes.data || []);
         setDocentes(docentesRes.usuarios || []);
         setLaboratorios(labsRes.data || []);
         
-        // Cargar horarios subidos
         await cargarHorariosSubidos();
       } catch (e) {
         console.error('Error cargando datos iniciales:', e);
@@ -49,26 +55,40 @@ export default function HorariosPage() {
     cargarDatos();
   }, []);
 
-  // Cargar lista de horarios subidos
   const cargarHorariosSubidos = async () => {
     try {
       const res = await horariosService.listarHorarios();
-      setArchivosSubidos(res.data || []);
+      if (res.success) {
+        setArchivosSubidos(res.data || []);
+      } else {
+        setArchivosSubidos([]);
+      }
     } catch (e) {
       console.error('Error cargando horarios subidos:', e);
+      setArchivosSubidos([]);
     }
   };
 
-  // Subir archivo
+  const handleGuardarConfiguracion = async () => {
+    try {
+      const res = await horariosService.actualizarConfiguracion(configForm);
+      setConfiguracion(res.data);
+      setConfigModal(false);
+      setExito('Configuración actualizada');
+      setTimeout(() => setExito(''), 4000);
+    } catch (e) {
+      setError(e.response?.data?.message || 'Error al guardar configuración');
+    }
+  };
+
   const handleUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Validar tipo
     const tiposPermitidos = [
       'application/pdf',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
-      'application/vnd.ms-excel', // .xls
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel',
     ];
     if (!tiposPermitidos.includes(file.type)) {
       setError('Formato no permitido. Solo PDF o Excel (.xlsx, .xls)');
@@ -76,7 +96,6 @@ export default function HorariosPage() {
       return;
     }
 
-    // Validar tamaño (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
       setError('El archivo no debe superar los 10 MB');
       e.target.value = '';
@@ -86,18 +105,17 @@ export default function HorariosPage() {
     setSubiendo(true);
     setError('');
     try {
-      // 1. Solicitar presigned URL al backend
       const res = await horariosService.solicitarUpload(file.name, file.type);
       if (!res.success) {
         throw new Error(res.message || 'Error al solicitar subida');
       }
 
-      // 2. Subir archivo directamente a S3 usando la presigned URL
-      await horariosService.subirArchivo(res.data.uploadUrl, file);
+      const uploadRes = await horariosService.subirArchivo(res.data.uploadUrl, file);
+      if (!uploadRes.ok) {
+        throw new Error(`Error al subir archivo: ${uploadRes.status}`);
+      }
       
-      // 3. Recargar lista de horarios
       await cargarHorariosSubidos();
-      
       setExito('Horario subido correctamente');
       setTimeout(() => setExito(''), 5000);
     } catch (err) {
@@ -105,11 +123,10 @@ export default function HorariosPage() {
       setError(err.message || 'Error al subir el archivo');
     } finally {
       setSubiendo(false);
-      e.target.value = ''; // reset input
+      e.target.value = '';
     }
   };
 
-  // Descargar archivo
   const handleDescargar = async (key, nombre) => {
     setDescargando(true);
     try {
@@ -117,8 +134,6 @@ export default function HorariosPage() {
       if (!res.success) {
         throw new Error(res.message || 'Error al obtener URL de descarga');
       }
-
-      // Abrir en nueva pestaña
       window.open(res.data.downloadUrl, '_blank');
     } catch (err) {
       console.error('Error al descargar archivo:', err);
@@ -126,6 +141,91 @@ export default function HorariosPage() {
     } finally {
       setDescargando(false);
     }
+  };
+
+  const renderConfigModal = () => {
+    if (!configModal) return null;
+    return (
+      <div className={styles.modalOverlay} onClick={() => setConfigModal(false)}>
+        <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+          <div className={styles.modalHeader}>
+            <h3 className={styles.modalTitle}>Configuración de horarios</h3>
+            <button className={styles.modalClose} onClick={() => setConfigModal(false)}>
+              <span>×</span>
+            </button>
+          </div>
+          <form className={styles.form} onSubmit={(e) => e.preventDefault()}>
+            <div className={styles.field}>
+              <label className={styles.label}>Duración de bloque (minutos)</label>
+              <input
+                type="number"
+                className={styles.input}
+                value={configForm.duracion_bloque_minutos || 50}
+                onChange={(e) => setConfigForm({ ...configForm, duracion_bloque_minutos: parseInt(e.target.value) })}
+              />
+            </div>
+            <div className={styles.row2}>
+              <div className={styles.field}>
+                <label className={styles.label}>Inicio de turno</label>
+                <input
+                  type="time"
+                  className={styles.input}
+                  value={configForm.hora_inicio_turno || '07:00'}
+                  onChange={(e) => setConfigForm({ ...configForm, hora_inicio_turno: e.target.value })}
+                />
+              </div>
+              <div className={styles.field}>
+                <label className={styles.label}>Fin de turno</label>
+                <input
+                  type="time"
+                  className={styles.input}
+                  value={configForm.hora_fin_turno || '13:00'}
+                  onChange={(e) => setConfigForm({ ...configForm, hora_fin_turno: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className={styles.row2}>
+              <div className={styles.field}>
+                <label className={styles.label}>Inicio de receso</label>
+                <input
+                  type="time"
+                  className={styles.input}
+                  value={configForm.receso_inicio || '09:30'}
+                  onChange={(e) => setConfigForm({ ...configForm, receso_inicio: e.target.value })}
+                />
+              </div>
+              <div className={styles.field}>
+                <label className={styles.label}>Fin de receso</label>
+                <input
+                  type="time"
+                  className={styles.input}
+                  value={configForm.receso_fin || '10:00'}
+                  onChange={(e) => setConfigForm({ ...configForm, receso_fin: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label}>
+                <input
+                  type="checkbox"
+                  checked={configForm.receso_bloqueado || false}
+                  onChange={(e) => setConfigForm({ ...configForm, receso_bloqueado: e.target.checked })}
+                />
+                Bloquear receso (no movible)
+              </label>
+            </div>
+            <div className={styles.modalActions}>
+              <button type="button" className={styles.btnSecondary} onClick={() => setConfigModal(false)}>
+                Cancelar
+              </button>
+              <button type="button" className={styles.btnPrimary} onClick={handleGuardarConfiguracion}>
+                Guardar configuración
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -139,6 +239,9 @@ export default function HorariosPage() {
           <p className={styles.subtitle}>Gestión de horarios para grupos, maestros y laboratorios</p>
         </div>
         <div className={styles.headerActions}>
+          <button className={styles.btnSecondary} onClick={() => setConfigModal(true)}>
+            <Settings size={16} /> Configuración
+          </button>
           <label className={styles.btnUpload}>
             <Upload size={16} />
             {subiendo ? 'Subiendo...' : 'Subir horario'}
@@ -156,7 +259,6 @@ export default function HorariosPage() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className={styles.tabsContainer}>
         <button
           className={`${styles.tab} ${tabActiva === 'grupos' ? styles.tabActive : ''}`}
@@ -178,7 +280,6 @@ export default function HorariosPage() {
         </button>
       </div>
 
-      {/* Selector de elemento (para visualización futura) */}
       <div className={styles.selectorContainer}>
         {tabActiva === 'grupos' && (
           <select
@@ -218,7 +319,6 @@ export default function HorariosPage() {
         )}
       </div>
 
-      {/* Lista de horarios subidos */}
       <div className={styles.horariosSection}>
         <h3 className={styles.sectionTitle}>Horarios subidos</h3>
         {cargando ? (
@@ -257,6 +357,8 @@ export default function HorariosPage() {
           </div>
         )}
       </div>
+
+      {renderConfigModal()}
     </div>
   );
 }
