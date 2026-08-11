@@ -545,4 +545,23 @@ export const auditoriaService = {
   },
 };
 
+export const reportesService = {
+  generarBoleta: async (params) => {
+    const response = await api.get('/reportes/boleta', { params, responseType: 'blob' });
+    return response.data;
+  },
+  generarConstancia: async (params) => {
+    const response = await api.get('/reportes/constancia', { params, responseType: 'blob' });
+    return response.data;
+  },
+  generarListadoAlumnos: async (params) => {
+    const response = await api.get('/reportes/listado-alumnos', { params, responseType: 'blob' });
+    return response.data;
+  },
+  generarEstadisticas: async (params) => {
+    const response = await api.get('/reportes/estadisticas', { params, responseType: 'blob' });
+    return response.data;
+  },
+};
+
 export default api;

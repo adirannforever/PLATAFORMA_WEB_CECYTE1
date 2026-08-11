@@ -8,6 +8,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@babel/core": "^8.0.1",
+    "@babel/parser": "^8.0.4",
     "axios": "^1.7.5",
     "lodash": "^4.18.1",
     "lucide-react": "^1.28.0",

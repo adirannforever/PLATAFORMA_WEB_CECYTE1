@@ -28,6 +28,8 @@ import ciclosRoutes from './routes/ciclos.routes.js';
 import materiasCatalogoRoutes from './routes/materiasCatalogo.routes.js';
 import auditoriaRoutes from './routes/auditoria.routes.js';
 import { auditoriaGlobal } from './middlewares/auditoriaGlobal.js'; 
+import reportesRoutes from './routes/reportes.routes.js';
+
 
 dotenv.config();
 
@@ -64,6 +66,7 @@ app.use('/api/periodos', periodosRoutes);
 app.use('/api/ciclos', ciclosRoutes);
 app.use('/api/materias-catalogo', materiasCatalogoRoutes);
 app.use('/api/auditoria', auditoriaRoutes);
+app.use('/api/reportes', reportesRoutes);
 
 
 app.use(auditoriaGlobal);
