@@ -1,11 +1,8 @@
 import { query } from '../config/db.js';
 
-// ============================================================
-// OBTENER INCIDENCIAS (con filtros básicos)
-// ============================================================
 export const getIncidencias = async (req, res) => {
   try {
-    const { alumno_id, tipo, resuelta, page = 1, limit = 10 } = req.query;
+    const { alumno_id, tipo, subtipo, resuelta, fecha_desde, fecha_hasta, page = 1, limit = 10 } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const limitNum = parseInt(limit);
 
@@ -22,6 +19,8 @@ export const getIncidencias = async (req, res) => {
         i.resuelta,
         i.resolucion,
         a.matricula,
+        a.semestre_actual AS semestre,
+        g.letra AS grupo_letra,
         u.nombre AS alumno_nombre,
         u.apellidos AS alumno_apellidos,
         r.nombre AS registrado_por_nombre,
@@ -29,6 +28,7 @@ export const getIncidencias = async (req, res) => {
       FROM incidencias i
       JOIN alumnos a ON a.id = i.alumno_id
       JOIN usuarios u ON u.id = a.usuario_id
+      LEFT JOIN grupos g ON g.id = a.grupo_actual_id
       JOIN usuarios r ON r.id = i.registrado_por
       WHERE 1=1
     `;
@@ -43,9 +43,21 @@ export const getIncidencias = async (req, res) => {
       conditions.push(`i.tipo = $${params.length + 1}`);
       params.push(tipo);
     }
+    if (subtipo) {
+      conditions.push(`i.subtipo = $${params.length + 1}`);
+      params.push(subtipo);
+    }
     if (resuelta !== undefined && resuelta !== '') {
       conditions.push(`i.resuelta = $${params.length + 1}`);
       params.push(resuelta === 'true');
+    }
+    if (fecha_desde) {
+      conditions.push(`i.fecha >= $${params.length + 1}`);
+      params.push(fecha_desde);
+    }
+    if (fecha_hasta) {
+      conditions.push(`i.fecha <= $${params.length + 1}`);
+      params.push(fecha_hasta);
     }
 
     if (conditions.length > 0) {
@@ -78,9 +90,6 @@ export const getIncidencias = async (req, res) => {
   }
 };
 
-// ============================================================
-// OBTENER INCIDENCIAS DE UN ALUMNO
-// ============================================================
 export const getIncidenciasByAlumno = async (req, res) => {
   try {
     const { alumno_id } = req.params;
@@ -102,9 +111,6 @@ export const getIncidenciasByAlumno = async (req, res) => {
   }
 };
 
-// ============================================================
-// CREAR INCIDENCIA
-// ============================================================
 export const crearIncidencia = async (req, res) => {
   const { alumno_id, ciclo_id, tipo, subtipo, descripcion, fecha } = req.body;
   if (!alumno_id || !tipo || !descripcion) {
@@ -127,9 +133,6 @@ export const crearIncidencia = async (req, res) => {
   }
 };
 
-// ============================================================
-// ACTUALIZAR INCIDENCIA
-// ============================================================
 export const actualizarIncidencia = async (req, res) => {
   const { id } = req.params;
   const { tipo, subtipo, descripcion, fecha } = req.body;
@@ -160,9 +163,6 @@ export const actualizarIncidencia = async (req, res) => {
   }
 };
 
-// ============================================================
-// RESOLVER INCIDENCIA
-// ============================================================
 export const resolverIncidencia = async (req, res) => {
   const { id } = req.params;
   const { resolucion } = req.body;
@@ -187,9 +187,6 @@ export const resolverIncidencia = async (req, res) => {
   }
 };
 
-// ============================================================
-// ELIMINAR INCIDENCIA
-// ============================================================
 export const eliminarIncidencia = async (req, res) => {
   const { id } = req.params;
   try {
