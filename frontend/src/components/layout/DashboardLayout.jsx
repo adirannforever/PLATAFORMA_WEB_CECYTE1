@@ -3,7 +3,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import styles from './DashboardLayout.module.css';
 import logoCecyte from '../../assets/logo_cecyte.png';
-import { Users, FileText, Gift, CreditCard, Briefcase, GraduationCap, Settings, AlertCircle } from 'lucide-react'; 
+import { Users, FileText, Gift, CreditCard, Briefcase, GraduationCap, Settings, AlertCircle, Activity } from 'lucide-react'; 
 
 
 const IconPortal = () => (
@@ -124,6 +124,7 @@ export default function DashboardLayout() {
     { to: '/titulacion', label: 'Titulación', icon: <GraduationCap size={18} />, roles: ['administrador'] },
     { to: '/configuracion-academica', label: 'Configuración Académica', icon: <Settings size={18} />, roles: ['administrador'] },
     { to: '/incidencias', label: 'Incidencias', icon: <AlertCircle size={18} />, roles: ['administrador'] },
+    { to: '/auditoria', label: 'Auditoría', icon: <Activity size={18} />, roles: ['administrador'] },
   ].filter(item => item.roles.includes(usuario?.rol));
 
   return (

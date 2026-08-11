@@ -538,4 +538,11 @@ export const especialidadesService = {
   },
 };
 
+export const auditoriaService = {
+  getLogs: async (params = {}) => {
+    const response = await api.get('/auditoria', { params });
+    return response.data;
+  },
+};
+
 export default api;

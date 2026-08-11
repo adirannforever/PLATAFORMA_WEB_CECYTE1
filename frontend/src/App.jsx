@@ -21,6 +21,7 @@ import ServicioSocialPage from './pages/ServicioSocialPage';
 import TitulacionPage from './pages/TitulacionPage';
 import ConfiguracionAcademicaPage from './pages/ConfiguracionAcademicaPage';
 import IncidenciasPage from './pages/IncidenciasPage';
+import AuditoriaPage from './pages/AuditoriaPage';
 
 const RutaProtegida = ({ children, rolesPermitidos }) => {
   const { usuario, cargando } = useAuth();
@@ -197,7 +198,15 @@ export default function App() {
               <IncidenciasPage />
             </RutaProtegida>
           }
-        />          
+        />   
+        <Route
+          path="/auditoria"
+          element={
+            <RutaProtegida rolesPermitidos={['administrador']}>
+              <AuditoriaPage />
+            </RutaProtegida>
+          }
+        />       
         
         {/* 404 */}
         <Route path="*" element={<NotFoundPage />} />
