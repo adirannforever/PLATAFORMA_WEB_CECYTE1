@@ -368,7 +368,6 @@ export const asignarMaterias = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Acceso denegado' });
     }
 
-    // Obtener el grupo para saber su ciclo_id
     const grupoRes = await query('SELECT ciclo_id FROM grupos WHERE id = $1', [id]);
     if (!grupoRes.rows[0]) {
       return res.status(404).json({ success: false, message: 'Grupo no encontrado' });
@@ -379,7 +378,6 @@ export const asignarMaterias = async (req, res) => {
 
     let asignadas = 0;
     for (const materia_id of materias_ids) {
-      // Verificar que la materia no esté ya asignada
       const existente = await query(
         'SELECT id FROM materias_grupo WHERE grupo_id = $1 AND materia_catalogo_id = $2 AND ciclo_id = $3',
         [id, materia_id, ciclo_id]
@@ -387,7 +385,7 @@ export const asignarMaterias = async (req, res) => {
       if (existente.rows.length === 0) {
         await query(
           `INSERT INTO materias_grupo (grupo_id, materia_catalogo_id, docente_id, ciclo_id, activa)
-           VALUES ($1, $2, NULL, $3, TRUE)`,
+           VALUES ($1, $2, NULL, $3, TRUE)`, // ✅ docente_id = NULL
           [id, materia_id, ciclo_id]
         );
         asignadas++;

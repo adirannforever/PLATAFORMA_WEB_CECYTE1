@@ -641,3 +641,77 @@
     grid-template-columns: 1fr;
   }
 }
+.semestreInfo {
+  padding: 0.5rem 0.8rem;
+  background: #f1f5f9;
+  border: 1px solid #d1d9e6;
+  border-radius: 2px;
+  font-size: 0.9rem;
+  color: #1e293b;
+}
+.semestreInfo strong {
+  color: #1A6B35;
+}
+
+.checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    cursor: pointer;
+    user-select: none;
+}
+
+.checkbox input {
+    display: none;
+}
+
+.checkmark {
+    width: 20px;
+    height: 20px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: 2px solid #999;
+    border-radius: 5px;
+
+    background-color: white;
+    color: white;
+
+    font-size: 14px;
+    font-weight: bold;
+
+    transition:
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        transform 0.2s ease;
+}
+
+/* CHECK */
+.checkbox input:checked + .checkmark {
+    background-color: #333;
+    border-color: #333;
+
+    transform: scale(1.05);
+}
+
+/* Palomita */
+.checkmark {
+    transition:
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        transform 0.2s ease,
+        color 0.15s ease;
+}
+
+/* Hover */
+.checkbox:hover .checkmark {
+    border-color: #555;
+}
+
+/* Pequeño efecto al marcar/desmarcar */
+.checkbox input:active + .checkmark {
+    transform: scale(0.85);
+}

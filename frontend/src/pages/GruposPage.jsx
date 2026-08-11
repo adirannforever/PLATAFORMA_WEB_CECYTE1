@@ -23,7 +23,6 @@ export default function GruposPage() {
   const [materiasDelGrupo, setMateriasDelGrupo] = useState({});
   const [alumnosDelGrupo, setAlumnosDelGrupo] = useState({});
 
-  // Modales de grupo
   const [modalAbierto, setModalAbierto] = useState(false);
   const [formGrupo, setFormGrupo] = useState({
     ciclo_id: '',
@@ -53,7 +52,6 @@ export default function GruposPage() {
   const [enviandoEdicion, setEnviandoEdicion] = useState(false);
   const [errorEdicion, setErrorEdicion] = useState('');
 
-  // Modal de asignación de materias
   const [modalAsignarMaterias, setModalAsignarMaterias] = useState(false);
   const [grupoParaAsignar, setGrupoParaAsignar] = useState(null);
   const [cargandoMateriasDisponibles, setCargandoMateriasDisponibles] = useState(false);
@@ -65,14 +63,12 @@ export default function GruposPage() {
   const [exitoAsignacion, setExitoAsignacion] = useState('');
   const [enviandoAsignacion, setEnviandoAsignacion] = useState(false);
 
-  // Filtros de lista de grupos
   const [filtros, setFiltros] = useState({
     ciclo_id: '',
     semestre: '',
     turno_id: ''  
   });
 
-  // Cargar filtros y datos iniciales
   useEffect(() => {
     const cargarInicial = async () => {
       try {
@@ -89,7 +85,6 @@ export default function GruposPage() {
     cargarInicial();
   }, []);
 
-  // Cargar grupos al cambiar filtros
   useEffect(() => {
     const cargarGrupos = async () => {
       setCargando(true);
@@ -111,40 +106,30 @@ export default function GruposPage() {
     cargarGrupos();
   }, [filtros]);
 
-  // ============================================================
-  // FUNCIÓN REESTRUCTURADA: Carga materias disponibles con filtros en backend
-  // ============================================================
   const cargarMateriasDisponibles = async () => {
     if (!grupoParaAsignar) return;
     setCargandoMateriasDisponibles(true);
     setErrorAsignacion('');
     setExitoAsignacion('');
     try {
-      // Construir parámetros para el backend
       const params = {};
-      if (filtroSemestre) params.semestre = parseInt(filtroSemestre);
+      if (grupoParaAsignar.semestre) params.semestre = grupoParaAsignar.semestre;
       if (filtroTipo) params.tipo = filtroTipo;
-      // Si es troncal_especialidad, forzar la especialidad del grupo
       if (filtroTipo === 'troncal_especialidad' && grupoParaAsignar?.especialidad_id) {
         params.especialidad_id = grupoParaAsignar.especialidad_id;
       }
 
-      // Obtener materias del catálogo con los filtros aplicados en el backend
       const res = await materiasCatalogoService.getAll(params);
       const catalogo = res.data || [];
 
-      // Obtener materias ya asignadas al grupo para excluirlas
       const materiasGrupoRes = await gruposService.getMaterias(grupoParaAsignar.id);
       const idsAsignadas = (materiasGrupoRes.materias || []).map(m => m.materia_catalogo_id || m.id);
 
-      // Filtrar solo las activas y no asignadas
       const disponibles = catalogo.filter(m => 
         m.activa !== false && !idsAsignadas.includes(m.id)
       );
 
-      // Actualizar estado
       setMateriasDisponibles(disponibles);
-      // Siempre limpiar selecciones para evitar IDs huérfanos
       setMateriasSeleccionadas([]);
     } catch (e) {
       console.error('Error cargando materias disponibles:', e);
@@ -154,25 +139,20 @@ export default function GruposPage() {
     }
   };
 
-  // Efecto para recargar materias cuando cambian los filtros (SEMESTRE o TIPO)
   useEffect(() => {
     if (modalAsignarMaterias && grupoParaAsignar) {
       cargarMateriasDisponibles();
     }
-  }, [filtroSemestre, filtroTipo, modalAsignarMaterias, grupoParaAsignar]);
+  }, [ filtroTipo, modalAsignarMaterias, grupoParaAsignar]);
 
-  // Abrir modal de asignación de materias
   const abrirModalAsignarMaterias = (grupo) => {
     setGrupoParaAsignar(grupo);
     setModalAsignarMaterias(true);
-    // Pre-seleccionar el semestre del grupo
     setFiltroSemestre(grupo.semestre?.toString() || '');
     setFiltroTipo('');
     setMateriasSeleccionadas([]);
-    // La carga se dispara por el useEffect
   };
 
-  // Manejar selección/deselección de todas
   const handleSeleccionarTodas = () => {
     setMateriasSeleccionadas(materiasDisponibles.map(m => m.id));
   };
@@ -185,7 +165,6 @@ export default function GruposPage() {
     );
   };
 
-  // Asignar materias seleccionadas
   const handleAsignarMaterias = async () => {
     if (materiasSeleccionadas.length === 0) {
       setErrorAsignacion('Selecciona al menos una materia');
@@ -197,10 +176,8 @@ export default function GruposPage() {
     try {
       await gruposService.asignarMaterias(grupoParaAsignar.id, materiasSeleccionadas);
       setExitoAsignacion(`${materiasSeleccionadas.length} materia(s) asignadas correctamente`);
-      // Recargar materias del grupo
       const materiasRes = await gruposService.getMaterias(grupoParaAsignar.id);
       setMateriasDelGrupo(prev => ({ ...prev, [grupoParaAsignar.id]: materiasRes.materias || [] }));
-      // Cerrar modal después de 1.5s
       setTimeout(() => {
         setModalAsignarMaterias(false);
         setExitoAsignacion('');
@@ -212,9 +189,7 @@ export default function GruposPage() {
     }
   };
 
-  // ============================================================
-  // FUNCIONES DE CRUD DE GRUPOS (sin cambios)
-  // ============================================================
+  // ... (resto de funciones CRUD de grupos sin cambios)
   const handleAbrirModalCrear = async () => {
     setErrorGrupo('');
     setFormGrupo({
@@ -348,7 +323,6 @@ export default function GruposPage() {
     setFiltros(prev => ({ ...prev, [name]: value }));
   };
 
-  // Renderizado de cada grupo
   const renderGrupo = (grupo) => {
     const isExpanded = expandedId === grupo.id;
     const materias = materiasDelGrupo[grupo.id] || [];
@@ -469,9 +443,6 @@ export default function GruposPage() {
     );
   };
 
-  // ============================================================
-  // RENDER PRINCIPAL
-  // ============================================================
   return (
     <div className={styles.page}>
       <div className={styles.pageHeader}>
@@ -488,7 +459,6 @@ export default function GruposPage() {
         )}
       </div>
 
-      {/* Filtros de lista de grupos */}
       <div className={styles.filtros}>
         <div className={styles.filtroGroup}>
           <label className={styles.label}>Ciclo</label>
@@ -537,7 +507,6 @@ export default function GruposPage() {
         </div>
       </div>
 
-      {/* Lista de grupos */}
       {cargando ? (
         <div className={styles.skeletonContainer}>
           {[1,2,3].map((n) => (
@@ -797,24 +766,14 @@ export default function GruposPage() {
             {errorAsignacion && <div className={styles.errorMsg}>{errorAsignacion}</div>}
             {exitoAsignacion && <div className={styles.successMsg}>{exitoAsignacion}</div>}
 
-            {/* Filtros */}
+            {/* FILTROS CORREGIDOS */}
             <div className={styles.filtrosContainer}>
               <div className={styles.filtrosGrid}>
                 <div className={styles.filtroGroup}>
                   <label className={styles.label}>Semestre</label>
-                  <select
-                    className={styles.select}
-                    value={filtroSemestre}
-                    onChange={(e) => {
-                      setFiltroSemestre(e.target.value);
-                      // El useEffect se encarga de recargar
-                    }}
-                  >
-                    <option value="">Todos</option>
-                    {[1,2,3,4,5,6].map(s => (
-                      <option key={s} value={s}>{s}°</option>
-                    ))}
-                  </select>
+                  <div className={styles.semestreInfo}>
+                    Editando para <strong>{grupoParaAsignar?.semestre}° Semestre</strong>
+                  </div>
                 </div>
                 <div className={styles.filtroGroup}>
                   <label className={styles.label}>Tipo</label>
@@ -823,7 +782,6 @@ export default function GruposPage() {
                     value={filtroTipo}
                     onChange={(e) => {
                       setFiltroTipo(e.target.value);
-                      // El useEffect se encarga de recargar
                     }}
                   >
                     <option value="">Todos</option>
@@ -834,13 +792,13 @@ export default function GruposPage() {
               </div>
             </div>
 
-            {/* Lista de materias disponibles */}
             <div className={styles.tableWrapper}>
               <table className={styles.table}>
                 <thead>
                   <tr>
                     <th>
                       <input
+                        class="checkbox"
                         type="checkbox"
                         checked={materiasSeleccionadas.length === materiasDisponibles.length && materiasDisponibles.length > 0}
                         onChange={(e) => {
@@ -866,6 +824,7 @@ export default function GruposPage() {
                       <tr key={m.id}>
                         <td>
                           <input
+                            class="checkbox"
                             type="checkbox"
                             checked={materiasSeleccionadas.includes(m.id)}
                             onChange={() => handleToggleMateria(m.id)}
@@ -883,7 +842,6 @@ export default function GruposPage() {
               </table>
             </div>
 
-            {/* Acciones */}
             <div className={styles.modalActions}>
               <div className={styles.batchActions}>
                 <button className={styles.btnSecondary} onClick={handleSeleccionarTodas} disabled={cargandoMateriasDisponibles || materiasDisponibles.length === 0}>
