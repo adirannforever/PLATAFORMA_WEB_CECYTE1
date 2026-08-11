@@ -398,3 +398,85 @@
     grid-template-columns: 1fr;
   }
 }
+
+.bloque {
+  border-radius: 2px;
+  padding: 2px 4px;
+  font-size: 0.65rem;
+  overflow: hidden;
+  cursor: grab;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 20px;
+  width: 100%;
+  height: 100%;
+  transition: box-shadow 0.15s;
+  user-select: none;
+}
+.bloque:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+.bloqueDragging {
+  opacity: 0.5;
+  transform: scale(0.95);
+}
+.bloqueContent {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  height: 100%;
+  justify-content: center;
+  gap: 0.1rem;
+}
+.bloqueHoras {
+  font-size: 0.55rem;
+  opacity: 0.85;
+}
+.bloqueDocente {
+  font-size: 0.55rem;
+  opacity: 0.7;
+}
+.resizeHandle {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  cursor: ns-resize;
+  background-color: rgba(255,255,255,0.2);
+  transition: background-color 0.15s;
+}
+.resizeHandle:hover {
+  background-color: rgba(255,255,255,0.5);
+}
+.gridCellHover {
+  background-color: rgba(26, 107, 53, 0.1);
+  border: 1px dashed #1A6B35;
+}
+.gridCell {
+  min-height: 40px;
+  border-right: 1px solid #e9edf2;
+  padding: 2px;
+  position: relative;
+  vertical-align: top;
+}
+.gridCell:last-child {
+  border-right: none;
+}
+.gridRow {
+  display: grid;
+  grid-template-columns: 60px repeat(5, 1fr);
+  border-bottom: 1px solid #e9edf2;
+}
+.gridRow:last-child {
+  border-bottom: none;
+}
+.gridTimeCell {
+  padding: 0.3rem 0.5rem;
+  font-size: 0.7rem;
+  color: #64748b;
+  text-align: right;
+  border-right: 1px solid #e9edf2;
+  background: #f8fafc;
+}
