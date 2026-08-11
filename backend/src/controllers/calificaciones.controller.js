@@ -40,10 +40,9 @@ export const misCalificaciones = async (req, res) => {
 
 // Obtener calificaciones de todos los alumnos en una materia_grupo específica
 export const calificacionesPorMateria = async (req, res) => {
-  const { materia_grupo_id } = req.params; // Cambiamos a materia_grupo_id
+  const { materia_grupo_id } = req.params;
 
   try {
-    // Verificar permisos: docente debe ser el responsable de esa materia_grupo
     if (req.user.rol === 'docente') {
       const owns = await docenteOwnsMateriaGrupo(materia_grupo_id, req.user.id);
       if (!owns) {
@@ -54,15 +53,21 @@ export const calificacionesPorMateria = async (req, res) => {
     }
 
     const result = await query(
-      `SELECT u.id AS alumno_id, u.nombre, u.apellidos,
-              a.id AS alumno_id_interno,
-              c.id AS calificacion_id, c.parcial, c.calificacion
-       FROM alumnos a
+      `SELECT 
+         a.id AS alumno_id,
+         u.id AS usuario_id,
+         u.nombre,
+         u.apellidos,
+         c.id AS calificacion_id,
+         c.parcial,
+         c.calificacion
+       FROM materias_grupo mg
+       JOIN grupos g ON mg.grupo_id = g.id
+       JOIN historial_grupos_alumno h ON h.grupo_id = g.id AND h.activo = TRUE
+       JOIN alumnos a ON a.id = h.alumno_id
        JOIN usuarios u ON u.id = a.usuario_id
-       LEFT JOIN calificaciones c ON c.alumno_id = a.id AND c.materia_grupo_id = $1
-       WHERE a.grupo_actual_id = (
-         SELECT grupo_id FROM materias_grupo WHERE id = $1
-       )
+       LEFT JOIN calificaciones c ON c.alumno_id = a.id AND c.materia_grupo_id = mg.id
+       WHERE mg.id = $1
        ORDER BY u.apellidos, u.nombre, c.parcial`,
       [materia_grupo_id]
     );
@@ -81,7 +86,7 @@ export const registrarCalificacion = async (req, res) => {
   if (!alumno_id || !materia_grupo_id || !parcial || calificacion === undefined) {
     return res.status(400).json({
       success: false,
-      message: 'alumno_id, materia_grupo_id, parcial y calificacion son requeridos.',
+      message: 'Faltan datos: alumno, materia, parcial y calificación son requeridos.',
     });
   }
 
@@ -97,7 +102,6 @@ export const registrarCalificacion = async (req, res) => {
   }
 
   try {
-    // Verificar que el docente tiene permiso sobre esta materia_grupo
     if (req.user.rol === 'docente') {
       const owns = await docenteOwnsMateriaGrupo(materia_grupo_id, req.user.id);
       if (!owns) {
@@ -105,37 +109,54 @@ export const registrarCalificacion = async (req, res) => {
       }
     }
 
-    // Verificar que el alumno pertenece al grupo de esa materia
-    const grupoCheck = await query(
-      `SELECT a.id FROM alumnos a
-       JOIN materias_grupo mg ON mg.grupo_id = a.grupo_actual_id
-       WHERE a.id = $1 AND mg.id = $2`,
-      [alumno_id, materia_grupo_id]
+    // Obtener el ciclo_id de la materia_grupo
+    const materiaInfo = await query(
+      `SELECT ciclo_id FROM materias_grupo WHERE id = $1 AND activa = TRUE`,
+      [materia_grupo_id]
     );
-    if (!grupoCheck.rows[0]) {
-      return res.status(400).json({ success: false, message: 'El alumno no pertenece al grupo de esta materia.' });
+    if (!materiaInfo.rows[0]) {
+      return res.status(404).json({ success: false, message: 'Materia no encontrada o inactiva.' });
+    }
+    const cicloId = materiaInfo.rows[0].ciclo_id;
+
+    // Verificar que el alumno existe en la tabla alumnos
+    const alumnoCheck = await query('SELECT id FROM alumnos WHERE id = $1', [alumno_id]);
+    if (!alumnoCheck.rows[0]) {
+      return res.status(400).json({
+        success: false,
+        message: 'El alumno no existe o no está registrado correctamente. Verifica que el usuario tenga rol de alumno.',
+      });
+    }
+
+    // Verificar que no exista duplicado
+    const duplicado = await query(
+      `SELECT id FROM calificaciones 
+       WHERE alumno_id = $1 AND materia_grupo_id = $2 AND parcial = $3`,
+      [alumno_id, materia_grupo_id, parcialNum]
+    );
+    if (duplicado.rows.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: 'Ya existe una calificación para este parcial. Si deseas modificarla, edita la celda correspondiente.',
+      });
     }
 
     const result = await query(
-      `INSERT INTO calificaciones (alumno_id, materia_grupo_id, parcial, calificacion, tipo_evaluacion, registrado_por)
-       VALUES ($1, $2, $3, $4, 'ordinaria', $5) RETURNING *`,
-      [alumno_id, materia_grupo_id, parcialNum, calNum, req.user.id]
+      `INSERT INTO calificaciones 
+        (alumno_id, materia_grupo_id, ciclo_id, parcial, calificacion, tipo_evaluacion, registrado_por)
+       VALUES ($1, $2, $3, $4, $5, 'ordinaria', $6) 
+       RETURNING *`,
+      [alumno_id, materia_grupo_id, cicloId, parcialNum, calNum, req.user.id]
     );
 
     return res.status(201).json({
       success: true,
-      message: 'Calificación registrada.',
+      message: 'Calificación registrada correctamente.',
       calificacion: result.rows[0],
     });
   } catch (err) {
-    if (err.code === '23505') {
-      return res.status(409).json({
-        success: false,
-        message: 'Ya existe una calificación para este alumno en este parcial. Usa PUT para actualizar.',
-      });
-    }
     console.error('Error en registrarCalificacion:', err);
-    return res.status(500).json({ success: false, message: 'Error interno.' });
+    return res.status(500).json({ success: false, message: 'Error interno del servidor.' });
   }
 };
 
@@ -150,7 +171,6 @@ export const actualizarCalificacion = async (req, res) => {
   }
 
   try {
-    // Obtener la calificación para verificar permisos
     const calRow = await query(
       `SELECT c.id, c.materia_grupo_id, c.alumno_id
        FROM calificaciones c
@@ -178,9 +198,38 @@ export const actualizarCalificacion = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Calificación no encontrada.' });
     }
 
-    return res.json({ success: true, message: 'Calificación actualizada.', calificacion: result.rows[0] });
+    return res.json({ success: true, message: 'Calificación actualizada correctamente.', calificacion: result.rows[0] });
   } catch (err) {
     console.error('Error en actualizarCalificacion:', err);
+    return res.status(500).json({ success: false, message: 'Error interno del servidor.' });
+  }
+};
+
+// Obtener períodos de evaluación para un ciclo (basado en materia_grupo_id)
+export const getPeriodosEvaluacion = async (req, res) => {
+  const { materia_grupo_id } = req.params;
+
+  try {
+    const result = await query(
+      `SELECT ciclo_id FROM materias_grupo WHERE id = $1 AND activa = TRUE`,
+      [materia_grupo_id]
+    );
+    if (!result.rows[0]) {
+      return res.status(404).json({ success: false, message: 'Materia no encontrada o inactiva.' });
+    }
+    const cicloId = result.rows[0].ciclo_id;
+
+    const periodos = await query(
+      `SELECT parcial, fecha_inicio, fecha_fin
+       FROM periodos_evaluacion
+       WHERE ciclo_id = $1 AND activo = TRUE
+       ORDER BY parcial`,
+      [cicloId]
+    );
+
+    return res.json({ success: true, periodos: periodos.rows });
+  } catch (err) {
+    console.error('Error en getPeriodosEvaluacion:', err);
     return res.status(500).json({ success: false, message: 'Error interno.' });
   }
 };

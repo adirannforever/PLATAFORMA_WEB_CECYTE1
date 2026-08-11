@@ -3,8 +3,10 @@ import { useAuth } from '../context/AuthContext';
 import { gruposService, catalogosService } from '../services/api';
 import Skeleton from '../components/Skeleton';
 import styles from './GruposPage.module.css';
+import { useNavigate } from 'react-router-dom';
 
 export default function GruposPage() {
+  const navigate = useNavigate();
   const { usuario } = useAuth();
   const [grupos, setGrupos] = useState([]);
   const [ciclos, setCiclos] = useState([]);
@@ -292,10 +294,13 @@ export default function GruposPage() {
                           <span className={styles.materiaDocente}>
                             {m.docente_nombre} {m.docente_apellidos}
                           </span>
-                          <button className={styles.btnVerCalif} onClick={(e) => {
+                          <button
+                            className={styles.btnVerCalif}
+                            onClick={(e) => {
                               e.stopPropagation();
-                              navigate(`/calificaciones/materia/${m.id}`);
-                            }}>
+                              navigate(`/calificaciones/${m.id}`);
+                            }}
+                          >
                             Ver calificaciones →
                           </button>
                         </div>

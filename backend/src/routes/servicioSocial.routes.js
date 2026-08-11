@@ -1,15 +1,23 @@
 import { Router } from 'express';
-import { 
-  obtenerServicioSocial, 
-  registrarServicioSocial, 
-  actualizarServicioSocial 
-} from '../controllers/servicioSocial.controller.js';
 import { verifyToken, requireRole } from '../middlewares/auth.js';
+import {
+  obtenerServicioSocial,
+  obtenerReportes,
+  toggleReporte,
+  registrarServicioSocial,
+  actualizarServicioSocial,
+  eliminarServicioSocial,
+} from '../controllers/servicioSocial.controller.js';
 
 const router = Router();
 
-router.get('/', verifyToken, obtenerServicioSocial);
-router.post('/', verifyToken, requireRole(['administrador']), registrarServicioSocial);
-router.put('/:id', verifyToken, requireRole(['administrador']), actualizarServicioSocial);
+router.use(verifyToken);
+
+router.get('/', requireRole('administrador'), obtenerServicioSocial);
+router.get('/:id/reportes', requireRole('administrador'), obtenerReportes);
+router.patch('/reportes/:id', requireRole('administrador'), toggleReporte);
+router.post('/', requireRole('administrador'), registrarServicioSocial);
+router.put('/:id', requireRole('administrador'), actualizarServicioSocial);
+router.delete('/:id', requireRole('administrador'), eliminarServicioSocial);
 
 export default router;

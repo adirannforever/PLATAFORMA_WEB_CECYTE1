@@ -8,11 +8,19 @@ import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import ComunicadosPage from './pages/ComunicadosPage';
 import CalificacionesPage from './pages/CalificacionesPage';
-import GruposPage from './pages/GruposPage'; //  Ya importado
+import GruposPage from './pages/GruposPage';
 import UsuariosPage from './pages/UsuariosPage';
 import InscripcionesPage from './pages/InscripcionesPage';
+import AsistenciaPage from './pages/AsistenciaPage'; 
 import NotFoundPage from './pages/NotFoundPage';
 import ExpedientePage from './pages/ExpedientePage';
+import BecasPage from './pages/BecasPage';
+import BecasDetallePage from './pages/BecasDetallePage';
+import PagosPage from './pages/PagosPage';
+import ServicioSocialPage from './pages/ServicioSocialPage';
+import TitulacionPage from './pages/TitulacionPage';
+import ConfiguracionAcademicaPage from './pages/ConfiguracionAcademicaPage';
+import IncidenciasPage from './pages/IncidenciasPage';
 
 const RutaProtegida = ({ children, rolesPermitidos }) => {
   const { usuario, cargando } = useAuth();
@@ -43,12 +51,9 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
+      <Route path="/login" element={usuario ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
 
-      <Route
-        path="/login"
-        element={usuario ? <Navigate to="/dashboard" replace /> : <LoginPage />}
-      />
-
+      {/* RUTAS PROTEGIDAS CON LAYOUT */}
       <Route
         element={
           <RutaProtegida>
@@ -69,15 +74,20 @@ export default function App() {
           }
         />
 
-        {/* Grupos (reemplaza a Materias) */}
+        {/* Grupos */}
         <Route path="/grupos" element={<GruposPage />} />
 
-        {/* Redirigir /materias a /grupos para compatibilidad */}
-        <Route path="/materias" element={<Navigate to="/grupos" replace />} />
-
-        {/* Docente y Admin - Calificaciones de materia específica */}
+        {/* Docente y Admin */}
         <Route
-          path="/calificaciones/:materiaId"
+          path="/materias"
+          element={
+            <RutaProtegida rolesPermitidos={['docente', 'administrador']}>
+              <GruposPage /> {/* O la página que tengas para materias, pero ya tienes Grupos */}
+            </RutaProtegida>
+          }
+        />
+        <Route
+          path="/calificaciones/:materia_grupo_id"
           element={
             <RutaProtegida rolesPermitidos={['docente', 'administrador']}>
               <CalificacionesPage />
@@ -102,18 +112,96 @@ export default function App() {
             </RutaProtegida>
           }
         />
+
+        {/*  NUEVA RUTA: ASISTENCIAS */}
+        <Route
+          path="/asistencia"
+          element={
+            <RutaProtegida rolesPermitidos={['administrador', 'docente']}>
+              <AsistenciaPage />
+            </RutaProtegida>
+          }
+        />
+
+        <Route
+          path="/expediente"
+          element={
+            <RutaProtegida rolesPermitidos={['administrador']}>
+              <ExpedientePage />
+            </RutaProtegida>
+          }
+        />
+        <Route
+          path="/expediente/:id"
+          element={
+            <RutaProtegida rolesPermitidos={['administrador', 'alumno']}>
+              <ExpedientePage />
+            </RutaProtegida>
+          }
+        />
+
+        <Route 
+          path="becas" 
+          element={
+            <RutaProtegida rolesPermitidos={['administrador']}>
+              <BecasPage />
+            </RutaProtegida>
+          } 
+        />
+
+        <Route 
+          path="becas/detalle/:nombre_beca" 
+          element={
+            <RutaProtegida rolesPermitidos={['administrador']}>
+              <BecasDetallePage />
+            </RutaProtegida>
+          }
+        />
+        <Route 
+          path="pagos"  
+          element={
+            <RutaProtegida rolesPermitidos={['administrador']}>
+              <PagosPage />
+            </RutaProtegida>
+            } 
+          />
+        <Route 
+          path="servicio-social" 
+          element={
+            <RutaProtegida rolesPermitidos={['administrador']}>
+              <ServicioSocialPage />
+            </RutaProtegida>
+            } 
+        />
+        <Route 
+          path="titulacion" 
+          element={
+            <RutaProtegida rolesPermitidos={['administrador']}>
+              <TitulacionPage />
+            </RutaProtegida>
+            } 
+        />
+
+        <Route 
+          path="/configuracion-academica" 
+          element={
+            <RutaProtegida rolesPermitidos={['administrador']}>
+              <ConfiguracionAcademicaPage />
+            </RutaProtegida>
+          } 
+        />
+        <Route
+          path="/incidencias"
+          element={
+            <RutaProtegida rolesPermitidos={['administrador']}>
+              <IncidenciasPage />
+            </RutaProtegida>
+          }
+        />          
+        
+        {/* 404 */}
+        <Route path="*" element={<NotFoundPage />} />
       </Route>
-
-      <Route
-        path="/expediente/:id"
-        element={
-          <RutaProtegida rolesPermitidos={['administrador', 'alumno']}>
-            <ExpedientePage />
-          </RutaProtegida>
-        }
-      />
-
-      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }

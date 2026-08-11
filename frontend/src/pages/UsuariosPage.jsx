@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { usuariosService } from '../services/api';
+import { usuariosService, catalogosService } from '../services/api';
 import Skeleton from '../components/Skeleton';
 import styles from './UsuariosPage.module.css';
 
@@ -7,30 +7,36 @@ const ROLES = ['todos', 'alumno', 'docente', 'administrador'];
 const ETIQUETA = { alumno: 'Alumno', docente: 'Docente', administrador: 'Admin' };
 const COLOR_ROL = { alumno: 'green', docente: 'orange', administrador: 'dark' };
 
-// Función para extraer solo semestre y letra (ej. "6°A" de "6°A Matutino")
 const getSemestreGrupo = (semestre, grupoNombre) => {
   if (!grupoNombre) return semestre ? `${semestre}°` : 'Sin asignar';
-  // Extrae el patrón "N°L" al inicio (ej. "6°A")
   const match = grupoNombre.match(/^(\d+°[A-Z])/);
   if (match) {
     return match[1];
   }
-  // Si no se encuentra, devuelve el nombre completo (fallback)
   return grupoNombre;
 };
 
 export default function UsuariosPage() {
   const [usuarios, setUsuarios] = useState([]);
+  const [ciclos, setCiclos] = useState([]);
+  const [especialidades, setEspecialidades] = useState([]);
+  const [turnos, setTurnos] = useState([]);
+  const [grupos, setGrupos] = useState([]);
   const [filtro, setFiltro] = useState('todos');
   const [busqueda, setBusqueda] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('todos');
-  const [filtroSemestre, setFiltroSemestre] = useState('todos');
+  const [filtroCiclo, setFiltroCiclo] = useState('');
+  const [filtroSemestre, setFiltroSemestre] = useState('');
+  const [filtroEspecialidad, setFiltroEspecialidad] = useState('');
+  const [filtroTurno, setFiltroTurno] = useState('');
+  const [filtroGrupo, setFiltroGrupo] = useState('');
   const [cargando, setCargando] = useState(true);
 
   const [modalAbierto, setModalAbierto] = useState(false);
-  const [form, setForm] = useState({ nombre: '', apellidos: '', email: '', password: '', rol: 'alumno' });
+  const [form, setForm] = useState({ nombre: '', apellidos: '', email: '', password: '', rol: 'alumno', matricula: '' });
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState('');
+  const [exito, setExito] = useState('');
 
   const [modalEditarAbierto, setModalEditarAbierto] = useState(false);
   const [usuarioEditando, setUsuarioEditando] = useState(null);
@@ -38,19 +44,51 @@ export default function UsuariosPage() {
   const [enviandoEditar, setEnviandoEditar] = useState(false);
   const [errorEditar, setErrorEditar] = useState('');
 
+  // Cargar catálogos
+  useEffect(() => {
+    const cargarCatalogos = async () => {
+      try {
+        const [ciclosRes, espRes, turnRes, gruposRes] = await Promise.all([
+          catalogosService.getCiclos(),
+          catalogosService.getEspecialidades(),
+          catalogosService.getTurnos(),
+          catalogosService.getGrupos(),
+        ]);
+        setCiclos(ciclosRes.data || []);
+        setEspecialidades(espRes.data || []);
+        setTurnos(turnRes.data || []);
+        setGrupos(gruposRes.data || []);
+        const activo = ciclosRes.data?.find(c => c.activo);
+        if (activo) {
+          setFiltroCiclo(String(activo.id));
+        }
+      } catch (e) {
+        console.error('Error cargando catálogos:', e);
+      }
+    };
+    cargarCatalogos();
+  }, []);
+
   const cargar = async () => {
     setCargando(true);
+    setError('');
+    setExito('');
     try {
       const params = {};
       if (filtro !== 'todos') params.rol = filtro;
       if (busqueda.trim()) params.search = busqueda.trim();
       if (filtroEstado !== 'todos') params.activo = filtroEstado === 'activo' ? 'true' : 'false';
-      if (filtroSemestre !== 'todos') params.semestre = filtroSemestre;
+      if (filtroCiclo) params.ciclo_id = filtroCiclo;
+      if (filtroSemestre) params.semestre = filtroSemestre;
+      if (filtroEspecialidad) params.especialidad_id = filtroEspecialidad;
+      if (filtroTurno) params.turno_id = filtroTurno;
+      if (filtroGrupo) params.grupo_id = filtroGrupo;
 
       const res = await usuariosService.getAll(params);
       setUsuarios(res.usuarios || []);
     } catch (e) {
       console.error('Error al cargar usuarios:', e);
+      setError('No se pudieron cargar los usuarios.');
       setUsuarios([]);
     } finally {
       setCargando(false);
@@ -59,17 +97,20 @@ export default function UsuariosPage() {
 
   useEffect(() => {
     cargar();
-  }, [filtro, busqueda, filtroEstado, filtroSemestre]);
+  }, [filtro, busqueda, filtroEstado, filtroCiclo, filtroSemestre, filtroEspecialidad, filtroTurno, filtroGrupo]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setExito('');
     setEnviando(true);
     try {
       await usuariosService.crear(form);
-      setForm({ nombre: '', apellidos: '', email: '', password: '', rol: 'alumno' });
+      setExito(' Usuario creado correctamente.');
+      setForm({ nombre: '', apellidos: '', email: '', password: '', rol: 'alumno', matricula: '' });
       setModalAbierto(false);
       await cargar();
+      setTimeout(() => setExito(''), 5000);
     } catch (err) {
       setError(err.response?.data?.message || 'Error al crear usuario.');
     } finally {
@@ -81,7 +122,9 @@ export default function UsuariosPage() {
     if (!confirm('¿Desactivar este usuario? No podrá iniciar sesión.')) return;
     try {
       await usuariosService.desactivar(id);
+      setExito(' Usuario desactivado.');
       await cargar();
+      setTimeout(() => setExito(''), 5000);
     } catch (err) {
       alert(err.response?.data?.message || 'Error al desactivar.');
     }
@@ -91,7 +134,9 @@ export default function UsuariosPage() {
     if (!confirm('¿Reactivar este usuario?')) return;
     try {
       await usuariosService.actualizar(id, { activo: true });
+      setExito(' Usuario reactivado.');
       await cargar();
+      setTimeout(() => setExito(''), 5000);
     } catch (err) {
       alert(err.response?.data?.message || 'Error al reactivar.');
     }
@@ -116,8 +161,10 @@ export default function UsuariosPage() {
     setEnviandoEditar(true);
     try {
       await usuariosService.actualizar(usuarioEditando.id, formEditar);
+      setExito(' Usuario actualizado.');
       setModalEditarAbierto(false);
       await cargar();
+      setTimeout(() => setExito(''), 5000);
     } catch (err) {
       setErrorEditar(err.response?.data?.message || 'Error al actualizar usuario.');
     } finally {
@@ -127,14 +174,22 @@ export default function UsuariosPage() {
 
   return (
     <div className={styles.page}>
+      {exito && <div className={styles.successMsg}>{exito}</div>}
+      {error && <div className={styles.errorMsg}>{error}</div>}
+
       <div className={styles.pageHeader}>
         <div>
           <h1 className={styles.title}>Usuarios</h1>
           <p className={styles.subtitle}>{usuarios.length} usuario(s)</p>
         </div>
-        <button className={styles.btnPrimary} onClick={() => setModalAbierto(true)}>
-          + Nuevo usuario
-        </button>
+        <div className={styles.headerActions}>
+          <button className={styles.btnSecondary} onClick={cargar} disabled={cargando}>
+            ↻ Refrescar
+          </button>
+          <button className={styles.btnPrimary} onClick={() => setModalAbierto(true)}>
+            + Nuevo usuario
+          </button>
+        </div>
       </div>
 
       {/* Filtros por rol */}
@@ -173,6 +228,21 @@ export default function UsuariosPage() {
             <option value="inactivo">Inactivos</option>
           </select>
         </div>
+        <div className={styles.filtroCiclo}>
+          <label className={styles.label}>Ciclo:</label>
+          <select
+            className={styles.input}
+            value={filtroCiclo}
+            onChange={(e) => setFiltroCiclo(e.target.value)}
+          >
+            <option value="">Todos</option>
+            {ciclos.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nombre} {c.activo ? '(Activo)' : ''}
+              </option>
+            ))}
+          </select>
+        </div>
         <div className={styles.filtroSemestre}>
           <label className={styles.label}>Semestre:</label>
           <select
@@ -180,9 +250,48 @@ export default function UsuariosPage() {
             value={filtroSemestre}
             onChange={(e) => setFiltroSemestre(e.target.value)}
           >
-            <option value="todos">Todos</option>
+            <option value="">Todos</option>
             {[1,2,3,4,5,6].map(s => (
               <option key={s} value={s}>{s}°</option>
+            ))}
+          </select>
+        </div>
+        <div className={styles.filtroEspecialidad}>
+          <label className={styles.label}>Especialidad:</label>
+          <select
+            className={styles.input}
+            value={filtroEspecialidad}
+            onChange={(e) => setFiltroEspecialidad(e.target.value)}
+          >
+            <option value="">Todas</option>
+            {especialidades.map((e) => (
+              <option key={e.id} value={e.id}>{e.nombre}</option>
+            ))}
+          </select>
+        </div>
+        <div className={styles.filtroTurno}>
+          <label className={styles.label}>Turno:</label>
+          <select
+            className={styles.input}
+            value={filtroTurno}
+            onChange={(e) => setFiltroTurno(e.target.value)}
+          >
+            <option value="">Todos</option>
+            {turnos.map((t) => (
+              <option key={t.id} value={t.id}>{t.nombre}</option>
+            ))}
+          </select>
+        </div>
+        <div className={styles.filtroGrupo}>
+          <label className={styles.label}>Grupo:</label>
+          <select
+            className={styles.input}
+            value={filtroGrupo}
+            onChange={(e) => setFiltroGrupo(e.target.value)}
+          >
+            <option value="">Todos</option>
+            {grupos.map((g) => (
+              <option key={g.id} value={g.id}>{g.nombre}</option>
             ))}
           </select>
         </div>
@@ -311,32 +420,83 @@ export default function UsuariosPage() {
               <div className={styles.row2}>
                 <div className={styles.field}>
                   <label className={styles.label}>Nombre(s)</label>
-                  <input className={styles.input} value={form.nombre} onChange={e => setForm({...form, nombre: e.target.value})} required placeholder="Nombre(s)" />
+                  <input
+                    className={styles.input}
+                    value={form.nombre}
+                    onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+                    required
+                    placeholder="Nombre(s)"
+                  />
                 </div>
                 <div className={styles.field}>
                   <label className={styles.label}>Apellidos</label>
-                  <input className={styles.input} value={form.apellidos} onChange={e => setForm({...form, apellidos: e.target.value})} required placeholder="Apellidos" />
+                  <input
+                    className={styles.input}
+                    value={form.apellidos}
+                    onChange={(e) => setForm({ ...form, apellidos: e.target.value })}
+                    required
+                    placeholder="Apellidos"
+                  />
                 </div>
               </div>
               <div className={styles.field}>
                 <label className={styles.label}>Correo electrónico</label>
-                <input className={styles.input} type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} required placeholder="correo@cecyte1.edu.mx" />
+                <input
+                  className={styles.input}
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  required
+                  placeholder="correo@cecyte1.edu.mx"
+                />
               </div>
               <div className={styles.field}>
                 <label className={styles.label}>Contraseña inicial</label>
-                <input className={styles.input} type="password" value={form.password} onChange={e => setForm({...form, password: e.target.value})} required placeholder="Mínimo 8 caracteres" minLength={8} />
+                <input
+                  className={styles.input}
+                  type="password"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  required
+                  placeholder="Mínimo 8 caracteres"
+                  minLength={8}
+                />
               </div>
               <div className={styles.field}>
                 <label className={styles.label}>Rol</label>
-                <select className={styles.input} value={form.rol} onChange={e => setForm({...form, rol: e.target.value})}>
+                <select
+                  className={styles.input}
+                  value={form.rol}
+                  onChange={(e) => setForm({ ...form, rol: e.target.value })}
+                >
                   <option value="alumno">Alumno</option>
                   <option value="docente">Docente</option>
                   <option value="administrador">Administrador</option>
                 </select>
               </div>
+              {form.rol === 'alumno' && (
+                <div className={styles.field}>
+                  <label className={styles.label}>Matrícula</label>
+                  <input
+                    className={styles.input}
+                    value={form.matricula}
+                    onChange={(e) => setForm({ ...form, matricula: e.target.value })}
+                    placeholder="Ej: A2024001 (opcional)"
+                  />
+                  <span className={styles.helpText}>Opcional: se generará automáticamente si se deja en blanco.</span>
+                </div>
+              )}
               <div className={styles.modalActions}>
-                <button type="button" className={styles.btnSecondary} onClick={() => setModalAbierto(false)}>Cancelar</button>
-                <button type="submit" className={styles.btnPrimary} disabled={enviando}>{enviando ? 'Creando...' : 'Crear usuario'}</button>
+                <button
+                  type="button"
+                  className={styles.btnSecondary}
+                  onClick={() => setModalAbierto(false)}
+                >
+                  Cancelar
+                </button>
+                <button type="submit" className={styles.btnPrimary} disabled={enviando}>
+                  {enviando ? 'Creando...' : 'Crear usuario'}
+                </button>
               </div>
             </form>
           </div>
@@ -353,20 +513,40 @@ export default function UsuariosPage() {
               <div className={styles.row2}>
                 <div className={styles.field}>
                   <label className={styles.label}>Nombre(s)</label>
-                  <input className={styles.input} value={formEditar.nombre} onChange={e => setFormEditar({...formEditar, nombre: e.target.value})} required />
+                  <input
+                    className={styles.input}
+                    value={formEditar.nombre}
+                    onChange={(e) => setFormEditar({ ...formEditar, nombre: e.target.value })}
+                    required
+                  />
                 </div>
                 <div className={styles.field}>
                   <label className={styles.label}>Apellidos</label>
-                  <input className={styles.input} value={formEditar.apellidos} onChange={e => setFormEditar({...formEditar, apellidos: e.target.value})} required />
+                  <input
+                    className={styles.input}
+                    value={formEditar.apellidos}
+                    onChange={(e) => setFormEditar({ ...formEditar, apellidos: e.target.value })}
+                    required
+                  />
                 </div>
               </div>
               <div className={styles.field}>
                 <label className={styles.label}>Correo electrónico</label>
-                <input className={styles.input} type="email" value={formEditar.email} onChange={e => setFormEditar({...formEditar, email: e.target.value})} required />
+                <input
+                  className={styles.input}
+                  type="email"
+                  value={formEditar.email}
+                  onChange={(e) => setFormEditar({ ...formEditar, email: e.target.value })}
+                  required
+                />
               </div>
               <div className={styles.field}>
                 <label className={styles.label}>Rol</label>
-                <select className={styles.input} value={formEditar.rol} onChange={e => setFormEditar({...formEditar, rol: e.target.value})}>
+                <select
+                  className={styles.input}
+                  value={formEditar.rol}
+                  onChange={(e) => setFormEditar({ ...formEditar, rol: e.target.value })}
+                >
                   <option value="alumno">Alumno</option>
                   <option value="docente">Docente</option>
                   <option value="administrador">Administrador</option>
@@ -374,14 +554,28 @@ export default function UsuariosPage() {
               </div>
               <div className={styles.field}>
                 <label className={styles.label}>Estado</label>
-                <select className={styles.input} value={formEditar.activo ? 'true' : 'false'} onChange={e => setFormEditar({...formEditar, activo: e.target.value === 'true'})}>
+                <select
+                  className={styles.input}
+                  value={formEditar.activo ? 'true' : 'false'}
+                  onChange={(e) =>
+                    setFormEditar({ ...formEditar, activo: e.target.value === 'true' })
+                  }
+                >
                   <option value="true">Activo</option>
                   <option value="false">Inactivo</option>
                 </select>
               </div>
               <div className={styles.modalActions}>
-                <button type="button" className={styles.btnSecondary} onClick={() => setModalEditarAbierto(false)}>Cancelar</button>
-                <button type="submit" className={styles.btnPrimary} disabled={enviandoEditar}>{enviandoEditar ? 'Guardando...' : 'Guardar cambios'}</button>
+                <button
+                  type="button"
+                  className={styles.btnSecondary}
+                  onClick={() => setModalEditarAbierto(false)}
+                >
+                  Cancelar
+                </button>
+                <button type="submit" className={styles.btnPrimary} disabled={enviandoEditar}>
+                  {enviandoEditar ? 'Guardando...' : 'Guardar cambios'}
+                </button>
               </div>
             </form>
           </div>

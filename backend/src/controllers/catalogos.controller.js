@@ -240,3 +240,25 @@ export const getAlumnos = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Error interno.' });
   }
 };
+
+export const actualizarEspecialidad = async (req, res) => {
+  const { id } = req.params;
+  const { nombre, descripcion } = req.body;
+  try {
+    if (req.user.rol !== 'administrador') {
+      return res.status(403).json({ success: false, message: 'Acceso denegado' });
+    }
+    const result = await query(
+      `UPDATE especialidades SET nombre = COALESCE($1, nombre), descripcion = COALESCE($2, descripcion)
+       WHERE id = $3 RETURNING *`,
+      [nombre, descripcion, id]
+    );
+    if (!result.rows[0]) {
+      return res.status(404).json({ success: false, message: 'Especialidad no encontrada' });
+    }
+    return res.json({ success: true, data: result.rows[0] });
+  } catch (err) {
+    console.error('Error en actualizarEspecialidad:', err);
+    return res.status(500).json({ success: false, message: 'Error interno' });
+  }
+};

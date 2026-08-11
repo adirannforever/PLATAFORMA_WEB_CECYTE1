@@ -4,7 +4,8 @@ import {
   misCalificaciones,
   calificacionesPorMateria,
   registrarCalificacion,
-  actualizarCalificacion
+  actualizarCalificacion,
+  getPeriodosEvaluacion, 
 } from '../controllers/calificaciones.controller.js';
 
 const router = Router();
@@ -19,5 +20,6 @@ router.get('/materia/:materia_grupo_id', requireRole('administrador', 'docente')
 // Registrar/actualizar calificaciones (docente/admin)
 router.post('/', requireRole('administrador', 'docente'), registrarCalificacion);
 router.put('/:id', requireRole('administrador', 'docente'), actualizarCalificacion);
+router.get('/periodos/:materia_grupo_id', requireRole('administrador', 'docente'), getPeriodosEvaluacion);
 
 export default router;

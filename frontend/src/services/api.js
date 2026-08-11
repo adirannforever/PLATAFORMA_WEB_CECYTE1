@@ -1,19 +1,17 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: '/api',          
-  withCredentials: true,    
+  baseURL: '/api',
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';
       }
@@ -22,7 +20,7 @@ api.interceptors.response.use(
   }
 );
 
-// autentificacion, inicio de sesion y cierre de sesion
+// ===== AUTENTICACIÓN =====
 export const authService = {
   login: async (email, password) => {
     const response = await api.post('/auth/login', { email, password });
@@ -38,8 +36,9 @@ export const authService = {
   },
 };
 
-//usuarios
+// ===== USUARIOS =====
 export const usuariosService = {
+  //  CORREGIDO: params debe ser un objeto, no un string
   getAll: async (params = {}) => {
     const response = await api.get('/usuarios', { params });
     return response.data;
@@ -62,7 +61,7 @@ export const usuariosService = {
   },
 };
 
-//materias
+// ===== MATERIAS =====
 export const materiasService = {
   getAll: async () => {
     const response = await api.get('/materias');
@@ -86,7 +85,7 @@ export const materiasService = {
   },
 };
 
-// inscripciones
+// ===== INSCRIPCIONES =====
 export const inscripcionesService = {
   misMaterias: async () => {
     const response = await api.get('/inscripciones/mis-materias');
@@ -100,10 +99,21 @@ export const inscripcionesService = {
     const response = await api.delete(`/inscripciones/${id}`);
     return response.data;
   },
+  getAlumnosDisponibles: async () => {
+    const response = await api.get('/inscripciones/alumnos-disponibles');
+    return response.data;
+  },
+  getGruposDisponibles: async () => {
+    const response = await api.get('/inscripciones/grupos-disponibles');
+    return response.data;
+  },
+  getAlumnosDeGrupo: async (grupoId) => {
+    const response = await api.get(`/inscripciones/grupo/${grupoId}/alumnos`);
+    return response.data;
+  },
 };
 
-
-// calificaciones
+// ===== CALIFICACIONES =====
 export const calificacionesService = {
   misCalificaciones: async () => {
     const response = await api.get('/calificaciones/mis-calificaciones');
@@ -121,9 +131,13 @@ export const calificacionesService = {
     const response = await api.put(`/calificaciones/${id}`, { calificacion });
     return response.data;
   },
+  getPeriodosEvaluacion: async (materia_grupo_id) => {
+    const response = await api.get(`/calificaciones/periodos/${materia_grupo_id}`);
+    return response.data;
+  },
 };
 
-// comunicados
+// ===== COMUNICADOS =====
 export const comunicadosService = {
   getAll: async () => {
     const response = await api.get('/comunicados');
@@ -143,7 +157,7 @@ export const comunicadosService = {
   },
 };
 
-// asistencias.
+// ===== ASISTENCIAS =====
 export const asistenciaService = {
   getAsistenciaDiaria: async (params) => {
     const response = await api.get('/asistencia/diaria', { params });
@@ -161,9 +175,13 @@ export const asistenciaService = {
     const response = await api.post('/asistencia/clase', data);
     return response.data;
   },
+  guardarAsistenciasLote: async (data) => {
+    const response = await api.post('/asistencia/clase/lote', data);
+    return response.data;
+  },
 };
 
-// aspirantes.
+// ===== ASPIRANTES =====
 export const aspirantesService = {
   getAspirantes: async (params) => {
     const response = await api.get('/aspirantes', { params });
@@ -177,30 +195,44 @@ export const aspirantesService = {
     const response = await api.patch(`/aspirantes/${id}/estatus`, data);
     return response.data;
   },
-};
-
-// becas
-export const becasService = {
-  getAll: async () => {
-    const response = await api.get('/becas');
+  convertir: async (data) => {
+    const response = await api.post('/aspirantes/convertir', data);
     return response.data;
   },
-  porAlumno: async (alumnoId) => {
-    const response = await api.get(`/becas/alumno/${alumnoId}`);
+};
+
+// ===== BECAS =====
+export const becasService = {
+  getAll: async (params = {}) => {
+    const response = await api.get('/becas', { params });
+    return response.data;
+  },
+  getDetalle: async (nombre_beca, params = {}) => {
+    const response = await api.get(`/becas/detalle/${encodeURIComponent(nombre_beca)}`, { params });
     return response.data;
   },
   crear: async (data) => {
     const response = await api.post('/becas', data);
     return response.data;
   },
+  asignar: async (data) => {
+    const response = await api.post('/becas/asignar', data);
+    return response.data;
+  },
   actualizar: async (id, data) => {
     const response = await api.put(`/becas/${id}`, data);
     return response.data;
   },
+  actualizarEstatusPago: async (id, data) => {
+    const response = await api.patch(`/becas/${id}/estatus-pago`, data);
+    return response.data;
+  },
+  eliminar: async (id) => {
+    const response = await api.delete(`/becas/${id}`);
+    return response.data;
+  },
 };
 
-
-// catalogo
 export const catalogosService = {
   getCiclos: async () => {
     const response = await api.get('/catalogos/ciclos');
@@ -256,8 +288,7 @@ export const catalogosService = {
   },
 };
 
-
-//expediente
+// ===== EXPEDIENTE =====
 export const expedienteService = {
   getByAlumnoId: async (alumnoId) => {
     const response = await api.get(`/expediente/${alumnoId}`);
@@ -267,10 +298,17 @@ export const expedienteService = {
     const response = await api.post('/expediente/documento', data);
     return response.data;
   },
+  getAlumnosConExpediente: async (params = '') => {
+    const response = await api.get(`/expediente/alumnos?${params}`);
+    return response.data;
+  },
+  getEstadoAlumno: async (alumnoId) => {
+    const response = await api.get(`/periodos/estado/${alumnoId}`);
+    return response.data;
+  },
 };
 
-
-// horarios
+// ===== HORARIOS =====
 export const horariosService = {
   getHorarioGrupo: async (params) => {
     const response = await api.get('/horarios/grupo', { params });
@@ -290,9 +328,12 @@ export const horariosService = {
   },
 };
 
-//incidencias
 export const incidenciasService = {
-  porAlumno: async (alumnoId) => {
+  getAll: async (params = {}) => {
+    const response = await api.get('/incidencias', { params });
+    return response.data;
+  },
+  getByAlumno: async (alumnoId) => {
     const response = await api.get(`/incidencias/alumno/${alumnoId}`);
     return response.data;
   },
@@ -300,19 +341,27 @@ export const incidenciasService = {
     const response = await api.post('/incidencias', data);
     return response.data;
   },
+  actualizar: async (id, data) => {
+    const response = await api.put(`/incidencias/${id}`, data);
+    return response.data;
+  },
   resolver: async (id, resolucion) => {
     const response = await api.patch(`/incidencias/${id}/resolver`, { resolucion });
     return response.data;
   },
+  eliminar: async (id) => {
+    const response = await api.delete(`/incidencias/${id}`);
+    return response.data;
+  },
 };
 
-// pagos
+// ===== PAGOS =====
 export const pagosService = {
   getConceptos: async () => {
     const response = await api.get('/pagos/conceptos');
     return response.data;
   },
-  porAlumno: async (alumnoId) => {
+  getPorAlumno: async (alumnoId) => {
     const response = await api.get(`/pagos/alumno/${alumnoId}`);
     return response.data;
   },
@@ -322,11 +371,17 @@ export const pagosService = {
   },
 };
 
-
-//servicio-social
 export const servicioSocialService = {
-  getAll: async () => {
-    const response = await api.get('/servicio-social');
+  getAll: async (params = {}) => {
+    const response = await api.get('/servicio-social', { params });
+    return response.data;
+  },
+  getReportes: async (id) => {
+    const response = await api.get(`/servicio-social/${id}/reportes`);
+    return response.data;
+  },
+  toggleReporte: async (id, entregado) => {
+    const response = await api.patch(`/servicio-social/reportes/${id}`, { entregado });
     return response.data;
   },
   crear: async (data) => {
@@ -337,12 +392,51 @@ export const servicioSocialService = {
     const response = await api.put(`/servicio-social/${id}`, data);
     return response.data;
   },
+  eliminar: async (id) => {
+    const response = await api.delete(`/servicio-social/${id}`);
+    return response.data;
+  },
 };
 
-//titulacion
+// ===== PERÍODOS (ADMINISTRACIÓN) =====
+export const periodosService = {
+  getEscolares: async (params = {}) => {
+    const response = await api.get('/periodos/escolares', { params });
+    return response.data;
+  },
+  getEvaluacion: async (params = {}) => {
+    const response = await api.get('/periodos/evaluacion', { params });
+    return response.data;
+  },
+  actualizarEscolar: async (id, data) => {
+    const response = await api.put(`/periodos/escolar/${id}`, data);
+    return response.data;
+  },
+  actualizarEvaluacion: async (id, data) => {
+    const response = await api.put(`/periodos/evaluacion/${id}`, data);
+    return response.data;
+  },
+  regenerar: async (ciclo_id) => {
+    const response = await api.post('/periodos/regenerar', { ciclo_id });
+    return response.data;
+  },
+  crearEscolar: async (data) => {
+    const response = await api.post('/periodos/escolar', data);
+    return response.data;
+  },
+  crearEvaluacion: async (data) => {
+    const response = await api.post('/periodos/evaluacion', data);
+    return response.data;
+  },
+  crearEscolarBatch: async (data) => {
+    const response = await api.post('/periodos/escolares/batch', data);
+    return response.data;
+  },
+};
+
 export const titulacionService = {
-  getAll: async () => {
-    const response = await api.get('/titulacion');
+  getAll: async (params = {}) => {
+    const response = await api.get('/titulacion', { params });
     return response.data;
   },
   crear: async (data) => {
@@ -353,9 +447,13 @@ export const titulacionService = {
     const response = await api.put(`/titulacion/${id}`, data);
     return response.data;
   },
+  eliminar: async (id) => {
+    const response = await api.delete(`/titulacion/${id}`);
+    return response.data;
+  },
 };
 
-//grupos
+// ===== GRUPOS =====
 export const gruposService = {
   getAll: async (filtros = {}) => {
     const params = new URLSearchParams(filtros).toString();
@@ -374,7 +472,7 @@ export const gruposService = {
     const response = await api.get(`/grupos/${id}/alumnos`);
     return response.data;
   },
-    crear: async (data) => {
+  crear: async (data) => {
     const response = await api.post('/grupos', data);
     return response.data;
   },
@@ -384,7 +482,6 @@ export const gruposService = {
   },
 };
 
-//tutorias
 export const tutoriasService = {
   getTutoriasGrupo: async (params) => {
     const response = await api.get('/tutorias', { params });
@@ -392,6 +489,51 @@ export const tutoriasService = {
   },
   crear: async (data) => {
     const response = await api.post('/tutorias', data);
+    return response.data;
+  },
+};
+
+export const ciclosService = {
+  getAll: async () => {
+    const response = await api.get('/ciclos');
+    return response.data;
+  },
+  crear: async (data) => {
+    const response = await api.post('/ciclos', data);
+    return response.data;
+  },
+  actualizar: async (id, data) => {
+    const response = await api.put(`/ciclos/${id}`, data);
+    return response.data;
+  },
+  eliminar: async (id) => {
+    const response = await api.delete(`/ciclos/${id}`);
+    return response.data;
+  },
+};
+
+export const materiasCatalogoService = {
+  getAll: async (params = {}) => {
+    const response = await api.get('/materias-catalogo', { params });
+    return response.data;
+  },
+  crear: async (data) => {
+    const response = await api.post('/materias-catalogo', data);
+    return response.data;
+  },
+  actualizar: async (id, data) => {
+    const response = await api.put(`/materias-catalogo/${id}`, data);
+    return response.data;
+  },
+  eliminar: async (id) => {
+    const response = await api.delete(`/materias-catalogo/${id}`);
+    return response.data;
+  },
+}
+
+export const especialidadesService = {
+  actualizar: async (id, data) => {
+    const response = await api.put(`/catalogos/especialidades/${id}`, data);
     return response.data;
   },
 };

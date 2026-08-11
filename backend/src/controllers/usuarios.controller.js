@@ -3,71 +3,99 @@ import { query } from '../config/db.js';
 
 export const getUsuarios = async (req, res) => {
   try {
-    const { rol, search, activo, semestre } = req.query;
+    const { rol, search, activo, ciclo_id, semestre, especialidad_id, turno_id, grupo_id, excluir_titulados } = req.query;
 
     let sql = `
       SELECT 
-        u.id, u.nombre, u.apellidos, u.email, u.rol, u.activo, u.fecha_registro,
+        u.id,
+        u.nombre, u.apellidos, u.email, u.rol, u.activo, u.fecha_registro,
+        a.id AS alumno_id,
         a.semestre_actual AS semestre,
+        a.especialidad_id AS alumno_especialidad_id,
+        a.grupo_actual_id,
         g.nombre AS grupo_nombre,
+        g.letra AS grupo_letra,
+        t.id AS turno_id,
         t.nombre AS turno_nombre,
+        e.id AS especialidad_catalogo_id,
         e.nombre AS especialidad_nombre,
         a.matricula
       FROM usuarios u
       LEFT JOIN alumnos a ON a.usuario_id = u.id
-      LEFT JOIN (
-        SELECT DISTINCT ON (alumno_id) 
-          alumno_id, grupo_id, ciclo_id, semestre
-        FROM historial_grupos_alumno
-        WHERE activo = TRUE
-        ORDER BY alumno_id, fecha_asignacion DESC
-      ) h ON h.alumno_id = a.id
-      LEFT JOIN grupos g ON g.id = h.grupo_id
+      LEFT JOIN grupos g ON g.id = a.grupo_actual_id
       LEFT JOIN turnos t ON t.id = g.turno_id
       LEFT JOIN especialidades e ON e.id = g.especialidad_id
+      WHERE u.activo = TRUE
     `;
+    const params = [];
     const conditions = [];
-    const values = [];
-
-    if (semestre) {
-      conditions.push(`a.semestre_actual = $${values.length + 1}`);
-      values.push(parseInt(semestre));
-      if (!rol) {
-        conditions.push(`u.rol = 'alumno'`);
-      }
-    }
 
     if (rol) {
-      conditions.push(`u.rol = $${values.length + 1}`);
-      values.push(rol);
+      conditions.push(`u.rol = $${params.length + 1}`);
+      params.push(rol);
     }
 
     if (search) {
       const searchTerm = `%${search}%`;
-      conditions.push(`(u.nombre ILIKE $${values.length + 1} OR u.apellidos ILIKE $${values.length + 2} OR u.email ILIKE $${values.length + 3})`);
-      values.push(searchTerm, searchTerm, searchTerm);
+      conditions.push(`(u.nombre ILIKE $${params.length + 1} OR u.apellidos ILIKE $${params.length + 1} OR a.matricula ILIKE $${params.length + 1})`);
+      params.push(searchTerm);
     }
 
     if (activo !== undefined) {
-      const isActive = activo === 'true';
-      conditions.push(`u.activo = $${values.length + 1}`);
-      values.push(isActive);
+      conditions.push(`u.activo = $${params.length + 1}`);
+      params.push(activo === 'true');
+    }
+
+    if (semestre && semestre !== '') {
+      const semestreNum = parseInt(semestre, 10);
+      if (!isNaN(semestreNum) && semestreNum >= 1 && semestreNum <= 6) {
+        conditions.push(`a.semestre_actual = $${params.length + 1}`);
+        params.push(semestreNum);
+      }
+    }
+
+    if (especialidad_id) {
+      conditions.push(`g.especialidad_id = $${params.length + 1}`);
+      params.push(parseInt(especialidad_id, 10));
+    }
+
+    if (turno_id) {
+      conditions.push(`g.turno_id = $${params.length + 1}`);
+      params.push(parseInt(turno_id, 10));
+    }
+
+    if (grupo_id) {
+      conditions.push(`a.grupo_actual_id = $${params.length + 1}`);
+      params.push(parseInt(grupo_id, 10));
+    }
+
+    if (grupo_letra) {
+        conditions.push(`g.letra = $${params.length + 1}`);
+        params.push(grupo_letra.toUpperCase());
+      }
+
+    if (excluir_titulados === 'true' && rol === 'alumno') {
+      conditions.push(`NOT EXISTS (SELECT 1 FROM titulacion t WHERE t.alumno_id = a.id)`);
     }
 
     if (conditions.length > 0) {
-      sql += ' WHERE ' + conditions.join(' AND ');
+      sql += ' AND ' + conditions.join(' AND ');
     }
 
     sql += ' ORDER BY u.apellidos, u.nombre';
 
-
-    const result = await query(sql, values);
+    const result = await query(sql, params);
     return res.json({ success: true, usuarios: result.rows });
   } catch (err) {
     console.error('Error en getUsuarios:', err);
-    return res.status(500).json({ success: false, message: 'Error interno.' });
+    return res.status(500).json({
+      success: false,
+      message: 'Error interno al obtener usuarios.',
+      error: err.message
+    });
   }
 };
+
 export const getUsuarioById = async (req, res) => {
   try {
     const result = await query(
@@ -112,6 +140,8 @@ export const crearUsuario = async (req, res) => {
   }
 
   try {
+    await query('BEGIN');
+
     const hash = await bcrypt.hash(password, 12);
 
     const result = await query(
@@ -124,11 +154,17 @@ export const crearUsuario = async (req, res) => {
     const nuevoUsuario = result.rows[0];
 
     if (rol === 'alumno') {
+      const matriculaFinal = matricula && matricula.trim() !== '' 
+        ? matricula.trim() 
+        : `A${String(nuevoUsuario.id).padStart(4, '0')}`;
+      
       await query(
-        `INSERT INTO alumnos (usuario_id, matricula) VALUES ($1, $2)`,
-        [nuevoUsuario.id, matricula || null]
+        `INSERT INTO alumnos (usuario_id, matricula, estatus) VALUES ($1, $2, 'activo')`,
+        [nuevoUsuario.id, matriculaFinal]
       );
     }
+
+    await query('COMMIT');
 
     return res.status(201).json({
       success: true,
@@ -136,6 +172,7 @@ export const crearUsuario = async (req, res) => {
       usuario: nuevoUsuario,
     });
   } catch (err) {
+    await query('ROLLBACK');
     if (err.code === '23505') {
       return res.status(409).json({
         success: false,
@@ -152,7 +189,6 @@ export const actualizarUsuario = async (req, res) => {
   const { id } = req.params;
 
   try {
-    // Validar rol si viene
     if (rol) {
       const rolesValidos = ['alumno', 'docente', 'administrador'];
       if (!rolesValidos.includes(rol)) {

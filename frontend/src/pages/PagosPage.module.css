@@ -1,0 +1,675 @@
+@import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Roboto:wght@400;500;700&display=swap');
+
+.page {
+  font-family: 'Roboto', sans-serif;
+  color: #1e293b;
+  background-color: #f4f6f9;
+  padding: 2rem 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.pageHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  border-bottom: 2px solid #d1d9e6;
+  padding-bottom: 0.75rem;
+}
+.title {
+  font-family: 'Merriweather', serif;
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: #1A6B35;
+  margin: 0;
+}
+.title::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 28px;
+  background: #F37238;
+  margin-right: 12px;
+  vertical-align: middle;
+  border-radius: 0;
+}
+.subtitle {
+  font-size: 0.95rem;
+  color: #64748b;
+  margin: 0.25rem 0 0 0;
+}
+.headerActions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.btnVolver {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.8rem;
+  background: #e9edf2;
+  border: 2px solid #d1d9e6;
+  border-radius: 2px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #1e293b;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btnVolver:hover {
+  background: #d1d9e6;
+  border-color: #b0bccf;
+}
+
+.btnPrimary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.6rem 1.2rem;
+  background: #1A6B35;
+  color: #ffffff;
+  border: 2px solid #135228;
+  border-radius: 2px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.btnPrimary:hover:not(:disabled) {
+  background: #135228;
+  border-color: #0d421a;
+}
+.btnPrimary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.btnSecondary {
+  padding: 0.6rem 1.2rem;
+  background: #e9edf2;
+  color: #1e293b;
+  border: 2px solid #d1d9e6;
+  border-radius: 2px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btnSecondary:hover {
+  background: #d1d9e6;
+  border-color: #b0bccf;
+}
+.btnLimpiar {
+  padding: 0.4rem 1.2rem;
+  background: #f1f5f9;
+  border: 1.5px solid #d1d9e6;
+  border-radius: 2px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s;
+  height: 38px;
+  align-self: flex-end;
+}
+.btnLimpiar:hover {
+  background: #e9edf2;
+}
+
+/* ===== ALUMNO INFO PANEL ===== */
+.alumnoInfoPanel {
+  background: #f8fafc;
+  border: 2px solid #d1d9e6;
+  border-radius: 2px;
+  padding: 0.8rem 1.2rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.5rem 1.5rem;
+}
+.alumnoInfoRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+.alumnoInfoLabel {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #64748b;
+  letter-spacing: 0.3px;
+}
+.alumnoInfoValue {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #1e293b;
+}
+
+/* ===== FILTROS ===== */
+.filtrosContainer {
+  background: #ffffff;
+  border: 2px solid #d1d9e6;
+  border-radius: 2px;
+  padding: 1rem 1.5rem;
+}
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+}
+.filtroGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+  min-width: 150px;
+}
+.label {
+  font-family: 'Roboto', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #1e293b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.select, .input {
+  width: 100%;
+  padding: 0.4rem 0.8rem;
+  background: #ffffff;
+  border: 2px solid #d1d9e6;
+  border-radius: 2px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 0.9rem;
+  color: #1e293b;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.select:focus, .input:focus {
+  border-color: #1A6B35;
+}
+
+/* ===== TABLA ===== */
+.tableWrapper {
+  overflow-x: auto;
+  border: 2px solid #d1d9e6;
+  border-radius: 2px;
+  background: #ffffff;
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.table th {
+  padding: 0.6rem 0.8rem;
+  background: #1A6B35;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  border: 1px solid #135228;
+  text-align: left;
+}
+.table td {
+  padding: 0.5rem 0.8rem;
+  border: 1px solid #d1d9e6;
+  vertical-align: middle;
+}
+.emptyRow {
+  text-align: center;
+  color: #94a3b8;
+  padding: 2rem 0;
+}
+
+/* ===== BOTÓN VER PAGOS ===== */
+.btnVerPagos {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.6rem;
+  background: #e6f0ea;
+  color: #1A6B35;
+  border: 1.5px solid #1A6B35;
+  border-radius: 2px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btnVerPagos:hover {
+  background: #1A6B35;
+  color: #ffffff;
+}
+
+.errorMsg {
+  padding: 0.6rem 0.8rem;
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 2px solid #b91c1c;
+  border-radius: 2px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 0.85rem;
+}
+.successMsg {
+  padding: 0.6rem 0.8rem;
+  background: #e6f0ea;
+  color: #1A6B35;
+  border: 2px solid #1A6B35;
+  border-radius: 2px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 1rem;
+}
+.modal {
+  background: #ffffff;
+  border: 2px solid #d1d9e6;
+  border-radius: 2px;
+  padding: 2rem;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+.modalTitle {
+  font-family: 'Merriweather', serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #1A6B35;
+  margin: 0;
+}
+.modalClose {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #94a3b8;
+  transition: color 0.15s;
+}
+.modalClose:hover {
+  color: #1e293b;
+}
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+.textarea {
+  width: 100%;
+  padding: 0.4rem 0.8rem;
+  background: #ffffff;
+  border: 2px solid #d1d9e6;
+  border-radius: 2px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 0.9rem;
+  color: #1e293b;
+  outline: none;
+  transition: border-color 0.15s;
+  resize: vertical;
+  min-height: 60px;
+}
+.textarea:focus {
+  border-color: #1A6B35;
+}
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding: 1rem;
+  }
+  .title {
+    font-size: 1.3rem;
+  }
+  .title::before {
+    display: none;
+  }
+  .filtros {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .btnLimpiar {
+    align-self: stretch;
+  }
+  .row2 {
+    grid-template-columns: 1fr;
+  }
+  .modal {
+    padding: 1.5rem;
+  }
+  .alumnoInfoPanel {
+    grid-template-columns: 1fr;
+  }
+  .headerActions {
+    flex-wrap: wrap;
+  }
+}
+/* ===== BÚSQUEDA DE ALUMNOS ===== */
+.searchContainer {
+  background: #ffffff;
+  border: 2px solid #d1d9e6;
+  border-radius: 2px;
+  padding: 0.6rem 1rem;
+}
+.searchWrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.searchIcon {
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+.inputSearch {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 0.95rem;
+  font-family: 'Roboto', sans-serif;
+  color: #1e293b;
+  background: transparent;
+}
+.inputSearch::placeholder {
+  color: #94a3b8;
+}
+.clearBtn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #94a3b8;
+  padding: 0.2rem;
+  transition: color 0.15s;
+}
+.clearBtn:hover {
+  color: #1e293b;
+}
+
+/* ===== PAGINACIÓN ===== */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  border-top: 1px solid #e9edf2;
+}
+.paginationBtn {
+  padding: 0.3rem 0.8rem;
+  background: #e9edf2;
+  border: 1.5px solid #d1d9e6;
+  border-radius: 2px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #1e293b;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.paginationBtn:hover:not(:disabled) {
+  background: #d1d9e6;
+}
+.paginationBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.paginationInfo {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+/* ========== FILTROS EN GRID ========== */
+.filtrosGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  align-items: end;
+}
+.filtroGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.filtroGroup .label {
+  font-family: 'Roboto', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #1e293b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.select, .input {
+  width: 100%;
+  padding: 0.4rem 0.8rem;
+  background: #ffffff;
+  border: 2px solid #d1d9e6;
+  border-radius: 2px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 0.9rem;
+  color: #1e293b;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.select:focus, .input:focus {
+  border-color: #1A6B35;
+}
+.btnLimpiar {
+  padding: 0.4rem 1.2rem;
+  background: #f1f5f9;
+  border: 1.5px solid #d1d9e6;
+  border-radius: 2px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s;
+  height: 38px;
+  align-self: flex-end;
+}
+.btnLimpiar:hover {
+  background: #e9edf2;
+}
+
+/* ========== PAGINACIÓN ========== */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  border-top: 1px solid #e9edf2;
+}
+.paginationBtn {
+  padding: 0.3rem 0.8rem;
+  background: #e9edf2;
+  border: 1.5px solid #d1d9e6;
+  border-radius: 2px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #1e293b;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.paginationBtn:hover:not(:disabled) {
+  background: #d1d9e6;
+}
+.paginationBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.paginationInfo {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+/* ========== FILTROS EN GRID ========== */
+.filtrosContainer {
+  background: #ffffff;
+  border: 2px solid #d1d9e6;
+  border-radius: 2px;
+  padding: 1rem 1.5rem;
+}
+.filtrosGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.8rem 1rem;
+  align-items: end;
+}
+.filtroGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.label {
+  font-family: 'Roboto', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #1e293b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.select, .input {
+  width: 100%;
+  padding: 0.4rem 0.8rem;
+  background: #ffffff;
+  border: 2px solid #d1d9e6;
+  border-radius: 2px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 0.9rem;
+  color: #1e293b;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.select:focus, .input:focus {
+  border-color: #1A6B35;
+}
+
+.btnLimpiar {
+  padding: 0.4rem 1.2rem;
+  background: #f1f5f9;
+  border: 1.5px solid #d1d9e6;
+  border-radius: 2px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s;
+  height: 38px;
+  align-self: flex-start;
+  white-space: nowrap;
+}
+.btnLimpiar:hover {
+  background: #e9edf2;
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 768px) {
+  .filtrosGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 480px) {
+  .filtrosGrid {
+    grid-template-columns: 1fr;
+  }
+}
+/* ========== FILTROS EN GRID ========== */
+.filtrosContainer {
+  background: #ffffff;
+  border: 2px solid #d1d9e6;
+  border-radius: 2px;
+  padding: 1rem 1.5rem;
+}
+.filtrosGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  align-items: end;
+}
+.filtroGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.label {
+  font-family: 'Roboto', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #1e293b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.select, .input {
+  width: 100%;
+  padding: 0.4rem 0.8rem;
+  background: #ffffff;
+  border: 2px solid #d1d9e6;
+  border-radius: 2px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 0.9rem;
+  color: #1e293b;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.select:focus, .input:focus {
+  border-color: #1A6B35;
+}
+
+.btnLimpiarFiltros {
+  padding: 0.4rem 1.2rem;
+  background: #f1f5f9;
+  border: 1.5px solid #d1d9e6;
+  border-radius: 2px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  height: 38px;
+  align-self: flex-end;
+}
+.btnLimpiarFiltros:hover {
+  background: #e9edf2;
+}

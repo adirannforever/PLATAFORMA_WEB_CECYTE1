@@ -3,6 +3,8 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import styles from './DashboardLayout.module.css';
 import logoCecyte from '../../assets/logo_cecyte.png';
+import { Users, FileText, Gift, CreditCard, Briefcase, GraduationCap, Settings, AlertCircle } from 'lucide-react'; 
+
 
 const IconPortal = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -16,6 +18,7 @@ const IconDashboard = () => (
     <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
   </svg>
 );
+
 const IconComunicados = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -46,6 +49,15 @@ const IconInscripciones = () => (
     <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
     <line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/>
     <line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+  </svg>
+);
+const IconAsistencia = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+    <line x1="16" y1="2" x2="16" y2="6" />
+    <line x1="8" y1="2" x2="8" y2="6" />
+    <line x1="3" y1="10" x2="21" y2="10" />
+    <polyline points="9 15 11 17 15 13" />
   </svg>
 );
 const IconLogout = () => (
@@ -102,8 +114,16 @@ export default function DashboardLayout() {
     { to: '/comunicados', label: 'Comunicados', icon: <IconComunicados />, roles: ['administrador', 'docente', 'alumno'] },
     { to: '/mis-calificaciones', label: 'Mis Calificaciones', icon: <IconCalif />, roles: ['alumno'] },
     { to: '/grupos', label: 'Grupos', icon: <IconGrupos />, roles: ['administrador', 'docente'] },
+    { to: '/asistencia', label: 'Asistencias', icon: <IconAsistencia />, roles: ['administrador', 'docente'] },
     { to: '/usuarios', label: 'Usuarios', icon: <IconUsuarios />, roles: ['administrador'] },
+    { to: '/becas', label: 'Becas', icon: <Gift size={18} />, roles: ['administrador'] },
+    { to: '/expediente', label: 'Expediente', icon: <FileText size={18} />, roles: ['administrador'] },
     { to: '/inscripciones', label: 'Inscripciones', icon: <IconInscripciones />, roles: ['administrador'] },
+    { to: '/pagos', label: 'Pagos', icon: <CreditCard size={18} />, roles: ['administrador'] },
+    { to: '/servicio-social', label: 'Servicio Social', icon: <Briefcase size={18} />, roles: ['administrador'] },
+    { to: '/titulacion', label: 'Titulación', icon: <GraduationCap size={18} />, roles: ['administrador'] },
+    { to: '/configuracion-academica', label: 'Configuración Académica', icon: <Settings size={18} />, roles: ['administrador'] },
+    { to: '/incidencias', label: 'Incidencias', icon: <AlertCircle size={18} />, roles: ['administrador'] },
   ].filter(item => item.roles.includes(usuario?.rol));
 
   return (
