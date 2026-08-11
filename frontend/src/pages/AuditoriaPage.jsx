@@ -1,570 +1,398 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { horariosService, catalogosService, usuariosService } from '../services/api';
-import { DndProvider, useDrag, useDrop } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
-import { Settings, Users, User, FlaskConical, RefreshCw, Save, AlertCircle, X, Plus } from 'lucide-react';
-import styles from './HorariosPage.module.css';
+import { auditoriaService, usuariosService } from '../services/api';
+import { Search, Filter, Eye, X } from 'lucide-react';
+import Skeleton from '../components/Skeleton';
+import styles from './AuditoriaPage.module.css';
 
-const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
-const ITEM_TYPE = 'BLOQUE';
+const ITEMS_PER_PAGE = 20;
 
-// Asignar colores por materia
+const ACCIONES = [
+  'CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT', 'VIEW', 'EXPORT'
+];
 const getColorForMateria = (nombre) => {
   if (!nombre) return '#1A6B35';
   const hash = nombre.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
   const colors = [
-    '#1A6B35', '#2563eb', '#dc2626', '#f59e0b', '#8b5cf6',
-    '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16',
-    '#06b6d4', '#d946ef', '#ef4444', '#22c55e', '#eab308'
+    '#1A6B35', // verde institucional
+    '#2563eb', // azul
+    '#dc2626', // rojo
+    '#f59e0b', // naranja
+    '#8b5cf6', // violeta
+    '#ec4899', // rosa
+    '#14b8a6', // teal
+    '#f97316', // naranja oscuro
+    '#6366f1', // índigo
+    '#84cc16', // lima
   ];
   return colors[hash % colors.length];
 };
 
-// Componente Bloque individual (con drag y resize)
-const Bloque = ({ bloque, idx, onMove, onResize, onDrop, configuracion }) => {
-  const ref = useRef(null);
-  const [isResizing, setIsResizing] = useState(false);
-  const [resizeDirection, setResizeDirection] = useState(null);
-
-  // Drag
-  const [{ isDragging }, drag] = useDrag({
-    type: ITEM_TYPE,
-    item: { id: bloque.id || idx, idx, bloque },
-    collect: (monitor) => ({
-      isDragging: !!monitor.isDragging(),
-    }),
-    end: (item, monitor) => {
-      const dropResult = monitor.getDropResult();
-      if (dropResult && onDrop) {
-        onDrop(item.idx, dropResult.diaIndex, dropResult.horaIndex);
-      }
-    },
-  });
-
-  // Resize (simulado con mouse events)
-  const handleMouseDown = (e, direction) => {
-    e.stopPropagation();
-    setIsResizing(true);
-    setResizeDirection(direction);
-    const startY = e.clientY;
-    const startH = bloque.altura || 1;
-
-    const onMouseMove = (ev) => {
-      const deltaY = ev.clientY - startY;
-      const deltaRows = Math.round(deltaY / 10); // cada fila = 10px
-      const newH = Math.max(1, startH + deltaRows);
-      onResize(idx, newH);
-    };
-
-    const onMouseUp = () => {
-      setIsResizing(false);
-      setResizeDirection(null);
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-    };
-
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
-  };
-
-  const color = getColorForMateria(bloque.materia_nombre);
-  const { duracion_bloque_minutos } = configuracion || { duracion_bloque_minutos: 50 };
-  const horas = Math.ceil((bloque.h || 1) * duracion_bloque_minutos / 60);
-
-  return (
-    <div
-      ref={drag}
-      className={`${styles.bloque} ${isDragging ? styles.bloqueDragging : ''}`}
-      style={{
-        backgroundColor: color,
-        color: '#fff',
-        gridRow: `span ${bloque.h || 1}`,
-        opacity: isDragging ? 0.5 : 1,
-        cursor: 'grab',
-        position: 'relative',
-        borderRadius: '2px',
-        padding: '2px 4px',
-        fontSize: '0.65rem',
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        minHeight: '20px',
-        width: '100%',
-        height: '100%',
-      }}
-      title={`${bloque.materia_nombre || 'Sin materia'} (${bloque.hora_inicio} - ${bloque.hora_fin})`}
-    >
-      <div className={styles.bloqueContent}>
-        <strong>{bloque.materia_clave || bloque.materia_nombre?.slice(0, 12) || 'Materia'}</strong>
-        <span className={styles.bloqueHoras}>
-          {bloque.hora_inicio} - {bloque.hora_fin}
-        </span>
-        {bloque.docente_apellidos && (
-          <span className={styles.bloqueDocente}>{bloque.docente_apellidos}</span>
-        )}
-      </div>
-      {/* Handle de redimension (borde inferior) */}
-      <div
-        className={styles.resizeHandle}
-        onMouseDown={(e) => handleMouseDown(e, 'bottom')}
-        style={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: '6px',
-          cursor: 'ns-resize',
-          backgroundColor: 'rgba(255,255,255,0.2)',
-        }}
-      />
-    </div>
-  );
-};
-
-// Componente Celda del grid (drop target)
-const Celda = ({ diaIndex, horaIndex, children, onDrop }) => {
-  const ref = useRef(null);
-  const [{ isOver }, drop] = useDrop({
-    accept: ITEM_TYPE,
-    drop: () => ({ diaIndex, horaIndex }),
-    collect: (monitor) => ({
-      isOver: !!monitor.isOver(),
-    }),
-  });
-
-  return (
-    <div
-      ref={drop}
-      className={`${styles.gridCell} ${isOver ? styles.gridCellHover : ''}`}
-      data-dia={DIAS[diaIndex]}
-      style={{
-        minHeight: '40px',
-        borderRight: '1px solid #e9edf2',
-        padding: '2px',
-        position: 'relative',
-        verticalAlign: 'top',
-        backgroundColor: isOver ? 'rgba(26, 107, 53, 0.1)' : 'transparent',
-      }}
-    >
-      {children}
-    </div>
-  );
-};
-
-export default function HorariosPage() {
+export default function AuditoriaPage() {
   const { usuario } = useAuth();
-  const esAdmin = usuario?.rol === 'administrador';
-
-  const [tabActiva, setTabActiva] = useState('grupos');
-  const [cargando, setCargando] = useState(false);
+  const [logs, setLogs] = useState([]);
+  const [usuarios, setUsuarios] = useState([]);
+  const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
-  const [exito, setExito] = useState('');
 
-  const [configuracion, setConfiguracion] = useState(null);
-  const [configModal, setConfigModal] = useState(false);
-  const [configForm, setConfigForm] = useState({});
+  // Filtros
+  const [filtroUsuario, setFiltroUsuario] = useState('');
+  const [filtroAccion, setFiltroAccion] = useState('');
+  const [filtroTabla, setFiltroTabla] = useState('');
+  const [filtroFechaDesde, setFiltroFechaDesde] = useState('');
+  const [filtroFechaHasta, setFiltroFechaHasta] = useState('');
 
-  const [grupos, setGrupos] = useState([]);
-  const [docentes, setDocentes] = useState([]);
-  const [laboratorios, setLaboratorios] = useState([]);
+  const [pagina, setPagina] = useState(1);
+  const [totalRegistros, setTotalRegistros] = useState(0);
+  const [totalPaginas, setTotalPaginas] = useState(1);
 
-  const [grupoSeleccionado, setGrupoSeleccionado] = useState('');
-  const [docenteSeleccionado, setDocenteSeleccionado] = useState('');
-  const [laboratorioSeleccionado, setLaboratorioSeleccionado] = useState('');
+  // Modal de detalle
+  const [detalleModal, setDetalleModal] = useState({ open: false, log: null });
 
-  const [bloques, setBloques] = useState([]);
-  const [horasGrid, setHorasGrid] = useState([]);
-  const [materiasDisponibles, setMateriasDisponibles] = useState([]);
-
-  // Cargar datos iniciales
+  // Cargar catálogos
   useEffect(() => {
-    const cargarDatos = async () => {
+    const cargarUsuarios = async () => {
       try {
-        const [configRes, gruposRes, docentesRes, labsRes] = await Promise.all([
-          horariosService.getConfiguracion(),
-          catalogosService.getGrupos(),
-          usuariosService.getAll({ rol: 'docente' }),
-          catalogosService.getAulas(),
-        ]);
-        setConfiguracion(configRes.data);
-        setGrupos(gruposRes.data || []);
-        setDocentes(docentesRes.usuarios || []);
-        setLaboratorios(labsRes.data || []);
-        setConfigForm(configRes.data || {});
+        const res = await usuariosService.getAll({ rol: 'administrador' });
+        setUsuarios(res.usuarios || []);
       } catch (e) {
-        console.error('Error cargando datos iniciales:', e);
-        setError('No se pudieron cargar los datos');
+        console.error('Error cargando usuarios:', e);
       }
     };
-    cargarDatos();
+    cargarUsuarios();
   }, []);
 
-  // Generar horas del grid
-  useEffect(() => {
-    if (!configuracion) return;
-    const { hora_inicio_turno, hora_fin_turno } = configuracion;
-    const horas = [];
-    let current = new Date(`2000-01-01T${hora_inicio_turno}`);
-    const fin = new Date(`2000-01-01T${hora_fin_turno}`);
-    const pasoMinutos = 10;
-
-    while (current < fin) {
-      horas.push({
-        time: current.toTimeString().slice(0, 5),
-        label: current.toTimeString().slice(0, 5),
-      });
-      current.setMinutes(current.getMinutes() + pasoMinutos);
-    }
-    setHorasGrid(horas);
-  }, [configuracion]);
-
-  // Cargar bloques del horario seleccionado
-  const cargarBloques = useCallback(async () => {
-    if (tabActiva === 'grupos' && !grupoSeleccionado) return;
-    if (tabActiva === 'maestros' && !docenteSeleccionado) return;
-    if (tabActiva === 'laboratorios' && !laboratorioSeleccionado) return;
-
+  // Cargar logs
+  const cargarLogs = useCallback(async () => {
     setCargando(true);
+    setError('');
     try {
-      let res;
-      if (tabActiva === 'grupos') {
-        res = await horariosService.getHorarioGrupo(grupoSeleccionado);
-      } else if (tabActiva === 'maestros') {
-        res = await horariosService.getHorarioMaestro(docenteSeleccionado);
-      } else {
-        res = await horariosService.getHorarioLaboratorio(laboratorioSeleccionado);
-      }
-      setBloques(res.data || []);
+      const params = {
+        page: pagina,
+        limit: ITEMS_PER_PAGE,
+      };
+      if (filtroUsuario) params.usuario_id = filtroUsuario;
+      if (filtroAccion) params.accion = filtroAccion;
+      if (filtroTabla) params.tabla_afectada = filtroTabla;
+      if (filtroFechaDesde) params.fecha_desde = filtroFechaDesde;
+      if (filtroFechaHasta) params.fecha_hasta = filtroFechaHasta;
+
+      const res = await auditoriaService.getLogs(params);
+      setLogs(res.data || []);
+      setTotalRegistros(res.pagination?.total || 0);
+      setTotalPaginas(res.pagination?.pages || 1);
     } catch (e) {
-      console.error('Error cargando bloques:', e);
-      setError('No se pudieron cargar los bloques');
+      console.error('Error cargando logs:', e);
+      setError('No se pudieron cargar los logs.');
     } finally {
       setCargando(false);
     }
-  }, [tabActiva, grupoSeleccionado, docenteSeleccionado, laboratorioSeleccionado]);
+  }, [pagina, filtroUsuario, filtroAccion, filtroTabla, filtroFechaDesde, filtroFechaHasta]);
 
   useEffect(() => {
-    if (grupoSeleccionado || docenteSeleccionado || laboratorioSeleccionado) {
-      cargarBloques();
-    }
-  }, [cargarBloques]);
+    cargarLogs();
+  }, [cargarLogs]);
 
-  // Manejar movimiento de bloque
-  const handleDrop = (idx, diaIndex, horaIndex) => {
-    const bloque = bloques[idx];
-    if (!bloque) return;
+  const limpiarFiltros = () => {
+    setFiltroUsuario('');
+    setFiltroAccion('');
+    setFiltroTabla('');
+    setFiltroFechaDesde('');
+    setFiltroFechaHasta('');
+    setPagina(1);
+  };
 
-    // Calcular nueva hora basada en el índice de fila
-    const horaInicio = horasGrid[horaIndex]?.time;
-    if (!horaInicio) return;
+  const cambiarPagina = (nuevaPagina) => {
+    if (nuevaPagina < 1 || nuevaPagina > totalPaginas) return;
+    setPagina(nuevaPagina);
+  };
 
-    const duracionMinutos = (new Date(`2000-01-01T${bloque.hora_fin}`) - new Date(`2000-01-01T${bloque.hora_inicio}`)) / 60000;
-    const filasOcupadas = Math.ceil(duracionMinutos / 10);
-    const horaFin = new Date(`2000-01-01T${horaInicio}`);
-    horaFin.setMinutes(horaFin.getMinutes() + duracionMinutos);
+  const formatDate = (date) => {
+    if (!date) return '—';
+    return new Date(date).toLocaleString('es-MX', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
 
-    const nuevoBloque = {
-      ...bloque,
-      dia_semana: DIAS[diaIndex],
-      hora_inicio: horaInicio,
-      hora_fin: horaFin.toTimeString().slice(0, 5),
+  const getAccionBadge = (accion) => {
+    const map = {
+      CREATE: { className: 'accionCreate', label: 'Creación' },
+      UPDATE: { className: 'accionUpdate', label: 'Actualización' },
+      DELETE: { className: 'accionDelete', label: 'Eliminación' },
+      LOGIN: { className: 'accionLogin', label: 'Inicio sesión' },
+      LOGOUT: { className: 'accionLogout', label: 'Cierre sesión' },
+      VIEW: { className: 'accionView', label: 'Vista' },
+      EXPORT: { className: 'accionExport', label: 'Exportación' },
     };
-
-    const nuevosBloques = [...bloques];
-    nuevosBloques[idx] = nuevoBloque;
-    setBloques(nuevosBloques);
-  };
-
-  // Manejar redimension de bloque
-  const handleResize = (idx, newH) => {
-    const bloque = bloques[idx];
-    if (!bloque) return;
-
-    const duracionBase = (new Date(`2000-01-01T${bloque.hora_fin}`) - new Date(`2000-01-01T${bloque.hora_inicio}`)) / 60000;
-    const nuevaDuracion = Math.max(10, newH * 10);
-    const horaInicio = bloque.hora_inicio;
-    const horaFin = new Date(`2000-01-01T${horaInicio}`);
-    horaFin.setMinutes(horaFin.getMinutes() + nuevaDuracion);
-
-    const nuevoBloque = {
-      ...bloque,
-      hora_fin: horaFin.toTimeString().slice(0, 5),
-    };
-
-    const nuevosBloques = [...bloques];
-    nuevosBloques[idx] = nuevoBloque;
-    setBloques(nuevosBloques);
-  };
-
-  // Guardar horario
-  const handleGuardar = async () => {
-    setCargando(true);
-    try {
-      await horariosService.guardarHorarioGrupo(grupoSeleccionado, bloques);
-      setExito('Horario guardado correctamente');
-      setTimeout(() => setExito(''), 4000);
-    } catch (e) {
-      setError(e.response?.data?.message || 'Error al guardar');
-    } finally {
-      setCargando(false);
-    }
-  };
-
-  // Guardar configuración
-  const handleGuardarConfiguracion = async () => {
-    try {
-      const res = await horariosService.actualizarConfiguracion(configForm);
-      setConfiguracion(res.data);
-      setConfigModal(false);
-      setExito('Configuración actualizada');
-      setTimeout(() => setExito(''), 4000);
-    } catch (e) {
-      setError(e.response?.data?.message || 'Error al guardar configuración');
-    }
-  };
-
-  // Renderizar el grid con DnD
-  const renderGrid = () => {
-    return (
-      <DndProvider backend={HTML5Backend}>
-        <div className={styles.gridContainer}>
-          <div className={styles.gridHeader}>
-            <div className={styles.gridHeaderCell}>Hora</div>
-            {DIAS.map((dia) => (
-              <div key={dia} className={styles.gridHeaderCell}>{dia}</div>
-            ))}
-          </div>
-          <div className={styles.gridBody}>
-            {horasGrid.map((hora, horaIdx) => (
-              <div key={horaIdx} className={styles.gridRow}>
-                <div className={styles.gridTimeCell}>{hora.label}</div>
-                {DIAS.map((dia, diaIdx) => {
-                  // Buscar bloques en esta celda
-                  const bloqueIdx = bloques.findIndex(b =>
-                    b.dia_semana === dia && b.hora_inicio === hora.time
-                  );
-                  const bloque = bloqueIdx !== -1 ? bloques[bloqueIdx] : null;
-
-                  return (
-                    <Celda
-                      key={`${dia}-${horaIdx}`}
-                      diaIndex={diaIdx}
-                      horaIndex={horaIdx}
-                      onDrop={handleDrop}
-                    >
-                      {bloque && (
-                        <Bloque
-                          bloque={bloque}
-                          idx={bloqueIdx}
-                          onMove={() => {}}
-                          onResize={handleResize}
-                          onDrop={handleDrop}
-                          configuracion={configuracion}
-                        />
-                      )}
-                    </Celda>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
-        </div>
-      </DndProvider>
-    );
-  };
-
-  // Modal de configuración
-  const renderConfigModal = () => {
-    if (!configModal) return null;
-    return (
-      <div className={styles.modalOverlay} onClick={() => setConfigModal(false)}>
-        <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-          <div className={styles.modalHeader}>
-            <h3 className={styles.modalTitle}>Configuración de horarios</h3>
-            <button className={styles.modalClose} onClick={() => setConfigModal(false)}>
-              <X size={18} />
-            </button>
-          </div>
-          <form className={styles.form} onSubmit={(e) => e.preventDefault()}>
-            <div className={styles.field}>
-              <label className={styles.label}>Duración de bloque (minutos)</label>
-              <input
-                type="number"
-                className={styles.input}
-                value={configForm.duracion_bloque_minutos || 50}
-                onChange={(e) => setConfigForm({ ...configForm, duracion_bloque_minutos: parseInt(e.target.value) })}
-              />
-            </div>
-            <div className={styles.row2}>
-              <div className={styles.field}>
-                <label className={styles.label}>Inicio de turno</label>
-                <input
-                  type="time"
-                  className={styles.input}
-                  value={configForm.hora_inicio_turno || '07:00'}
-                  onChange={(e) => setConfigForm({ ...configForm, hora_inicio_turno: e.target.value })}
-                />
-              </div>
-              <div className={styles.field}>
-                <label className={styles.label}>Fin de turno</label>
-                <input
-                  type="time"
-                  className={styles.input}
-                  value={configForm.hora_fin_turno || '13:00'}
-                  onChange={(e) => setConfigForm({ ...configForm, hora_fin_turno: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className={styles.row2}>
-              <div className={styles.field}>
-                <label className={styles.label}>Inicio de receso</label>
-                <input
-                  type="time"
-                  className={styles.input}
-                  value={configForm.receso_inicio || '09:30'}
-                  onChange={(e) => setConfigForm({ ...configForm, receso_inicio: e.target.value })}
-                />
-              </div>
-              <div className={styles.field}>
-                <label className={styles.label}>Fin de receso</label>
-                <input
-                  type="time"
-                  className={styles.input}
-                  value={configForm.receso_fin || '10:00'}
-                  onChange={(e) => setConfigForm({ ...configForm, receso_fin: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className={styles.field}>
-              <label className={styles.label}>
-                <input
-                  type="checkbox"
-                  checked={configForm.receso_bloqueado || false}
-                  onChange={(e) => setConfigForm({ ...configForm, receso_bloqueado: e.target.checked })}
-                />
-                Bloquear receso (no movible)
-              </label>
-            </div>
-            <div className={styles.modalActions}>
-              <button type="button" className={styles.btnSecondary} onClick={() => setConfigModal(false)}>
-                Cancelar
-              </button>
-              <button type="button" className={styles.btnPrimary} onClick={handleGuardarConfiguracion}>
-                Guardar configuración
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    );
+    return map[accion] || { className: 'accionDefault', label: accion };
   };
 
   return (
     <div className={styles.page}>
       {error && <div className={styles.errorMsg}>{error}</div>}
-      {exito && <div className={styles.successMsg}>{exito}</div>}
 
       <div className={styles.pageHeader}>
         <div>
-          <h1 className={styles.title}>Horarios</h1>
-          <p className={styles.subtitle}>Gestión de horarios para grupos, maestros y laboratorios</p>
+          <h1 className={styles.title}>Auditoría</h1>
+          <p className={styles.subtitle}>{totalRegistros} registro(s)</p>
         </div>
-        <div className={styles.headerActions}>
-          <button className={styles.btnSecondary} onClick={() => setConfigModal(true)}>
-            <Settings size={16} /> Configuración
+      </div>
+
+      {/* Filtros */}
+      <div className={styles.filtrosContainer}>
+        <div className={styles.filtrosGrid}>
+          <div className={styles.filtroGroup}>
+            <label className={styles.label}>Usuario</label>
+            <select
+              className={styles.select}
+              value={filtroUsuario}
+              onChange={(e) => setFiltroUsuario(e.target.value)}
+            >
+              <option value="">Todos</option>
+              {usuarios.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.apellidos}, {u.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className={styles.filtroGroup}>
+            <label className={styles.label}>Acción</label>
+            <select
+              className={styles.select}
+              value={filtroAccion}
+              onChange={(e) => setFiltroAccion(e.target.value)}
+            >
+              <option value="">Todas</option>
+              {ACCIONES.map((a) => (
+                <option key={a} value={a}>
+                  {a}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className={styles.filtroGroup}>
+            <label className={styles.label}>Tabla</label>
+            <input
+              type="text"
+              className={styles.input}
+              placeholder="usuarios, grupos, etc."
+              value={filtroTabla}
+              onChange={(e) => setFiltroTabla(e.target.value)}
+            />
+          </div>
+
+          <div className={styles.filtroGroup}>
+            <label className={styles.label}>Fecha desde</label>
+            <input
+              type="date"
+              className={styles.input}
+              value={filtroFechaDesde}
+              onChange={(e) => setFiltroFechaDesde(e.target.value)}
+            />
+          </div>
+
+          <div className={styles.filtroGroup}>
+            <label className={styles.label}>Fecha hasta</label>
+            <input
+              type="date"
+              className={styles.input}
+              value={filtroFechaHasta}
+              onChange={(e) => setFiltroFechaHasta(e.target.value)}
+            />
+          </div>
+
+          <button className={styles.btnLimpiar} onClick={limpiarFiltros}>
+            <Filter size={14} /> Limpiar
           </button>
-          <button className={styles.btnSecondary} onClick={() => window.location.reload()}>
-            <RefreshCw size={16} /> Regenerar automáticos
+        </div>
+      </div>
+
+      {/* Tabla */}
+      {cargando ? (
+        <div className={styles.tableWrapper}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>Usuario</th>
+                <th>Acción</th>
+                <th>Tabla</th>
+                <th>Registro</th>
+                <th>Fecha</th>
+                <th>IP</th>
+                <th>Detalle</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[1,2,3,4,5].map(n => (
+                <tr key={n}>
+                  <td><Skeleton width="150px" height="16px" variant="text" /></td>
+                  <td><Skeleton width="100px" height="16px" variant="text" /></td>
+                  <td><Skeleton width="100px" height="16px" variant="text" /></td>
+                  <td><Skeleton width="60px" height="16px" variant="text" /></td>
+                  <td><Skeleton width="160px" height="16px" variant="text" /></td>
+                  <td><Skeleton width="120px" height="16px" variant="text" /></td>
+                  <td><Skeleton width="40px" height="16px" variant="text" /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : logs.length === 0 ? (
+        <div className={styles.empty}>No hay logs registrados.</div>
+      ) : (
+        <div className={styles.tableWrapper}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>Usuario</th>
+                <th>Acción</th>
+                <th>Tabla</th>
+                <th>Registro</th>
+                <th>Fecha</th>
+                <th>IP</th>
+                <th>Detalle</th>
+              </tr>
+            </thead>
+            <tbody>
+              {logs.map((log) => {
+                const badge = getAccionBadge(log.accion);
+                return (
+                  <tr key={log.id}>
+                    <td>
+                      {log.usuario_nombre
+                        ? `${log.usuario_apellidos}, ${log.usuario_nombre}`
+                        : 'Sistema'}
+                    </td>
+                    <td>
+                      <span className={`${styles.accionBadge} ${styles[badge.className]}`}>
+                        {badge.label}
+                      </span>
+                    </td>
+                    <td>{log.tabla_afectada || '—'}</td>
+                    <td>{log.registro_id || '—'}</td>
+                    <td>{formatDate(log.fecha)}</td>
+                    <td>{log.ip || '—'}</td>
+                    <td>
+                      <button
+                        className={styles.btnDetalle}
+                        onClick={() => setDetalleModal({ open: true, log })}
+                        title="Ver detalles"
+                      >
+                        <Eye size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Paginación */}
+      {totalPaginas > 1 && (
+        <div className={styles.pagination}>
+          <button
+            className={styles.paginationBtn}
+            onClick={() => cambiarPagina(pagina - 1)}
+            disabled={pagina <= 1}
+          >
+            Anterior
+          </button>
+          <span className={styles.paginationInfo}>
+            Página {pagina} de {totalPaginas}
+          </span>
+          <button
+            className={styles.paginationBtn}
+            onClick={() => cambiarPagina(pagina + 1)}
+            disabled={pagina >= totalPaginas}
+          >
+            Siguiente
           </button>
         </div>
-      </div>
+      )}
 
-      <div className={styles.tabsContainer}>
-        <button
-          className={`${styles.tab} ${tabActiva === 'grupos' ? styles.tabActive : ''}`}
-          onClick={() => setTabActiva('grupos')}
-        >
-          <Users size={16} /> Grupos
-        </button>
-        <button
-          className={`${styles.tab} ${tabActiva === 'maestros' ? styles.tabActive : ''}`}
-          onClick={() => setTabActiva('maestros')}
-        >
-          <User size={16} /> Maestros
-        </button>
-        <button
-          className={`${styles.tab} ${tabActiva === 'laboratorios' ? styles.tabActive : ''}`}
-          onClick={() => setTabActiva('laboratorios')}
-        >
-          <FlaskConical size={16} /> Laboratorios
-        </button>
-      </div>
-
-      <div className={styles.selectorContainer}>
-        {tabActiva === 'grupos' && (
-          <select
-            className={styles.select}
-            value={grupoSeleccionado}
-            onChange={(e) => setGrupoSeleccionado(e.target.value)}
-          >
-            <option value="">Seleccionar grupo...</option>
-            {grupos.map((g) => (
-              <option key={g.id} value={g.id}>{g.nombre}</option>
-            ))}
-          </select>
-        )}
-        {tabActiva === 'maestros' && (
-          <select
-            className={styles.select}
-            value={docenteSeleccionado}
-            onChange={(e) => setDocenteSeleccionado(e.target.value)}
-          >
-            <option value="">Seleccionar maestro...</option>
-            {docentes.map((d) => (
-              <option key={d.id} value={d.id}>{d.apellidos}, {d.nombre}</option>
-            ))}
-          </select>
-        )}
-        {tabActiva === 'laboratorios' && (
-          <select
-            className={styles.select}
-            value={laboratorioSeleccionado}
-            onChange={(e) => setLaboratorioSeleccionado(e.target.value)}
-          >
-            <option value="">Seleccionar laboratorio...</option>
-            {laboratorios.map((l) => (
-              <option key={l.id} value={l.id}>{l.nombre}</option>
-            ))}
-          </select>
-        )}
-        {(grupoSeleccionado || docenteSeleccionado || laboratorioSeleccionado) && (
-          <button className={styles.btnPrimary} onClick={handleGuardar} disabled={cargando}>
-            <Save size={16} /> {cargando ? 'Guardando...' : 'Guardar horario'}
-          </button>
-        )}
-      </div>
-
-      <div className={styles.gridWrapper}>
-        {cargando ? (
-          <div className={styles.loading}>Cargando horario...</div>
-        ) : (
-          renderGrid()
-        )}
-      </div>
-
-      <div className={styles.validationPanel}>
-        <div className={styles.validationHeader}>
-          <AlertCircle size={16} />
-          <span>Validaciones</span>
+      {/* Modal de detalle */}
+      {detalleModal.open && detalleModal.log && (
+        <div className={styles.modalOverlay} onClick={() => setDetalleModal({ open: false, log: null })}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3 className={styles.modalTitle}>Detalle del log</h3>
+              <button
+                className={styles.modalClose}
+                onClick={() => setDetalleModal({ open: false, log: null })}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className={styles.detalleContent}>
+              <div className={styles.detalleRow}>
+                <span className={styles.detalleLabel}>Usuario:</span>
+                <span>
+                  {detalleModal.log.usuario_nombre
+                    ? `${detalleModal.log.usuario_apellidos}, ${detalleModal.log.usuario_nombre}`
+                    : 'Sistema'}
+                </span>
+              </div>
+              <div className={styles.detalleRow}>
+                <span className={styles.detalleLabel}>Acción:</span>
+                <span>{detalleModal.log.accion}</span>
+              </div>
+              <div className={styles.detalleRow}>
+                <span className={styles.detalleLabel}>Tabla:</span>
+                <span>{detalleModal.log.tabla_afectada || '—'}</span>
+              </div>
+              <div className={styles.detalleRow}>
+                <span className={styles.detalleLabel}>Registro ID:</span>
+                <span>{detalleModal.log.registro_id || '—'}</span>
+              </div>
+              <div className={styles.detalleRow}>
+                <span className={styles.detalleLabel}>IP:</span>
+                <span>{detalleModal.log.ip || '—'}</span>
+              </div>
+              <div className={styles.detalleRow}>
+                <span className={styles.detalleLabel}>User Agent:</span>
+                <span className={styles.detalleUserAgent}>{detalleModal.log.user_agent || '—'}</span>
+              </div>
+              <div className={styles.detalleRow}>
+                <span className={styles.detalleLabel}>Fecha:</span>
+                <span>{formatDate(detalleModal.log.fecha)}</span>
+              </div>
+              {detalleModal.log.datos_anteriores && (
+                <div className={styles.detalleSection}>
+                  <strong>Datos anteriores:</strong>
+                  <pre className={styles.detalleJson}>
+                    {JSON.stringify(detalleModal.log.datos_anteriores, null, 2)}
+                  </pre>
+                </div>
+              )}
+              {detalleModal.log.datos_nuevos && (
+                <div className={styles.detalleSection}>
+                  <strong>Datos nuevos:</strong>
+                  <pre className={styles.detalleJson}>
+                    {JSON.stringify(detalleModal.log.datos_nuevos, null, 2)}
+                  </pre>
+                </div>
+              )}
+            </div>
+            <div className={styles.modalActions}>
+              <button
+                className={styles.btnPrimary}
+                onClick={() => setDetalleModal({ open: false, log: null })}
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
         </div>
-        <div className={styles.validationContent}>
-          <p> No hay conflictos detectados</p>
-        </div>
-      </div>
-
-      {renderConfigModal()}
+      )}
     </div>
   );
 }
