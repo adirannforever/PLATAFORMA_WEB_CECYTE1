@@ -1,8 +1,21 @@
 import { query } from '../config/db.js';
 
+import { query } from '../config/db.js';
+
 export const getIncidencias = async (req, res) => {
   try {
-    const { alumno_id, tipo, subtipo, resuelta, fecha_desde, fecha_hasta, page = 1, limit = 10 } = req.query;
+    const { 
+      alumno_id, 
+      tipo, 
+      subtipo, 
+      resuelta, 
+      fecha_desde, 
+      fecha_hasta, 
+      page = 1, 
+      limit = 10,
+      grupo_letra 
+    } = req.query;
+
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const limitNum = parseInt(limit);
 
@@ -59,6 +72,10 @@ export const getIncidencias = async (req, res) => {
       conditions.push(`i.fecha <= $${params.length + 1}`);
       params.push(fecha_hasta);
     }
+    if (grupo_letra) {
+      conditions.push(`g.letra = $${params.length + 1}`);
+      params.push(grupo_letra.toUpperCase());
+    }
 
     if (conditions.length > 0) {
       sql += ' AND ' + conditions.join(' AND ');
@@ -89,6 +106,8 @@ export const getIncidencias = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Error interno' });
   }
 };
+
+// Las demás funciones (getIncidenciasByAlumno, crearIncidencia, etc.) se mantienen igual.
 
 export const getIncidenciasByAlumno = async (req, res) => {
   try {
