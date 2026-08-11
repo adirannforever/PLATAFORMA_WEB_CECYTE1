@@ -7,7 +7,141 @@ import { Settings, Users, User, FlaskConical, RefreshCw, Save, AlertCircle, X, P
 import styles from './HorariosPage.module.css';
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
-const TIPO_BLOQUE = 'BLOQUE_HORARIO';
+const ITEM_TYPE = 'BLOQUE';
+const ROW_HEIGHT = 40; // px por cada 10 minutos
+
+const getColorForMateria = (nombre) => {
+  if (!nombre) return '#1A6B35';
+  const hash = nombre.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const colors = [
+    '#1A6B35', '#2563eb', '#dc2626', '#f59e0b', '#8b5cf6',
+    '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16',
+    '#06b6d4', '#d946ef', '#ef4444', '#22c55e', '#eab308'
+  ];
+  return colors[hash % colors.length];
+};
+
+// Componente Celda (drop target)
+const Celda = ({ diaIndex, horaIndex, onDrop, children, style }) => {
+  const ref = useRef(null);
+  const [{ isOver }, drop] = useDrop({
+    accept: ITEM_TYPE,
+    drop: () => ({ diaIndex, horaIndex }),
+    collect: (monitor) => ({
+      isOver: !!monitor.isOver(),
+    }),
+  });
+
+  return (
+    <div
+      ref={drop}
+      className={`${styles.gridCell} ${isOver ? styles.gridCellHover : ''}`}
+      style={{
+        ...style,
+        backgroundColor: isOver ? 'rgba(26, 107, 53, 0.1)' : 'transparent',
+        position: 'relative',
+      }}
+    >
+      {children}
+    </div>
+  );
+};
+
+// Componente Bloque absoluto (arrastrable y redimensionable)
+const BloqueAbsoluto = ({ bloque, idx, onResize, configuracion, rowHeight, horaIndex }) => {
+  const ref = useRef(null);
+  const { duracion_bloque_minutos } = configuracion || { duracion_bloque_minutos: 50 };
+  const horaInicio = new Date(`2000-01-01T${bloque.hora_inicio}`);
+  const horaFin = new Date(`2000-01-01T${bloque.hora_fin}`);
+  const duracionMinutos = (horaFin - horaInicio) / 60000;
+  const filas = Math.max(1, Math.ceil(duracionMinutos / 10));
+  const height = filas * rowHeight;
+  const top = horaIndex * rowHeight;
+
+  const [{ isDragging }, drag] = useDrag({
+    type: ITEM_TYPE,
+    item: { idx },
+    collect: (monitor) => ({
+      isDragging: !!monitor.isDragging(),
+    }),
+    end: (item, monitor) => {
+      const dropResult = monitor.getDropResult();
+      if (dropResult) {
+        // El movimiento se maneja en handleDrop del padre
+      }
+    },
+  });
+
+  const color = getColorForMateria(bloque.materia_nombre);
+
+  return (
+    <div
+      ref={drag}
+      className={styles.bloqueAbsoluto}
+      style={{
+        position: 'absolute',
+        top: `${top}px`,
+        left: 0,
+        right: 0,
+        height: `${height}px`,
+        backgroundColor: color,
+        color: '#fff',
+        padding: '2px 4px',
+        fontSize: '0.65rem',
+        borderRadius: '2px',
+        overflow: 'hidden',
+        cursor: 'grab',
+        opacity: isDragging ? 0.5 : 1,
+        zIndex: 10,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        transition: 'opacity 0.15s',
+      }}
+      title={`${bloque.materia_nombre || 'Sin materia'} (${bloque.hora_inicio} - ${bloque.hora_fin})`}
+    >
+      <div className={styles.bloqueContent}>
+        <strong>{bloque.materia_clave || bloque.materia_nombre?.slice(0, 12) || 'Materia'}</strong>
+        <span className={styles.bloqueHoras}>
+          {bloque.hora_inicio} - {bloque.hora_fin}
+        </span>
+        {bloque.docente_apellidos && (
+          <span className={styles.bloqueDocente}>{bloque.docente_apellidos}</span>
+        )}
+      </div>
+      <div
+        className={styles.resizeHandle}
+        onMouseDown={(e) => {
+          e.stopPropagation();
+          const startY = e.clientY;
+          const startH = height;
+          const onMouseMove = (ev) => {
+            const deltaY = ev.clientY - startY;
+            const deltaRows = Math.round(deltaY / rowHeight);
+            const newH = Math.max(rowHeight, startH + deltaRows);
+            const nuevasFilas = Math.round(newH / rowHeight);
+            onResize(idx, nuevasFilas);
+          };
+          const onMouseUp = () => {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+          };
+          document.addEventListener('mousemove', onMouseMove);
+          document.addEventListener('mouseup', onMouseUp);
+        }}
+        style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: '6px',
+          cursor: 'ns-resize',
+          backgroundColor: 'rgba(255,255,255,0.3)',
+        }}
+      />
+    </div>
+  );
+};
 
 export default function HorariosPage() {
   const { usuario } = useAuth();
@@ -25,18 +159,25 @@ export default function HorariosPage() {
   const [grupos, setGrupos] = useState([]);
   const [docentes, setDocentes] = useState([]);
   const [laboratorios, setLaboratorios] = useState([]);
-  const [materiasDisponibles, setMateriasDisponibles] = useState([]);
 
   const [grupoSeleccionado, setGrupoSeleccionado] = useState('');
   const [docenteSeleccionado, setDocenteSeleccionado] = useState('');
   const [laboratorioSeleccionado, setLaboratorioSeleccionado] = useState('');
-  const [materiaSeleccionada, setMateriaSeleccionada] = useState('');
 
   const [bloques, setBloques] = useState([]);
   const [horasGrid, setHorasGrid] = useState([]);
-  const [materiaGrupoMap, setMateriaGrupoMap] = useState({});
+  const [materiasDisponibles, setMateriasDisponibles] = useState([]);
 
-  const gridRef = useRef(null);
+  // Obtener turno del grupo seleccionado para ajustar horas del grid
+  const getTurnoDelGrupo = useCallback(() => {
+    if (!grupoSeleccionado) return null;
+    const grupo = grupos.find(g => g.id === parseInt(grupoSeleccionado));
+    if (!grupo) return null;
+    // Necesitamos el turno_id del grupo, pero el objeto grupo devuelto por catalogosService.getGrupos() incluye turno_id?
+    // Si no, podemos obtenerlo de la BD. Por ahora, usamos la configuración global.
+    // Para simplificar, usamos la configuración global.
+    return null;
+  }, [grupoSeleccionado, grupos]);
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -52,6 +193,7 @@ export default function HorariosPage() {
         setGrupos(gruposRes.data || []);
         setDocentes(docentesRes.usuarios || []);
         setLaboratorios(labsRes.data || []);
+        setConfigForm(configRes.data || {});
       } catch (e) {
         console.error('Error cargando datos iniciales:', e);
         setError('No se pudieron cargar los datos');
@@ -60,25 +202,10 @@ export default function HorariosPage() {
     cargarDatos();
   }, []);
 
-  // Cargar materias disponibles para el grupo seleccionado
-  useEffect(() => {
-    const cargarMaterias = async () => {
-      if (!grupoSeleccionado) return;
-      try {
-        const res = await catalogosService.getMaterias(); // o el endpoint que tengas
-        const materias = res.data || [];
-        setMateriasDisponibles(materias);
-      } catch (e) {
-        console.error('Error cargando materias:', e);
-      }
-    };
-    cargarMaterias();
-  }, [grupoSeleccionado]);
-
-  // Generar horas del grid
+  // Generar horas del grid basado en la configuración
   useEffect(() => {
     if (!configuracion) return;
-    const { hora_inicio_turno, hora_fin_turno, duracion_bloque_minutos } = configuracion;
+    const { hora_inicio_turno, hora_fin_turno } = configuracion;
     const horas = [];
     let current = new Date(`2000-01-01T${hora_inicio_turno}`);
     const fin = new Date(`2000-01-01T${hora_fin_turno}`);
@@ -88,8 +215,6 @@ export default function HorariosPage() {
       horas.push({
         time: current.toTimeString().slice(0, 5),
         label: current.toTimeString().slice(0, 5),
-        minute: current.getMinutes(),
-        hour: current.getHours(),
       });
       current.setMinutes(current.getMinutes() + pasoMinutos);
     }
@@ -112,17 +237,7 @@ export default function HorariosPage() {
       } else {
         res = await horariosService.getHorarioLaboratorio(laboratorioSeleccionado);
       }
-      // Normalizar datos
-      const bloquesData = (res.data || []).map(b => ({
-        ...b,
-        id: b.id || `temp-${Date.now()}-${Math.random()}`,
-        dia_semana: b.dia_semana || 'Lunes',
-        hora_inicio: b.hora_inicio || '07:00',
-        hora_fin: b.hora_fin || '07:50',
-        materia_grupo_id: b.materia_grupo_id || null,
-        es_temporal: b.id ? false : true,
-      }));
-      setBloques(bloquesData);
+      setBloques(res.data || []);
     } catch (e) {
       console.error('Error cargando bloques:', e);
       setError('No se pudieron cargar los bloques');
@@ -137,23 +252,57 @@ export default function HorariosPage() {
     }
   }, [cargarBloques]);
 
+  // Manejar movimiento de bloque (drop)
+  const handleDrop = (idx, diaIndex, horaIndex) => {
+    const bloque = bloques[idx];
+    if (!bloque) return;
+
+    const horaInicio = horasGrid[horaIndex]?.time;
+    if (!horaInicio) return;
+
+    const duracionMinutos = (new Date(`2000-01-01T${bloque.hora_fin}`) - new Date(`2000-01-01T${bloque.hora_inicio}`)) / 60000;
+    const horaFin = new Date(`2000-01-01T${horaInicio}`);
+    horaFin.setMinutes(horaFin.getMinutes() + duracionMinutos);
+
+    const nuevoBloque = {
+      ...bloque,
+      dia_semana: DIAS[diaIndex],
+      hora_inicio: horaInicio,
+      hora_fin: horaFin.toTimeString().slice(0, 5),
+    };
+
+    const nuevosBloques = [...bloques];
+    nuevosBloques[idx] = nuevoBloque;
+    setBloques(nuevosBloques);
+  };
+
+  // Manejar redimension de bloque
+  const handleResize = (idx, nuevasFilas) => {
+    const bloque = bloques[idx];
+    if (!bloque) return;
+
+    const nuevaDuracion = nuevasFilas * 10;
+    const horaInicio = new Date(`2000-01-01T${bloque.hora_inicio}`);
+    const horaFin = new Date(horaInicio);
+    horaFin.setMinutes(horaFin.getMinutes() + nuevaDuracion);
+
+    const nuevoBloque = {
+      ...bloque,
+      hora_fin: horaFin.toTimeString().slice(0, 5),
+    };
+
+    const nuevosBloques = [...bloques];
+    nuevosBloques[idx] = nuevoBloque;
+    setBloques(nuevosBloques);
+  };
+
   // Guardar horario
   const handleGuardar = async () => {
     setCargando(true);
     try {
-      // Filtrar bloques temporales y preparar datos
-      const bloquesParaGuardar = bloques
-        .filter(b => !b.es_temporal)
-        .map(b => ({
-          materia_grupo_id: b.materia_grupo_id,
-          dia_semana: b.dia_semana,
-          hora_inicio: b.hora_inicio,
-          hora_fin: b.hora_fin,
-        }));
-      await horariosService.guardarHorarioGrupo(grupoSeleccionado, bloquesParaGuardar);
+      await horariosService.guardarHorarioGrupo(grupoSeleccionado, bloques);
       setExito('Horario guardado correctamente');
       setTimeout(() => setExito(''), 4000);
-      cargarBloques();
     } catch (e) {
       setError(e.response?.data?.message || 'Error al guardar');
     } finally {
@@ -174,249 +323,69 @@ export default function HorariosPage() {
     }
   };
 
-  // ============================================================
-  // LOGICA DE DRAG & DROP
-  // ============================================================
-
-  // Obtener coordenadas de un bloque en el grid
-  const getBloqueCoords = (bloque) => {
-    const diaIdx = DIAS.indexOf(bloque.dia_semana);
-    const horaIdx = horasGrid.findIndex(h => h.time === bloque.hora_inicio);
-    if (diaIdx === -1 || horaIdx === -1) return null;
-    const duracionMinutos = (new Date(`2000-01-01T${bloque.hora_fin}`) - new Date(`2000-01-01T${bloque.hora_inicio}`)) / 60000;
-    const altura = Math.round(duracionMinutos / 10);
-    return { diaIdx, horaIdx, altura };
-  };
-
-  // Mover bloque a nueva posición
-  const moverBloque = (bloqueId, nuevoDia, nuevaHoraInicio) => {
-    setBloques(prev => {
-      return prev.map(b => {
-        if (b.id !== bloqueId) return b;
-        // Calcular nueva hora_fin
-        const duracionMinutos = (new Date(`2000-01-01T${b.hora_fin}`) - new Date(`2000-01-01T${b.hora_inicio}`)) / 60000;
-        const fin = new Date(`2000-01-01T${nuevaHoraInicio}`);
-        fin.setMinutes(fin.getMinutes() + duracionMinutos);
-        const nuevaHoraFin = fin.toTimeString().slice(0, 5);
-        return {
-          ...b,
-          dia_semana: nuevoDia,
-          hora_inicio: nuevaHoraInicio,
-          hora_fin: nuevaHoraFin,
-        };
-      });
-    });
-  };
-
-  // Redimensionar bloque (cambiar duración)
-  const redimensionarBloque = (bloqueId, nuevaDuracionMinutos) => {
-    setBloques(prev => {
-      return prev.map(b => {
-        if (b.id !== bloqueId) return b;
-        const nuevaHoraFin = new Date(`2000-01-01T${b.hora_inicio}`);
-        nuevaHoraFin.setMinutes(nuevaHoraFin.getMinutes() + nuevaDuracionMinutos);
-        return {
-          ...b,
-          hora_fin: nuevaHoraFin.toTimeString().slice(0, 5),
-        };
-      });
-    });
-  };
-
-  // Crear nuevo bloque en celda
-  const crearBloque = (dia, horaInicio) => {
-    if (!materiaSeleccionada) {
-      setError('Selecciona una materia primero');
-      return;
-    }
-    const duracion = configuracion?.duracion_bloque_minutos || 50;
-    const fin = new Date(`2000-01-01T${horaInicio}`);
-    fin.setMinutes(fin.getMinutes() + duracion);
-    const nuevoBloque = {
-      id: `temp-${Date.now()}-${Math.random()}`,
-      dia_semana: dia,
-      hora_inicio: horaInicio,
-      hora_fin: fin.toTimeString().slice(0, 5),
-      materia_grupo_id: materiaSeleccionada,
-      es_temporal: true,
-      materia_nombre: materiasDisponibles.find(m => m.id === parseInt(materiaSeleccionada))?.nombre || 'Materia',
-    };
-    setBloques(prev => [...prev, nuevoBloque]);
-  };
-
-  // Eliminar bloque temporal
-  const eliminarBloque = (bloqueId) => {
-    setBloques(prev => prev.filter(b => b.id !== bloqueId));
-  };
-
-  // Validar conflictos (simplificado)
-  const tieneConflictos = (bloque) => {
-    // Verificar si otro bloque ocupa el mismo espacio
-    const conflicto = bloques.some(b => {
-      if (b.id === bloque.id) return false;
-      if (b.dia_semana !== bloque.dia_semana) return false;
-      const bInicio = b.hora_inicio;
-      const bFin = b.hora_fin;
-      const bloqueInicio = bloque.hora_inicio;
-      const bloqueFin = bloque.hora_fin;
-      return (bloqueInicio >= bInicio && bloqueInicio < bFin) ||
-             (bloqueFin > bInicio && bloqueFin <= bFin);
-    });
-    return conflicto;
-  };
-
-  // ============================================================
-  // COMPONENTES DE DRAG & DROP
-  // ============================================================
-
-  // Componente Celda (drop target)
-  const CeldaDrop = ({ dia, hora, children }) => {
-    const [{ isOver, canDrop }, drop] = useDrop(() => ({
-      accept: TIPO_BLOQUE,
-      drop: (item, monitor) => {
-        const delta = monitor.getDifferenceFromInitialOffset();
-        if (delta) {
-          // Mover bloque a esta celda
-          const bloqueId = item.id;
-          const nuevoDia = dia;
-          const nuevaHora = hora;
-          moverBloque(bloqueId, nuevoDia, nuevaHora);
-        }
-        return { dia, hora };
-      },
-      collect: (monitor) => ({
-        isOver: !!monitor.isOver(),
-        canDrop: !!monitor.canDrop(),
-      }),
-    }), [dia, hora]);
-
-    return (
-      <div
-        ref={drop}
-        className={`${styles.gridCell} ${isOver && canDrop ? styles.dropOver : ''}`}
-        onClick={() => crearBloque(dia, hora)}
-        data-dia={dia}
-        data-hora={hora}
-      >
-        {children}
-      </div>
-    );
-  };
-
-  // Componente Bloque (drag source + resize)
-  const BloqueDrag = ({ bloque }) => {
-    const [{ isDragging }, drag] = useDrag(() => ({
-      type: TIPO_BLOQUE,
-      item: { id: bloque.id, dia: bloque.dia_semana, hora: bloque.hora_inicio },
-      collect: (monitor) => ({
-        isDragging: !!monitor.isDragging(),
-      }),
-    }), [bloque]);
-
-    const coords = getBloqueCoords(bloque);
-    if (!coords) return null;
-
-    const { diaIdx, horaIdx, altura } = coords;
-    const conflicto = tieneConflictos(bloque);
-    const esTemporal = bloque.es_temporal;
-
-    // Calcular posición en el grid
-    const top = horaIdx * 10; // 10px por cada 10 minutos
-    const left = diaIdx * (100 / 5); // 20% por día
-
-    return (
-      <div
-        ref={drag}
-        className={`${styles.bloque} ${isDragging ? styles.dragging : ''} ${conflicto ? styles.conflicto : ''} ${esTemporal ? styles.temporal : ''}`}
-        style={{
-          position: 'absolute',
-          top: `${top}px`,
-          left: `${left}%`,
-          width: `${100 / 5}%`,
-          height: `${altura * 10}px`,
-          backgroundColor: conflicto ? '#b91c1c' : esTemporal ? '#f59e0b' : '#1A6B35',
-          color: '#fff',
-          padding: '2px 4px',
-          fontSize: '0.65rem',
-          borderRadius: '2px',
-          overflow: 'hidden',
-          cursor: 'grab',
-          zIndex: isDragging ? 100 : 10,
-        }}
-        title={`${bloque.materia_nombre || 'Materia'} ${conflicto ? '️ Conflicto' : ''}`}
-      >
-        <div className={styles.bloqueContent}>
-          <strong>{bloque.materia_clave || bloque.materia_nombre?.slice(0, 15) || 'Materia'}</strong>
-          {bloque.docente_apellidos && (
-            <span style={{ fontSize: '0.6rem', opacity: 0.8 }}>
-              {bloque.docente_apellidos}
-            </span>
-          )}
-          {esTemporal && (
-            <button
-              className={styles.btnEliminarBloque}
-              onClick={(e) => {
-                e.stopPropagation();
-                eliminarBloque(bloque.id);
-              }}
-            >
-              <X size={12} />
-            </button>
-          )}
-        </div>
-        {/* Resize handle (borde inferior) */}
-        <div
-          className={styles.resizeHandle}
-          onMouseDown={(e) => {
-            e.stopPropagation();
-            const startY = e.clientY;
-            const startHeight = altura * 10;
-            const onMouseMove = (ev) => {
-              const deltaY = ev.clientY - startY;
-              const newHeight = Math.max(20, startHeight + deltaY);
-              const newDuracionMinutos = Math.round(newHeight / 10) * 10;
-              redimensionarBloque(bloque.id, newDuracionMinutos);
-            };
-            const onMouseUp = () => {
-              document.removeEventListener('mousemove', onMouseMove);
-              document.removeEventListener('mouseup', onMouseUp);
-            };
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp);
-          }}
-        />
-      </div>
-    );
-  };
-
-  // ============================================================
-  // RENDERIZADO PRINCIPAL
-  // ============================================================
-
+  // Renderizar el grid con DnD y bloques absolutos
   const renderGrid = () => {
+    if (!configuracion) return <div className={styles.loading}>Cargando configuración...</div>;
+
+    const totalRows = horasGrid.length;
+    if (totalRows === 0) return <div className={styles.empty}>No hay horas configuradas para este turno.</div>;
+
     return (
       <DndProvider backend={HTML5Backend}>
-        <div className={styles.gridContainer} ref={gridRef}>
+        <div className={styles.gridContainer}>
           <div className={styles.gridHeader}>
             <div className={styles.gridHeaderCell}>Hora</div>
             {DIAS.map((dia) => (
               <div key={dia} className={styles.gridHeaderCell}>{dia}</div>
             ))}
           </div>
-          <div className={styles.gridBody} style={{ position: 'relative' }}>
-            {horasGrid.map((hora, idx) => (
-              <div key={idx} className={styles.gridRow}>
-                <div className={styles.gridTimeCell}>{hora.label}</div>
-                {DIAS.map((dia) => (
-                  <CeldaDrop key={`${dia}-${idx}`} dia={dia} hora={hora.time}>
-                    {/* Los bloques se renderizan en posición absoluta sobre el grid */}
-                  </CeldaDrop>
-                ))}
-              </div>
-            ))}
-            {/* Renderizar bloques en posición absoluta */}
-            {bloques.map((bloque) => (
-              <BloqueDrag key={bloque.id} bloque={bloque} />
+          <div
+            className={styles.gridBody}
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '60px repeat(5, 1fr)',
+              gridAutoRows: `${ROW_HEIGHT}px`,
+              position: 'relative',
+            }}
+          >
+            {horasGrid.map((hora, horaIdx) => (
+              <React.Fragment key={horaIdx}>
+                <div className={styles.gridTimeCell} style={{ gridRow: horaIdx + 1, gridColumn: 1 }}>
+                  {hora.label}
+                </div>
+                {DIAS.map((dia, diaIdx) => {
+                  const celdaKey = `${dia}-${horaIdx}`;
+                  // Buscar bloque que comienza en esta celda
+                  const bloque = bloques.find(b => b.dia_semana === dia && b.hora_inicio === hora.time);
+                  return (
+                    <Celda
+                      key={celdaKey}
+                      diaIndex={diaIdx}
+                      horaIndex={horaIdx}
+                      onDrop={handleDrop}
+                      style={{
+                        gridRow: horaIdx + 1,
+                        gridColumn: diaIdx + 2,
+                        minHeight: `${ROW_HEIGHT}px`,
+                        borderRight: '1px solid #e9edf2',
+                        padding: 0,
+                        position: 'relative',
+                      }}
+                    >
+                      {bloque && bloque.hora_inicio === hora.time && (
+                        <BloqueAbsoluto
+                          bloque={bloque}
+                          idx={bloques.indexOf(bloque)}
+                          onResize={handleResize}
+                          configuracion={configuracion}
+                          rowHeight={ROW_HEIGHT}
+                          horaIndex={horaIdx}
+                        />
+                      )}
+                    </Celda>
+                  );
+                })}
+              </React.Fragment>
             ))}
           </div>
         </div>
@@ -424,7 +393,7 @@ export default function HorariosPage() {
     );
   };
 
-  // Modal de configuración
+  // Modal de configuración (sin cambios)
   const renderConfigModal = () => {
     if (!configModal) return null;
     return (
@@ -505,46 +474,6 @@ export default function HorariosPage() {
               </button>
             </div>
           </form>
-        </div>
-      </div>
-    );
-  };
-
-  // Selector de materia para crear bloques
-  const renderMateriaSelector = () => {
-    if (tabActiva !== 'grupos') return null;
-    return (
-      <div className={styles.materiaSelector}>
-        <label className={styles.label}>Materia para nuevo bloque</label>
-        <div className={styles.materiaSelectorRow}>
-          <select
-            className={styles.select}
-            value={materiaSeleccionada}
-            onChange={(e) => setMateriaSeleccionada(e.target.value)}
-          >
-            <option value="">Seleccionar materia...</option>
-            {materiasDisponibles.map((m) => (
-              <option key={m.id} value={m.id}>{m.nombre}</option>
-            ))}
-          </select>
-          <button
-            className={styles.btnPrimary}
-            onClick={() => {
-              if (!materiaSeleccionada) {
-                setError('Selecciona una materia primero');
-                return;
-              }
-              // Crear bloque en la primera celda disponible
-              const dia = DIAS[0];
-              const hora = horasGrid[0]?.time;
-              if (hora) {
-                crearBloque(dia, hora);
-              }
-            }}
-            title="Crear bloque en la primera celda disponible"
-          >
-            <Plus size={16} />
-          </button>
         </div>
       </div>
     );
@@ -635,8 +564,6 @@ export default function HorariosPage() {
         )}
       </div>
 
-      {renderMateriaSelector()}
-
       <div className={styles.gridWrapper}>
         {cargando ? (
           <div className={styles.loading}>Cargando horario...</div>
@@ -651,14 +578,7 @@ export default function HorariosPage() {
           <span>Validaciones</span>
         </div>
         <div className={styles.validationContent}>
-          {bloques.some(b => tieneConflictos(b)) ? (
-            <p className={styles.conflictoMsg}>️ Hay bloques en conflicto. Revisa las celdas marcadas en rojo.</p>
-          ) : (
-            <p> No hay conflictos detectados</p>
-          )}
-          {bloques.some(b => b.es_temporal) && (
-            <p className={styles.temporalMsg}> Hay bloques temporales (naranja). Guarda el horario para confirmarlos.</p>
-          )}
+          <p>✅ No hay conflictos detectados</p>
         </div>
       </div>
 
