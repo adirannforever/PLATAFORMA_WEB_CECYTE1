@@ -174,13 +174,23 @@ export default function HorariosPage() {
     duracion_minutos: 50,
   });
 
-  // Obtener materias del grupo seleccionado usando gruposService
+  // Obtener materias del grupo seleccionado
   const cargarMateriasDisponibles = useCallback(async () => {
     if (!grupoSeleccionado) return;
     try {
       const res = await gruposService.getMaterias(grupoSeleccionado);
-      // La respuesta viene como { success: true, materias: [...] }
-      const materias = res.materias || [];
+      // La respuesta puede ser { success: true, materias: [...] }
+      let materias = [];
+      if (res.materias && Array.isArray(res.materias)) {
+        materias = res.materias;
+      } else if (res.data && Array.isArray(res.data)) {
+        materias = res.data;
+      } else if (Array.isArray(res)) {
+        materias = res;
+      } else {
+        console.warn('Respuesta de materias no reconocida:', res);
+        materias = [];
+      }
       // Filtrar las que ya tienen bloques asignados
       const idsConBloque = bloques.map(b => b.materia_grupo_id);
       const disponibles = materias.filter(m => !idsConBloque.includes(m.id));

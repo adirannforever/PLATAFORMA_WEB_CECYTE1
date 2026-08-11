@@ -87,6 +87,55 @@ export const getMateriasDeGrupo = async (req, res) => {
   }
 };
 
+export const getMaterias = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await query(
+      `SELECT 
+        mg.id,
+        mg.grupo_id,
+        mg.materia_catalogo_id,
+        mg.docente_id,
+        mc.nombre AS materia_nombre,
+        mc.clave AS clave,
+        mc.semestre,
+        mc.tipo,
+        mc.horas_semana,
+        u.nombre AS docente_nombre,
+        u.apellidos AS docente_apellidos
+      FROM materias_grupo mg
+      JOIN materias_catalogo mc ON mc.id = mg.materia_catalogo_id
+      LEFT JOIN usuarios u ON u.id = mg.docente_id
+      WHERE mg.grupo_id = $1 AND mg.activa = TRUE`,
+      [id]
+    );
+
+    // Formatear respuesta para que coincida con lo que espera el frontend
+    const materias = result.rows.map(row => ({
+      id: row.id,
+      materia_grupo_id: row.id,
+      materia_nombre: row.materia_nombre,
+      nombre: row.materia_nombre,
+      clave: row.clave,
+      semestre: row.semestre,
+      tipo: row.tipo,
+      horas_semana: row.horas_semana,
+      docente_id: row.docente_id,
+      docente_nombre: row.docente_nombre,
+      docente_apellidos: row.docente_apellidos,
+      apellidos: row.docente_apellidos,
+    }));
+
+    return res.json({
+      success: true,
+      materias, // ✅ El frontend espera 'materias'
+    });
+  } catch (err) {
+    console.error('Error en getMaterias:', err);
+    return res.status(500).json({ success: false, message: 'Error interno' });
+  }
+};
+
 export const crearGrupo = async (req, res) => {
   const { ciclo_id, especialidad_id, turno_id, semestre, letra, tutor_id } = req.body;
   const tutorYaAsignado = async (tutor_id, ciclo_id, grupo_id_excluir = null) => {

@@ -123,20 +123,22 @@ export const guardarHorarioGrupo = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Acceso denegado' });
     }
 
-    // Iniciar transacción
     await query('BEGIN');
 
     // Eliminar bloques existentes del grupo
     await query('DELETE FROM horario_grupos WHERE grupo_id = $1', [grupo_id]);
 
-    // Insertar nuevos bloques
+    // Insertar nuevos bloques (solo los que tienen ID válido, los temporales no se guardan)
     for (const bloque of bloques) {
-      const { materia_grupo_id, dia_semana, hora_inicio, hora_fin } = bloque;
+      // Si el bloque tiene un ID numérico y no es temporal (no es timestamp), intentamos actualizar
+      // Pero como simplificamos, solo insertamos los que tienen materia_grupo_id
+      if (!bloque.materia_grupo_id) continue;
+
       await query(
         `INSERT INTO horario_grupos 
          (grupo_id, materia_grupo_id, dia_semana, hora_inicio, hora_fin, creado_por)
          VALUES ($1, $2, $3, $4, $5, $6)`,
-        [grupo_id, materia_grupo_id, dia_semana, hora_inicio, hora_fin, req.user.id]
+        [grupo_id, bloque.materia_grupo_id, bloque.dia_semana, bloque.hora_inicio, bloque.hora_fin, req.user.id]
       );
     }
 
@@ -227,11 +229,8 @@ export const regenerarMaestros = async (req, res) => {
     }
 
     await query('BEGIN');
-
-    // Eliminar horarios automáticos de maestros
     await query('DELETE FROM horario_maestros WHERE es_automatico = TRUE');
 
-    // Generar desde horario_grupos
     await query(`
       INSERT INTO horario_maestros (docente_id, materia_grupo_id, dia_semana, hora_inicio, hora_fin, es_automatico)
       SELECT 
@@ -262,12 +261,8 @@ export const regenerarLaboratorios = async (req, res) => {
     }
 
     await query('BEGIN');
-
-    // Eliminar horarios automáticos de laboratorios
     await query('DELETE FROM horario_laboratorios WHERE es_automatico = TRUE');
 
-    // Generar desde horario_grupos (asumiendo que tienes laboratorio_id en materias_grupo)
-    // Por ahora, si no tienes laboratorio_id, esto no generará nada
     await query(`
       INSERT INTO horario_laboratorios (laboratorio_id, materia_grupo_id, dia_semana, hora_inicio, hora_fin, es_automatico)
       SELECT 
