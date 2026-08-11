@@ -531,3 +531,110 @@
   color: #f59e0b;
   font-weight: 600;
 }
+
+.bloqueAbsoluto {
+  border-radius: 2px;
+  padding: 2px 4px;
+  font-size: 0.65rem;
+  overflow: hidden;
+  cursor: grab;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  user-select: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.bloqueAbsoluto:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.bloqueHoras {
+  font-size: 0.55rem;
+  opacity: 0.85;
+}
+.bloqueDocente {
+  font-size: 0.55rem;
+  opacity: 0.7;
+}
+.resizeHandle {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  cursor: ns-resize;
+  background-color: rgba(255,255,255,0.2);
+  transition: background-color 0.15s;
+}
+.resizeHandle:hover {
+  background-color: rgba(255,255,255,0.5);
+}
+.gridCellHover {
+  background-color: rgba(26, 107, 53, 0.1);
+  border: 1px dashed #1A6B35;
+}
+.gridCell {
+  min-height: 40px;
+  border-right: 1px solid #e9edf2;
+  padding: 0;
+  position: relative;
+  vertical-align: top;
+}
+.gridCell:last-child {
+  border-right: none;
+}
+.gridRow {
+  display: contents; 
+}
+.bloqueAbsoluto {
+  border-radius: 2px;
+  padding: 2px 4px;
+  font-size: 0.65rem;
+  overflow: hidden;
+  cursor: grab;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  user-select: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.bloqueAbsoluto:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.bloqueHoras {
+  font-size: 0.55rem;
+  opacity: 0.85;
+}
+.bloqueDocente {
+  font-size: 0.55rem;
+  opacity: 0.7;
+}
+.resizeHandle {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  cursor: ns-resize;
+  background-color: rgba(255,255,255,0.2);
+  transition: background-color 0.15s;
+}
+.resizeHandle:hover {
+  background-color: rgba(255,255,255,0.5);
+}
+.gridCellHover {
+  background-color: rgba(26, 107, 53, 0.1);
+  border: 1px dashed #1A6B35;
+}
+.gridCell {
+  min-height: 40px;
+  border-right: 1px solid #e9edf2;
+  padding: 0;
+  position: relative;
+  vertical-align: top;
+}
+.gridCell:last-child {
+  border-right: none;
+}
+.gridRow {
+  display: contents;
+}

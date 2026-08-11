@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { horariosService, catalogosService, usuariosService } from '../services/api';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
@@ -8,7 +8,7 @@ import styles from './HorariosPage.module.css';
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
 const ITEM_TYPE = 'BLOQUE';
-const ROW_HEIGHT = 40; // px por cada 10 minutos
+const ROW_HEIGHT = 40;
 
 const getColorForMateria = (nombre) => {
   if (!nombre) return '#1A6B35';
@@ -21,7 +21,6 @@ const getColorForMateria = (nombre) => {
   return colors[hash % colors.length];
 };
 
-// Componente Celda (drop target)
 const Celda = ({ diaIndex, horaIndex, onDrop, children, style }) => {
   const ref = useRef(null);
   const [{ isOver }, drop] = useDrop({
@@ -47,7 +46,6 @@ const Celda = ({ diaIndex, horaIndex, onDrop, children, style }) => {
   );
 };
 
-// Componente Bloque absoluto (arrastrable y redimensionable)
 const BloqueAbsoluto = ({ bloque, idx, onResize, configuracion, rowHeight, horaIndex }) => {
   const ref = useRef(null);
   const { duracion_bloque_minutos } = configuracion || { duracion_bloque_minutos: 50 };
@@ -166,20 +164,7 @@ export default function HorariosPage() {
 
   const [bloques, setBloques] = useState([]);
   const [horasGrid, setHorasGrid] = useState([]);
-  const [materiasDisponibles, setMateriasDisponibles] = useState([]);
 
-  // Obtener turno del grupo seleccionado para ajustar horas del grid
-  const getTurnoDelGrupo = useCallback(() => {
-    if (!grupoSeleccionado) return null;
-    const grupo = grupos.find(g => g.id === parseInt(grupoSeleccionado));
-    if (!grupo) return null;
-    // Necesitamos el turno_id del grupo, pero el objeto grupo devuelto por catalogosService.getGrupos() incluye turno_id?
-    // Si no, podemos obtenerlo de la BD. Por ahora, usamos la configuración global.
-    // Para simplificar, usamos la configuración global.
-    return null;
-  }, [grupoSeleccionado, grupos]);
-
-  // Cargar datos iniciales
   useEffect(() => {
     const cargarDatos = async () => {
       try {
@@ -202,7 +187,6 @@ export default function HorariosPage() {
     cargarDatos();
   }, []);
 
-  // Generar horas del grid basado en la configuración
   useEffect(() => {
     if (!configuracion) return;
     const { hora_inicio_turno, hora_fin_turno } = configuracion;
@@ -221,7 +205,6 @@ export default function HorariosPage() {
     setHorasGrid(horas);
   }, [configuracion]);
 
-  // Cargar bloques del horario seleccionado
   const cargarBloques = useCallback(async () => {
     if (tabActiva === 'grupos' && !grupoSeleccionado) return;
     if (tabActiva === 'maestros' && !docenteSeleccionado) return;
@@ -252,7 +235,6 @@ export default function HorariosPage() {
     }
   }, [cargarBloques]);
 
-  // Manejar movimiento de bloque (drop)
   const handleDrop = (idx, diaIndex, horaIndex) => {
     const bloque = bloques[idx];
     if (!bloque) return;
@@ -276,7 +258,6 @@ export default function HorariosPage() {
     setBloques(nuevosBloques);
   };
 
-  // Manejar redimension de bloque
   const handleResize = (idx, nuevasFilas) => {
     const bloque = bloques[idx];
     if (!bloque) return;
@@ -296,7 +277,6 @@ export default function HorariosPage() {
     setBloques(nuevosBloques);
   };
 
-  // Guardar horario
   const handleGuardar = async () => {
     setCargando(true);
     try {
@@ -310,7 +290,6 @@ export default function HorariosPage() {
     }
   };
 
-  // Guardar configuración
   const handleGuardarConfiguracion = async () => {
     try {
       const res = await horariosService.actualizarConfiguracion(configForm);
@@ -323,7 +302,6 @@ export default function HorariosPage() {
     }
   };
 
-  // Renderizar el grid con DnD y bloques absolutos
   const renderGrid = () => {
     if (!configuracion) return <div className={styles.loading}>Cargando configuración...</div>;
 
@@ -355,7 +333,6 @@ export default function HorariosPage() {
                 </div>
                 {DIAS.map((dia, diaIdx) => {
                   const celdaKey = `${dia}-${horaIdx}`;
-                  // Buscar bloque que comienza en esta celda
                   const bloque = bloques.find(b => b.dia_semana === dia && b.hora_inicio === hora.time);
                   return (
                     <Celda
@@ -393,7 +370,6 @@ export default function HorariosPage() {
     );
   };
 
-  // Modal de configuración (sin cambios)
   const renderConfigModal = () => {
     if (!configModal) return null;
     return (
