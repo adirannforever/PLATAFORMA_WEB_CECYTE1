@@ -394,3 +394,140 @@
 .gridCell:last-child {
   border-right: none;
 }
+
+/* ===== DRAG & DROP ===== */
+.gridBody {
+  position: relative;
+  min-height: 400px;
+}
+.gridCell {
+  min-height: 40px;
+  border-right: 1px solid #e9edf2;
+  padding: 2px;
+  position: relative;
+  vertical-align: top;
+  transition: background-color 0.15s;
+}
+.gridCell:last-child {
+  border-right: none;
+}
+.gridCell.dropOver {
+  background-color: #d1fae5;
+}
+
+.bloque {
+  position: absolute;
+  border-radius: 2px;
+  font-size: 0.65rem;
+  padding: 2px 4px;
+  overflow: hidden;
+  cursor: grab;
+  transition: opacity 0.15s;
+  user-select: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.bloque.dragging {
+  opacity: 0.5;
+  cursor: grabbing;
+  z-index: 100;
+}
+.bloque.conflicto {
+  border: 2px solid #b91c1c;
+  animation: pulse-conflicto 1s infinite;
+}
+.bloque.temporal {
+  border: 2px dashed #f59e0b;
+  opacity: 0.8;
+}
+
+@keyframes pulse-conflicto {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.bloqueContent {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  height: 100%;
+  justify-content: center;
+  gap: 0.1rem;
+  pointer-events: none;
+}
+.bloqueContent strong {
+  font-size: 0.6rem;
+  pointer-events: none;
+}
+
+.resizeHandle {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  cursor: ns-resize;
+  background: rgba(255,255,255,0.3);
+  pointer-events: auto;
+}
+.resizeHandle:hover {
+  background: rgba(255,255,255,0.6);
+}
+
+.btnEliminarBloque {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  background: rgba(0,0,0,0.5);
+  border: none;
+  border-radius: 2px;
+  color: #fff;
+  cursor: pointer;
+  padding: 1px 2px;
+  line-height: 1;
+  font-size: 0.6rem;
+  pointer-events: auto;
+  display: none;
+}
+.bloque:hover .btnEliminarBloque {
+  display: block;
+}
+
+/* ===== SELECTOR DE MATERIA ===== */
+.materiaSelector {
+  background: #ffffff;
+  border: 2px solid #d1d9e6;
+  border-radius: 2px;
+  padding: 0.8rem 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.materiaSelector .label {
+  font-family: 'Roboto', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #1e293b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.materiaSelectorRow {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex: 1;
+}
+.materiaSelectorRow .select {
+  flex: 1;
+  min-width: 200px;
+}
+
+/* ===== MENSAJES DE VALIDACIÓN ===== */
+.conflictoMsg {
+  color: #b91c1c;
+  font-weight: 600;
+}
+.temporalMsg {
+  color: #f59e0b;
+  font-weight: 600;
+}

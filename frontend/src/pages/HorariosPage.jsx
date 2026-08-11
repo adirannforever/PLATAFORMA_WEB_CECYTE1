@@ -1,10 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { horariosService, catalogosService, usuariosService } from '../services/api';
-import { Settings, Users, User, FlaskConical, RefreshCw, Save, AlertCircle, X } from 'lucide-react';
+import { DndProvider, useDrag, useDrop } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
+import { Settings, Users, User, FlaskConical, RefreshCw, Save, AlertCircle, X, Plus } from 'lucide-react';
 import styles from './HorariosPage.module.css';
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+const TIPO_BLOQUE = 'BLOQUE_HORARIO';
 
 export default function HorariosPage() {
   const { usuario } = useAuth();
@@ -22,14 +25,20 @@ export default function HorariosPage() {
   const [grupos, setGrupos] = useState([]);
   const [docentes, setDocentes] = useState([]);
   const [laboratorios, setLaboratorios] = useState([]);
+  const [materiasDisponibles, setMateriasDisponibles] = useState([]);
 
   const [grupoSeleccionado, setGrupoSeleccionado] = useState('');
   const [docenteSeleccionado, setDocenteSeleccionado] = useState('');
   const [laboratorioSeleccionado, setLaboratorioSeleccionado] = useState('');
+  const [materiaSeleccionada, setMateriaSeleccionada] = useState('');
 
   const [bloques, setBloques] = useState([]);
   const [horasGrid, setHorasGrid] = useState([]);
+  const [materiaGrupoMap, setMateriaGrupoMap] = useState({});
 
+  const gridRef = useRef(null);
+
+  // Cargar datos iniciales
   useEffect(() => {
     const cargarDatos = async () => {
       try {
@@ -51,9 +60,25 @@ export default function HorariosPage() {
     cargarDatos();
   }, []);
 
+  // Cargar materias disponibles para el grupo seleccionado
+  useEffect(() => {
+    const cargarMaterias = async () => {
+      if (!grupoSeleccionado) return;
+      try {
+        const res = await catalogosService.getMaterias(); // o el endpoint que tengas
+        const materias = res.data || [];
+        setMateriasDisponibles(materias);
+      } catch (e) {
+        console.error('Error cargando materias:', e);
+      }
+    };
+    cargarMaterias();
+  }, [grupoSeleccionado]);
+
+  // Generar horas del grid
   useEffect(() => {
     if (!configuracion) return;
-    const { hora_inicio_turno, hora_fin_turno } = configuracion;
+    const { hora_inicio_turno, hora_fin_turno, duracion_bloque_minutos } = configuracion;
     const horas = [];
     let current = new Date(`2000-01-01T${hora_inicio_turno}`);
     const fin = new Date(`2000-01-01T${hora_fin_turno}`);
@@ -63,13 +88,15 @@ export default function HorariosPage() {
       horas.push({
         time: current.toTimeString().slice(0, 5),
         label: current.toTimeString().slice(0, 5),
+        minute: current.getMinutes(),
+        hour: current.getHours(),
       });
       current.setMinutes(current.getMinutes() + pasoMinutos);
     }
     setHorasGrid(horas);
-    console.log('🕒 Horas grid generadas:', horas);
   }, [configuracion]);
 
+  // Cargar bloques del horario seleccionado
   const cargarBloques = useCallback(async () => {
     if (tabActiva === 'grupos' && !grupoSeleccionado) return;
     if (tabActiva === 'maestros' && !docenteSeleccionado) return;
@@ -85,11 +112,17 @@ export default function HorariosPage() {
       } else {
         res = await horariosService.getHorarioLaboratorio(laboratorioSeleccionado);
       }
-      setBloques(res.data || []);
-      console.log('📦 Bloques cargados:', res.data);
-      console.log('🔍 Primer bloque:', res.data[0]);
-      console.log('📅 Días en bloques:', res.data.map(b => b.dia_semana));
-      console.log('⏰ Horas en bloques:', res.data.map(b => b.hora_inicio));
+      // Normalizar datos
+      const bloquesData = (res.data || []).map(b => ({
+        ...b,
+        id: b.id || `temp-${Date.now()}-${Math.random()}`,
+        dia_semana: b.dia_semana || 'Lunes',
+        hora_inicio: b.hora_inicio || '07:00',
+        hora_fin: b.hora_fin || '07:50',
+        materia_grupo_id: b.materia_grupo_id || null,
+        es_temporal: b.id ? false : true,
+      }));
+      setBloques(bloquesData);
     } catch (e) {
       console.error('Error cargando bloques:', e);
       setError('No se pudieron cargar los bloques');
@@ -104,12 +137,23 @@ export default function HorariosPage() {
     }
   }, [cargarBloques]);
 
+  // Guardar horario
   const handleGuardar = async () => {
     setCargando(true);
     try {
-      await horariosService.guardarHorarioGrupo(grupoSeleccionado, bloques);
+      // Filtrar bloques temporales y preparar datos
+      const bloquesParaGuardar = bloques
+        .filter(b => !b.es_temporal)
+        .map(b => ({
+          materia_grupo_id: b.materia_grupo_id,
+          dia_semana: b.dia_semana,
+          hora_inicio: b.hora_inicio,
+          hora_fin: b.hora_fin,
+        }));
+      await horariosService.guardarHorarioGrupo(grupoSeleccionado, bloquesParaGuardar);
       setExito('Horario guardado correctamente');
       setTimeout(() => setExito(''), 4000);
+      cargarBloques();
     } catch (e) {
       setError(e.response?.data?.message || 'Error al guardar');
     } finally {
@@ -117,6 +161,7 @@ export default function HorariosPage() {
     }
   };
 
+  // Guardar configuración
   const handleGuardarConfiguracion = async () => {
     try {
       const res = await horariosService.actualizarConfiguracion(configForm);
@@ -129,34 +174,176 @@ export default function HorariosPage() {
     }
   };
 
-  const renderBloques = (dia, hora) => {
-    const horaNormalizada = hora; // ya viene como "07:00"
+  // ============================================================
+  // LOGICA DE DRAG & DROP
+  // ============================================================
 
-    const bloque = bloques.find(b => {
-      const horaInicioNormalizada = b.hora_inicio ? b.hora_inicio.slice(0, 5) : '';
-      return b.dia_semana === dia && horaInicioNormalizada === horaNormalizada;
+  // Obtener coordenadas de un bloque en el grid
+  const getBloqueCoords = (bloque) => {
+    const diaIdx = DIAS.indexOf(bloque.dia_semana);
+    const horaIdx = horasGrid.findIndex(h => h.time === bloque.hora_inicio);
+    if (diaIdx === -1 || horaIdx === -1) return null;
+    const duracionMinutos = (new Date(`2000-01-01T${bloque.hora_fin}`) - new Date(`2000-01-01T${bloque.hora_inicio}`)) / 60000;
+    const altura = Math.round(duracionMinutos / 10);
+    return { diaIdx, horaIdx, altura };
+  };
+
+  // Mover bloque a nueva posición
+  const moverBloque = (bloqueId, nuevoDia, nuevaHoraInicio) => {
+    setBloques(prev => {
+      return prev.map(b => {
+        if (b.id !== bloqueId) return b;
+        // Calcular nueva hora_fin
+        const duracionMinutos = (new Date(`2000-01-01T${b.hora_fin}`) - new Date(`2000-01-01T${b.hora_inicio}`)) / 60000;
+        const fin = new Date(`2000-01-01T${nuevaHoraInicio}`);
+        fin.setMinutes(fin.getMinutes() + duracionMinutos);
+        const nuevaHoraFin = fin.toTimeString().slice(0, 5);
+        return {
+          ...b,
+          dia_semana: nuevoDia,
+          hora_inicio: nuevaHoraInicio,
+          hora_fin: nuevaHoraFin,
+        };
+      });
     });
+  };
 
-    if (!bloque) return null;
+  // Redimensionar bloque (cambiar duración)
+  const redimensionarBloque = (bloqueId, nuevaDuracionMinutos) => {
+    setBloques(prev => {
+      return prev.map(b => {
+        if (b.id !== bloqueId) return b;
+        const nuevaHoraFin = new Date(`2000-01-01T${b.hora_inicio}`);
+        nuevaHoraFin.setMinutes(nuevaHoraFin.getMinutes() + nuevaDuracionMinutos);
+        return {
+          ...b,
+          hora_fin: nuevaHoraFin.toTimeString().slice(0, 5),
+        };
+      });
+    });
+  };
 
-    const horaFinNormalizada = bloque.hora_fin ? bloque.hora_fin.slice(0, 5) : '';
-    const duracionMinutos = (new Date(`2000-01-01T${horaFinNormalizada}`) - new Date(`2000-01-01T${horaNormalizada}`)) / 60000;
-    const filas = Math.round(duracionMinutos / 10);
+  // Crear nuevo bloque en celda
+  const crearBloque = (dia, horaInicio) => {
+    if (!materiaSeleccionada) {
+      setError('Selecciona una materia primero');
+      return;
+    }
+    const duracion = configuracion?.duracion_bloque_minutos || 50;
+    const fin = new Date(`2000-01-01T${horaInicio}`);
+    fin.setMinutes(fin.getMinutes() + duracion);
+    const nuevoBloque = {
+      id: `temp-${Date.now()}-${Math.random()}`,
+      dia_semana: dia,
+      hora_inicio: horaInicio,
+      hora_fin: fin.toTimeString().slice(0, 5),
+      materia_grupo_id: materiaSeleccionada,
+      es_temporal: true,
+      materia_nombre: materiasDisponibles.find(m => m.id === parseInt(materiaSeleccionada))?.nombre || 'Materia',
+    };
+    setBloques(prev => [...prev, nuevoBloque]);
+  };
+
+  // Eliminar bloque temporal
+  const eliminarBloque = (bloqueId) => {
+    setBloques(prev => prev.filter(b => b.id !== bloqueId));
+  };
+
+  // Validar conflictos (simplificado)
+  const tieneConflictos = (bloque) => {
+    // Verificar si otro bloque ocupa el mismo espacio
+    const conflicto = bloques.some(b => {
+      if (b.id === bloque.id) return false;
+      if (b.dia_semana !== bloque.dia_semana) return false;
+      const bInicio = b.hora_inicio;
+      const bFin = b.hora_fin;
+      const bloqueInicio = bloque.hora_inicio;
+      const bloqueFin = bloque.hora_fin;
+      return (bloqueInicio >= bInicio && bloqueInicio < bFin) ||
+             (bloqueFin > bInicio && bloqueFin <= bFin);
+    });
+    return conflicto;
+  };
+
+  // ============================================================
+  // COMPONENTES DE DRAG & DROP
+  // ============================================================
+
+  // Componente Celda (drop target)
+  const CeldaDrop = ({ dia, hora, children }) => {
+    const [{ isOver, canDrop }, drop] = useDrop(() => ({
+      accept: TIPO_BLOQUE,
+      drop: (item, monitor) => {
+        const delta = monitor.getDifferenceFromInitialOffset();
+        if (delta) {
+          // Mover bloque a esta celda
+          const bloqueId = item.id;
+          const nuevoDia = dia;
+          const nuevaHora = hora;
+          moverBloque(bloqueId, nuevoDia, nuevaHora);
+        }
+        return { dia, hora };
+      },
+      collect: (monitor) => ({
+        isOver: !!monitor.isOver(),
+        canDrop: !!monitor.canDrop(),
+      }),
+    }), [dia, hora]);
 
     return (
       <div
-        className={styles.bloque}
+        ref={drop}
+        className={`${styles.gridCell} ${isOver && canDrop ? styles.dropOver : ''}`}
+        onClick={() => crearBloque(dia, hora)}
+        data-dia={dia}
+        data-hora={hora}
+      >
+        {children}
+      </div>
+    );
+  };
+
+  // Componente Bloque (drag source + resize)
+  const BloqueDrag = ({ bloque }) => {
+    const [{ isDragging }, drag] = useDrag(() => ({
+      type: TIPO_BLOQUE,
+      item: { id: bloque.id, dia: bloque.dia_semana, hora: bloque.hora_inicio },
+      collect: (monitor) => ({
+        isDragging: !!monitor.isDragging(),
+      }),
+    }), [bloque]);
+
+    const coords = getBloqueCoords(bloque);
+    if (!coords) return null;
+
+    const { diaIdx, horaIdx, altura } = coords;
+    const conflicto = tieneConflictos(bloque);
+    const esTemporal = bloque.es_temporal;
+
+    // Calcular posición en el grid
+    const top = horaIdx * 10; // 10px por cada 10 minutos
+    const left = diaIdx * (100 / 5); // 20% por día
+
+    return (
+      <div
+        ref={drag}
+        className={`${styles.bloque} ${isDragging ? styles.dragging : ''} ${conflicto ? styles.conflicto : ''} ${esTemporal ? styles.temporal : ''}`}
         style={{
-          backgroundColor: '#1A6B35',
+          position: 'absolute',
+          top: `${top}px`,
+          left: `${left}%`,
+          width: `${100 / 5}%`,
+          height: `${altura * 10}px`,
+          backgroundColor: conflicto ? '#b91c1c' : esTemporal ? '#f59e0b' : '#1A6B35',
           color: '#fff',
           padding: '2px 4px',
           fontSize: '0.65rem',
           borderRadius: '2px',
-          height: `${Math.max(filas * 10, 20)}px`,
           overflow: 'hidden',
-          cursor: 'pointer',
+          cursor: 'grab',
+          zIndex: isDragging ? 100 : 10,
         }}
-        title={`${bloque.materia_nombre || 'Sin materia'}`}
+        title={`${bloque.materia_nombre || 'Materia'} ${conflicto ? '️ Conflicto' : ''}`}
       >
         <div className={styles.bloqueContent}>
           <strong>{bloque.materia_clave || bloque.materia_nombre?.slice(0, 15) || 'Materia'}</strong>
@@ -165,41 +352,79 @@ export default function HorariosPage() {
               {bloque.docente_apellidos}
             </span>
           )}
+          {esTemporal && (
+            <button
+              className={styles.btnEliminarBloque}
+              onClick={(e) => {
+                e.stopPropagation();
+                eliminarBloque(bloque.id);
+              }}
+            >
+              <X size={12} />
+            </button>
+          )}
         </div>
+        {/* Resize handle (borde inferior) */}
+        <div
+          className={styles.resizeHandle}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            const startY = e.clientY;
+            const startHeight = altura * 10;
+            const onMouseMove = (ev) => {
+              const deltaY = ev.clientY - startY;
+              const newHeight = Math.max(20, startHeight + deltaY);
+              const newDuracionMinutos = Math.round(newHeight / 10) * 10;
+              redimensionarBloque(bloque.id, newDuracionMinutos);
+            };
+            const onMouseUp = () => {
+              document.removeEventListener('mousemove', onMouseMove);
+              document.removeEventListener('mouseup', onMouseUp);
+            };
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+          }}
+        />
       </div>
     );
   };
+
+  // ============================================================
+  // RENDERIZADO PRINCIPAL
+  // ============================================================
 
   const renderGrid = () => {
     return (
-      <div className={styles.gridContainer}>
-        <div className={styles.gridHeader}>
-          <div className={styles.gridHeaderCell}>Hora</div>
-          {DIAS.map((dia) => (
-            <div key={dia} className={styles.gridHeaderCell}>{dia}</div>
-          ))}
+      <DndProvider backend={HTML5Backend}>
+        <div className={styles.gridContainer} ref={gridRef}>
+          <div className={styles.gridHeader}>
+            <div className={styles.gridHeaderCell}>Hora</div>
+            {DIAS.map((dia) => (
+              <div key={dia} className={styles.gridHeaderCell}>{dia}</div>
+            ))}
+          </div>
+          <div className={styles.gridBody} style={{ position: 'relative' }}>
+            {horasGrid.map((hora, idx) => (
+              <div key={idx} className={styles.gridRow}>
+                <div className={styles.gridTimeCell}>{hora.label}</div>
+                {DIAS.map((dia) => (
+                  <CeldaDrop key={`${dia}-${idx}`} dia={dia} hora={hora.time}>
+                    {/* Los bloques se renderizan en posición absoluta sobre el grid */}
+                  </CeldaDrop>
+                ))}
+              </div>
+            ))}
+            {/* Renderizar bloques en posición absoluta */}
+            {bloques.map((bloque) => (
+              <BloqueDrag key={bloque.id} bloque={bloque} />
+            ))}
+          </div>
         </div>
-        <div className={styles.gridBody}>
-          {horasGrid.map((hora, idx) => (
-            <div key={idx} className={styles.gridRow}>
-              <div className={styles.gridTimeCell}>{hora.label}</div>
-              {DIAS.map((dia) => (
-                <div
-                  key={`${dia}-${idx}`}
-                  className={styles.gridCell}
-                  data-dia={dia}
-                  data-hora={hora.time}
-                >
-                  {renderBloques(dia, hora.time)}
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
-      </div>
+      </DndProvider>
     );
   };
 
+  // Modal de configuración
   const renderConfigModal = () => {
     if (!configModal) return null;
     return (
@@ -280,6 +505,46 @@ export default function HorariosPage() {
               </button>
             </div>
           </form>
+        </div>
+      </div>
+    );
+  };
+
+  // Selector de materia para crear bloques
+  const renderMateriaSelector = () => {
+    if (tabActiva !== 'grupos') return null;
+    return (
+      <div className={styles.materiaSelector}>
+        <label className={styles.label}>Materia para nuevo bloque</label>
+        <div className={styles.materiaSelectorRow}>
+          <select
+            className={styles.select}
+            value={materiaSeleccionada}
+            onChange={(e) => setMateriaSeleccionada(e.target.value)}
+          >
+            <option value="">Seleccionar materia...</option>
+            {materiasDisponibles.map((m) => (
+              <option key={m.id} value={m.id}>{m.nombre}</option>
+            ))}
+          </select>
+          <button
+            className={styles.btnPrimary}
+            onClick={() => {
+              if (!materiaSeleccionada) {
+                setError('Selecciona una materia primero');
+                return;
+              }
+              // Crear bloque en la primera celda disponible
+              const dia = DIAS[0];
+              const hora = horasGrid[0]?.time;
+              if (hora) {
+                crearBloque(dia, hora);
+              }
+            }}
+            title="Crear bloque en la primera celda disponible"
+          >
+            <Plus size={16} />
+          </button>
         </div>
       </div>
     );
@@ -370,6 +635,8 @@ export default function HorariosPage() {
         )}
       </div>
 
+      {renderMateriaSelector()}
+
       <div className={styles.gridWrapper}>
         {cargando ? (
           <div className={styles.loading}>Cargando horario...</div>
@@ -384,7 +651,14 @@ export default function HorariosPage() {
           <span>Validaciones</span>
         </div>
         <div className={styles.validationContent}>
-          <p>✅ No hay conflictos detectados</p>
+          {bloques.some(b => tieneConflictos(b)) ? (
+            <p className={styles.conflictoMsg}>️ Hay bloques en conflicto. Revisa las celdas marcadas en rojo.</p>
+          ) : (
+            <p> No hay conflictos detectados</p>
+          )}
+          {bloques.some(b => b.es_temporal) && (
+            <p className={styles.temporalMsg}> Hay bloques temporales (naranja). Guarda el horario para confirmarlos.</p>
+          )}
         </div>
       </div>
 
