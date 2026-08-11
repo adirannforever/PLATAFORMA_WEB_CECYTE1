@@ -313,7 +313,7 @@ export const expedienteService = {
 };
 
 export const horariosService = {
-  // Configuración global
+  // Configuración
   getConfiguracion: async () => {
     const response = await api.get('/horarios/configuracion');
     return response.data;
@@ -322,41 +322,10 @@ export const horariosService = {
     const response = await api.put('/horarios/configuracion', data);
     return response.data;
   },
-  // Grupos
-  getHorarioGrupo: async (grupoId) => {
-    const response = await api.get(`/horarios/grupos/${grupoId}`);
-    return response.data;
-  },
-  guardarHorarioGrupo: async (grupoId, bloques) => {
-    const response = await api.post(`/horarios/grupos/${grupoId}`, { bloques });
-    return response.data;
-  },
-  // Maestros
-  getHorarioMaestro: async (docenteId) => {
-    const response = await api.get(`/horarios/maestros/${docenteId}`);
-    return response.data;
-  },
-  // Laboratorios
-  getHorarioLaboratorio: async (laboratorioId) => {
-    const response = await api.get(`/horarios/laboratorios/${laboratorioId}`);
-    return response.data;
-  },
-  // Regenerar automáticos
-  regenerarMaestros: async () => {
-    const response = await api.post('/horarios/regenerar/maestros');
-    return response.data;
-  },
-  regenerarLaboratorios: async () => {
-    const response = await api.post('/horarios/regenerar/laboratorios');
-    return response.data;
-  },
-  solicitarUpload: async (nombre, tipo) => {
-    const response = await api.post('/horarios/upload/solicitar', { nombre, tipo });
-    return response.data;
-  },
 
-  solicitarUpload: async (nombre, tipo, grupo_id = null) => {
-    const response = await api.post('/horarios/upload/solicitar', { nombre, tipo, grupo_id });
+  // Subida con metadata
+  solicitarUpload: async (data) => {
+    const response = await api.post('/horarios/upload/solicitar', data);
     return response.data;
   },
 
@@ -374,6 +343,7 @@ export const horariosService = {
     return response;
   },
 
+  // Listado con filtros
   listarHorarios: async (params = {}) => {
     const response = await api.get('/horarios/listar', { params });
     return response.data;
@@ -384,7 +354,7 @@ export const horariosService = {
     return response.data;
   },
 
-  eliminarHorario: async (id) => {
+  eliminar: async (id) => {
     const response = await api.delete(`/horarios/${id}`);
     return response.data;
   },

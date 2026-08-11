@@ -14,7 +14,7 @@ const router = Router();
 router.use(verifyToken);
 router.use(requireRole('administrador'));
 
-// Configuración
+
 router.get('/configuracion', getConfiguracion);
 router.put('/configuracion', actualizarConfiguracion);
 
