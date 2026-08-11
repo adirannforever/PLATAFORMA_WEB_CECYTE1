@@ -166,7 +166,7 @@ export default function IncidenciasPage() {
       if (filtroFechaDesde) params.fecha_desde = filtroFechaDesde;
       if (filtroFechaHasta) params.fecha_hasta = filtroFechaHasta;
       if (busqueda) params.search = busqueda;
-      if (filtroGrupo) params.grupo_letra = filtroGrupo;
+      if (filtroGrupo) params.grupo_letra = filtroGrupo; 
 
       const res = await incidenciasService.getAll(params);
       setIncidencias(res.data || []);
@@ -585,7 +585,7 @@ export default function IncidenciasPage() {
                   <td>{formatDate(i.fecha)}</td>
                   <td>
                     <span className={i.resuelta ? styles.estadoResuelto : styles.estadoPendiente}>
-                      {i.resuelta ? ' Resuelta' : ' Pendiente'}
+                      {i.resuelta ? 'Resuelta' : 'Pendiente'}
                     </span>
                   </td>
                   <td>
@@ -740,7 +740,7 @@ export default function IncidenciasPage() {
                           </span>
                           <span className={styles.resultadoDetalle}>
                             {a.matricula || 'sin matrícula'} •{' '}
-                            {a.semestre ? `${a.semestre}° Ssemestre` : '—'} •{' '}
+                            {a.semestre ? `Grado ${a.semestre}°` : '—'} •{' '}
                             {a.grupo_letra ? `Grupo ${a.grupo_letra}` : 'sin grupo'} •{' '}
                             {a.especialidad_nombre || 'sin especialidad'}
                           </span>
