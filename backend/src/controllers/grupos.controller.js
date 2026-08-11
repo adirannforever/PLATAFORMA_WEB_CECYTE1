@@ -128,7 +128,7 @@ export const getMaterias = async (req, res) => {
 
     return res.json({
       success: true,
-      materias, // ✅ El frontend espera 'materias'
+      materias, //  El frontend espera 'materias'
     });
   } catch (err) {
     console.error('Error en getMaterias:', err);
@@ -353,5 +353,56 @@ export const actualizarGrupo = async (req, res) => {
   } catch (err) {
     console.error('Error en actualizarGrupo:', err);
     return res.status(500).json({ success: false, message: 'Error interno al actualizar grupo.' });
+  }
+};
+export const asignarMaterias = async (req, res) => {
+  const { id } = req.params;
+  const { materias_ids } = req.body;
+
+  if (!materias_ids || !Array.isArray(materias_ids) || materias_ids.length === 0) {
+    return res.status(400).json({ success: false, message: 'Se requiere un array de IDs de materias' });
+  }
+
+  try {
+    if (req.user.rol !== 'administrador') {
+      return res.status(403).json({ success: false, message: 'Acceso denegado' });
+    }
+
+    // Obtener el grupo para saber su ciclo_id
+    const grupoRes = await query('SELECT ciclo_id FROM grupos WHERE id = $1', [id]);
+    if (!grupoRes.rows[0]) {
+      return res.status(404).json({ success: false, message: 'Grupo no encontrado' });
+    }
+    const { ciclo_id } = grupoRes.rows[0];
+
+    await query('BEGIN');
+
+    let asignadas = 0;
+    for (const materia_id of materias_ids) {
+      // Verificar que la materia no esté ya asignada
+      const existente = await query(
+        'SELECT id FROM materias_grupo WHERE grupo_id = $1 AND materia_catalogo_id = $2 AND ciclo_id = $3',
+        [id, materia_id, ciclo_id]
+      );
+      if (existente.rows.length === 0) {
+        await query(
+          `INSERT INTO materias_grupo (grupo_id, materia_catalogo_id, docente_id, ciclo_id, activa)
+           VALUES ($1, $2, NULL, $3, TRUE)`,
+          [id, materia_id, ciclo_id]
+        );
+        asignadas++;
+      }
+    }
+
+    await query('COMMIT');
+    return res.json({
+      success: true,
+      message: `${asignadas} materia(s) asignadas correctamente`,
+      asignadas,
+    });
+  } catch (err) {
+    await query('ROLLBACK');
+    console.error('Error en asignarMaterias:', err);
+    return res.status(500).json({ success: false, message: 'Error interno' });
   }
 };

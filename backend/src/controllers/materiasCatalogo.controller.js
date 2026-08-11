@@ -2,7 +2,7 @@ import { query } from '../config/db.js';
 
 export const getMateriasCatalogo = async (req, res) => {
   try {
-    const { especialidad_id, semestre } = req.query;
+    const { especialidad_id, semestre, tipo } = req.query;
     let sql = `
       SELECT id, nombre, clave, semestre, tipo, especialidad_id,
              modulo_numero, submodulo_numero, horas_semana, activa
@@ -11,6 +11,7 @@ export const getMateriasCatalogo = async (req, res) => {
     `;
     const params = [];
     const conditions = [];
+
     if (especialidad_id) {
       conditions.push(`especialidad_id = $${params.length + 1}`);
       params.push(especialidad_id);
@@ -19,6 +20,11 @@ export const getMateriasCatalogo = async (req, res) => {
       conditions.push(`semestre = $${params.length + 1}`);
       params.push(semestre);
     }
+    if (tipo) {
+      conditions.push(`tipo = $${params.length + 1}`);
+      params.push(tipo);
+    }
+
     if (conditions.length > 0) {
       sql += ' AND ' + conditions.join(' AND ');
     }

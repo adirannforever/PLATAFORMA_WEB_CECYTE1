@@ -504,6 +504,10 @@ export const gruposService = {
     const response = await api.patch(`/grupos/${id}`, data);
     return response.data;
   },
+  asignarMaterias: async (id, materias_ids) => {
+    const response = await api.post(`/grupos/${id}/materias`, { materias_ids });
+    return response.data;
+  },
 };
 
 export const tutoriasService = {
