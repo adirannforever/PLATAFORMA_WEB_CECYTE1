@@ -12,17 +12,17 @@ export default function ReportesPage() {
   const [error, setError] = useState('');
   const [exito, setExito] = useState('');
 
-  // Catálogos
+  
   const [ciclos, setCiclos] = useState([]);
   const [grupos, setGrupos] = useState([]);
   const [especialidades, setEspecialidades] = useState([]);
   const [alumnos, setAlumnos] = useState([]);
 
-  // Filtros comunes
+  
   const [alumnoId, setAlumnoId] = useState('');
   const [cicloId, setCicloId] = useState('');
 
-  // Búsqueda de alumnos para boleta/constancia
+  
   const [busquedaAlumno, setBusquedaAlumno] = useState('');
   const [filtroGrupoAlumno, setFiltroGrupoAlumno] = useState('');
   const [filtroEspecialidadAlumno, setFiltroEspecialidadAlumno] = useState('');
@@ -30,17 +30,17 @@ export default function ReportesPage() {
   const [alumnosFiltrados, setAlumnosFiltrados] = useState([]);
   const [buscandoAlumnos, setBuscandoAlumnos] = useState(false);
 
-  // Filtros listado
+  
   const [filtroGrupo, setFiltroGrupo] = useState('');
   const [filtroEspecialidad, setFiltroEspecialidad] = useState('');
   const [filtroSemestre, setFiltroSemestre] = useState('');
   const [filtroEstatus, setFiltroEstatus] = useState('');
 
-  // Filtros estadísticas
+  
   const [estadisticasCicloId, setEstadisticasCicloId] = useState('');
   const [estadisticasGrupoId, setEstadisticasGrupoId] = useState('');
 
-  // Memo: letras únicas de grupos
+  
   const letrasUnicas = useMemo(() => {
     const letras = grupos.map(g => g.letra).filter(Boolean);
     return [...new Set(letras)].sort();
@@ -72,7 +72,7 @@ export default function ReportesPage() {
     cargarCatalogos();
   }, []);
 
-  // Buscar alumnos con filtros (para boleta/constancia)
+  
   const buscarAlumnos = useCallback(async () => {
     setBuscandoAlumnos(true);
     try {
@@ -90,7 +90,7 @@ export default function ReportesPage() {
     }
   }, [busquedaAlumno, filtroGrupoAlumno, filtroEspecialidadAlumno, filtroSemestreAlumno]);
 
-  // Debounce para búsqueda
+  
   useEffect(() => {
     const handler = setTimeout(() => {
       if (busquedaAlumno || filtroGrupoAlumno || filtroEspecialidadAlumno || filtroSemestreAlumno) {
@@ -108,45 +108,75 @@ export default function ReportesPage() {
     setAlumnosFiltrados([]);
   };
 
-  const handleDescargar = async (tipo, params, filename) => {
+    const handleDescargar = async (tipo, params, baseName) => {
     setCargando(true);
     setError('');
     try {
-      let blob;
-      switch (tipo) {
+        let blob;
+        switch (tipo) {
         case 'boleta':
-          blob = await reportesService.generarBoleta(params);
-          break;
+            blob = await reportesService.generarBoleta(params);
+            break;
         case 'constancia':
-          blob = await reportesService.generarConstancia(params);
-          break;
+            blob = await reportesService.generarConstancia(params);
+            break;
         case 'listado':
-          blob = await reportesService.generarListadoAlumnos(params);
-          break;
+            blob = await reportesService.generarListadoAlumnos(params);
+            break;
         case 'estadisticas':
-          blob = await reportesService.generarEstadisticas(params);
-          break;
+            blob = await reportesService.generarEstadisticas(params);
+            break;
         default:
-          throw new Error('Tipo de reporte inválido');
-      }
-      
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      
-      setExito('Reporte descargado correctamente');
-      setTimeout(() => setExito(''), 4000);
+            throw new Error('Tipo de reporte inválido');
+        }
+
+        
+        const now = new Date();
+        const timestamp =
+        now.getFullYear() +
+        '-' +
+        String(now.getMonth() + 1).padStart(2, '0') +
+        '-' +
+        String(now.getDate()).padStart(2, '0') +
+        '_' +
+        String(now.getHours()).padStart(2, '0') +
+        '-' +
+        String(now.getMinutes()).padStart(2, '0');
+
+        
+        let nombreAlumno = '';
+        if (['boleta', 'constancia'].includes(tipo) && busquedaAlumno) {
+        
+        const match = busquedaAlumno.match(/^([^\(]+)/);
+        if (match) {
+            nombreAlumno = match[1].trim().replace(/\s+/g, '_').replace(/,/g, '');
+        }
+        }
+
+        let filename;
+        if (nombreAlumno) {
+        filename = `${tipo}_${nombreAlumno}_${timestamp}.${tipo === 'listado' || tipo === 'estadisticas' ? 'xlsx' : 'pdf'}`;
+        } else {
+        filename = `${baseName || tipo}_${timestamp}.${tipo === 'listado' || tipo === 'estadisticas' ? 'xlsx' : 'pdf'}`;
+        }
+
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+
+        setExito(`Reporte descargado: ${filename}`);
+        setTimeout(() => setExito(''), 5000);
     } catch (err) {
-      setError(err.response?.data?.message || 'Error al generar el reporte');
+        setError(err.response?.data?.message || 'Error al generar el reporte');
     } finally {
-      setCargando(false);
+        setCargando(false);
     }
-  };
+    };
 
   const limpiarBusquedaAlumno = () => {
     setBusquedaAlumno('');
