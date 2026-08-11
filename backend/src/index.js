@@ -67,7 +67,7 @@ app.use('/api/ciclos', ciclosRoutes);
 app.use('/api/materias-catalogo', materiasCatalogoRoutes);
 app.use('/api/auditoria', auditoriaRoutes);
 app.use('/api/reportes', reportesRoutes);
-
+app.use('/api/horarios', horariosRoutes);
 
 app.use(auditoriaGlobal);
 

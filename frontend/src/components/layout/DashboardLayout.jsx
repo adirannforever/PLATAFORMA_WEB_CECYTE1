@@ -13,6 +13,7 @@ import {
   Settings,
   AlertCircle,
   Activity,
+  Calendar,
 } from 'lucide-react';
 
 const IconPortal = () => (
@@ -233,6 +234,7 @@ export default function DashboardLayout() {
     { to: '/incidencias', label: 'Incidencias', icon: <AlertCircle size={18} />, roles: ['administrador'] },
     { to: '/auditoria', label: 'Auditoría', icon: <Activity size={18} />, roles: ['administrador'] },
     { to: '/reportes', label: 'Reportes', icon: <FileText size={18} />, roles: ['administrador'] },
+    { to: '/horarios', label: 'Horarios', icon: <Calendar size={18} />, roles: ['administrador'] },
   ].filter((item) => item.roles.includes(usuario?.rol));
 
   return (

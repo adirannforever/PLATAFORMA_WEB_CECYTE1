@@ -1,18 +1,37 @@
 import { Router } from 'express';
-import { 
-  getHorarioGrupo, 
-  asignarHorario, 
-  actualizarHorario, 
-  eliminarHorario 
-} from '../controllers/horarios.controller.js';
 import { verifyToken, requireRole } from '../middlewares/auth.js';
+import {
+  getConfiguracion,
+  actualizarConfiguracion,
+  getHorarioGrupo,
+  guardarHorarioGrupo,
+  getHorarioMaestro,
+  getHorarioLaboratorio,
+  regenerarMaestros,
+  regenerarLaboratorios,
+} from '../controllers/horarios.controller.js';
 
 const router = Router();
 
-router.get('/grupo', verifyToken, requireRole('administrador', 'docente'), getHorarioGrupo);
+router.use(verifyToken);
+router.use(requireRole('administrador'));
 
-router.post('/', verifyToken, requireRole('administrador'), asignarHorario);
-router.patch('/:id', verifyToken, requireRole('administrador'), actualizarHorario);
-router.delete('/:id', verifyToken, requireRole('administrador'), eliminarHorario);
+// Configuración
+router.get('/configuracion', getConfiguracion);
+router.put('/configuracion', actualizarConfiguracion);
+
+// Grupos
+router.get('/grupos/:grupo_id', getHorarioGrupo);
+router.post('/grupos/:grupo_id', guardarHorarioGrupo);
+
+// Maestros
+router.get('/maestros/:docente_id', getHorarioMaestro);
+
+// Laboratorios
+router.get('/laboratorios/:laboratorio_id', getHorarioLaboratorio);
+
+// Regenerar automáticos
+router.post('/regenerar/maestros', regenerarMaestros);
+router.post('/regenerar/laboratorios', regenerarLaboratorios);
 
 export default router;

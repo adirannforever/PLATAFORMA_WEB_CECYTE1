@@ -20,7 +20,7 @@ api.interceptors.response.use(
   }
 );
 
-// ===== AUTENTICACIÓN =====
+
 export const authService = {
   login: async (email, password) => {
     const response = await api.post('/auth/login', { email, password });
@@ -36,9 +36,9 @@ export const authService = {
   },
 };
 
-// ===== USUARIOS =====
+
 export const usuariosService = {
-  //  CORREGIDO: params debe ser un objeto, no un string
+  
   getAll: async (params = {}) => {
     const response = await api.get('/usuarios', { params });
     return response.data;
@@ -61,7 +61,7 @@ export const usuariosService = {
   },
 };
 
-// ===== MATERIAS =====
+
 export const materiasService = {
   getAll: async () => {
     const response = await api.get('/materias');
@@ -85,7 +85,7 @@ export const materiasService = {
   },
 };
 
-// ===== INSCRIPCIONES =====
+
 export const inscripcionesService = {
   misMaterias: async () => {
     const response = await api.get('/inscripciones/mis-materias');
@@ -113,7 +113,7 @@ export const inscripcionesService = {
   },
 };
 
-// ===== CALIFICACIONES =====
+
 export const calificacionesService = {
   misCalificaciones: async () => {
     const response = await api.get('/calificaciones/mis-calificaciones');
@@ -137,7 +137,7 @@ export const calificacionesService = {
   },
 };
 
-// ===== COMUNICADOS =====
+
 export const comunicadosService = {
   getAll: async () => {
     const response = await api.get('/comunicados');
@@ -157,7 +157,7 @@ export const comunicadosService = {
   },
 };
 
-// ===== ASISTENCIAS =====
+
 export const asistenciaService = {
   getAsistenciaDiaria: async (params) => {
     const response = await api.get('/asistencia/diaria', { params });
@@ -181,7 +181,7 @@ export const asistenciaService = {
   },
 };
 
-// ===== ASPIRANTES =====
+
 export const aspirantesService = {
   getAspirantes: async (params) => {
     const response = await api.get('/aspirantes', { params });
@@ -201,7 +201,7 @@ export const aspirantesService = {
   },
 };
 
-// ===== BECAS =====
+
 export const becasService = {
   getAll: async (params = {}) => {
     const response = await api.get('/becas', { params });
@@ -288,7 +288,7 @@ export const catalogosService = {
   },
 };
 
-// ===== EXPEDIENTE =====
+
 export const expedienteService = {
   getByAlumnoId: async (alumnoId) => {
     const response = await api.get(`/expediente/${alumnoId}`);
@@ -308,22 +308,42 @@ export const expedienteService = {
   },
 };
 
-// ===== HORARIOS =====
 export const horariosService = {
-  getHorarioGrupo: async (params) => {
-    const response = await api.get('/horarios/grupo', { params });
+  // Configuración global
+  getConfiguracion: async () => {
+    const response = await api.get('/horarios/configuracion');
     return response.data;
   },
-  asignar: async (data) => {
-    const response = await api.post('/horarios', data);
+  actualizarConfiguracion: async (data) => {
+    const response = await api.put('/horarios/configuracion', data);
     return response.data;
   },
-  actualizar: async (id, data) => {
-    const response = await api.patch(`/horarios/${id}`, data);
+  // Grupos
+  getHorarioGrupo: async (grupoId) => {
+    const response = await api.get(`/horarios/grupos/${grupoId}`);
     return response.data;
   },
-  eliminar: async (id) => {
-    const response = await api.delete(`/horarios/${id}`);
+  guardarHorarioGrupo: async (grupoId, bloques) => {
+    const response = await api.post(`/horarios/grupos/${grupoId}`, { bloques });
+    return response.data;
+  },
+  // Maestros
+  getHorarioMaestro: async (docenteId) => {
+    const response = await api.get(`/horarios/maestros/${docenteId}`);
+    return response.data;
+  },
+  // Laboratorios
+  getHorarioLaboratorio: async (laboratorioId) => {
+    const response = await api.get(`/horarios/laboratorios/${laboratorioId}`);
+    return response.data;
+  },
+  // Regenerar automáticos
+  regenerarMaestros: async () => {
+    const response = await api.post('/horarios/regenerar/maestros');
+    return response.data;
+  },
+  regenerarLaboratorios: async () => {
+    const response = await api.post('/horarios/regenerar/laboratorios');
     return response.data;
   },
 };
@@ -355,7 +375,7 @@ export const incidenciasService = {
   },
 };
 
-// ===== PAGOS =====
+
 export const pagosService = {
   getConceptos: async () => {
     const response = await api.get('/pagos/conceptos');
@@ -398,7 +418,7 @@ export const servicioSocialService = {
   },
 };
 
-// ===== PERÍODOS (ADMINISTRACIÓN) =====
+
 export const periodosService = {
   getEscolares: async (params = {}) => {
     const response = await api.get('/periodos/escolares', { params });
@@ -453,7 +473,7 @@ export const titulacionService = {
   },
 };
 
-// ===== GRUPOS =====
+
 export const gruposService = {
   getAll: async (filtros = {}) => {
     const params = new URLSearchParams(filtros).toString();

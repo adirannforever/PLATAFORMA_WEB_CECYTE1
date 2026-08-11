@@ -1,11 +1,6 @@
-/* ============================================
-   FUENTES PROFESIONALES
-   ============================================ */
 @import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Roboto:wght@400;500;700&display=swap');
 
-/* ============================================
-   BASE DE PÁGINA
-   ============================================ */
+
 .page {
   font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
   color: #1e293b;
@@ -26,9 +21,6 @@
   font-weight: 400;
 }
 
-/* ============================================
-   ENCABEZADO DE PÁGINA
-   ============================================ */
 .pageHeader {
   display: flex;
   align-items: flex-start;
@@ -65,9 +57,6 @@
   font-weight: 400;
 }
 
-/* ============================================
-   BOTONES
-   ============================================ */
 .btnPrimary {
   padding: 0.6rem 1.5rem;
   background: #1A6B35;
@@ -129,9 +118,6 @@
   border-color: #b91c1c;
 }
 
-/* ============================================
-   ESTADOS VACÍOS
-   ============================================ */
 .empty {
   padding: 3rem 1rem;
   text-align: center;
@@ -143,9 +129,6 @@
   font-size: 0.95rem;
 }
 
-/* ============================================
-   LISTA DE COMUNICADOS
-   ============================================ */
 .list {
   display: flex;
   flex-direction: column;
@@ -225,9 +208,6 @@
   color: #1e293b;
 }
 
-/* ============================================
-   MODAL
-   ============================================ */
 .modalOverlay {
   position: fixed;
   inset: 0;
@@ -266,9 +246,6 @@
   margin-top: 0.25rem;
 }
 
-/* ============================================
-   FORMULARIO DEL MODAL
-   ============================================ */
 .form {
   display: flex;
   flex-direction: column;
@@ -330,9 +307,6 @@
   margin-bottom: 0.5rem;
 }
 
-/* ============================================
-   RESPONSIVE
-   ============================================ */
 @media (max-width: 640px) {
   .page {
     padding: 1rem;

@@ -23,6 +23,7 @@ import ConfiguracionAcademicaPage from './pages/ConfiguracionAcademicaPage';
 import IncidenciasPage from './pages/IncidenciasPage';
 import AuditoriaPage from './pages/AuditoriaPage';
 import ReportesPage from './pages/ReportesPage';
+import HorariosPage from './pages/HorariosPage';
 
 const RutaProtegida = ({ children, rolesPermitidos }) => {
   const { usuario, cargando } = useAuth();
@@ -220,6 +221,15 @@ export default function App() {
             </RutaProtegida>
           }
         />
+
+        <Route
+          path="horarios"
+          element={
+            <RutaProtegida rolesPermitidos={['administrador']}>
+              <HorariosPage />
+            </RutaProtegida>
+          }
+        />        
 
         <Route path="*" element={<NotFoundPage />} />
       </Route>
