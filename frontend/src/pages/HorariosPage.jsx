@@ -165,6 +165,39 @@ export default function HorariosPage() {
   const [bloques, setBloques] = useState([]);
   const [horasGrid, setHorasGrid] = useState([]);
 
+  // Estado para el modal de agregar materia
+  const [addModal, setAddModal] = useState({ open: false });
+  const [materiasDisponibles, setMateriasDisponibles] = useState([]);
+  const [nuevoBloque, setNuevoBloque] = useState({
+    materia_grupo_id: '',
+    dia_semana: 'Lunes',
+    hora_inicio: '',
+    duracion_minutos: 50,
+  });
+
+  // Obtener materias del grupo seleccionado (las que no tienen bloques)
+  const cargarMateriasDisponibles = useCallback(async () => {
+    if (!grupoSeleccionado) return;
+    try {
+      // Obtener todas las materias_grupo del grupo
+      const res = await catalogosService.getMateriasGrupo(grupoSeleccionado);
+      const todas = res.data || [];
+      // Filtrar las que ya tienen bloques asignados
+      const idsConBloque = bloques.map(b => b.materia_grupo_id);
+      const disponibles = todas.filter(m => !idsConBloque.includes(m.id));
+      setMateriasDisponibles(disponibles);
+    } catch (e) {
+      console.error('Error cargando materias disponibles:', e);
+    }
+  }, [grupoSeleccionado, bloques]);
+
+  useEffect(() => {
+    if (addModal.open) {
+      cargarMateriasDisponibles();
+    }
+  }, [addModal.open, cargarMateriasDisponibles]);
+
+  // Cargar datos iniciales
   useEffect(() => {
     const cargarDatos = async () => {
       try {
@@ -302,6 +335,56 @@ export default function HorariosPage() {
     }
   };
 
+  // Agregar nuevo bloque
+  const handleAgregarBloque = () => {
+    const { materia_grupo_id, dia_semana, hora_inicio, duracion_minutos } = nuevoBloque;
+    if (!materia_grupo_id || !hora_inicio) {
+      setError('Selecciona materia y hora de inicio');
+      return;
+    }
+
+    // Buscar la materia seleccionada para obtener su nombre
+    const materia = materiasDisponibles.find(m => m.id === parseInt(materia_grupo_id));
+    if (!materia) return;
+
+    const horaFin = new Date(`2000-01-01T${hora_inicio}`);
+    horaFin.setMinutes(horaFin.getMinutes() + parseInt(duracion_minutos));
+
+    const nuevoBloqueObj = {
+      id: Date.now(), // temporal
+      materia_grupo_id: parseInt(materia_grupo_id),
+      materia_nombre: materia.materia_nombre,
+      materia_clave: materia.materia_clave,
+      docente_apellidos: materia.docente_apellidos || '',
+      dia_semana,
+      hora_inicio,
+      hora_fin: horaFin.toTimeString().slice(0, 5),
+    };
+
+    setBloques([...bloques, nuevoBloqueObj]);
+    setAddModal({ open: false });
+    setExito('Bloque agregado correctamente');
+    setTimeout(() => setExito(''), 3000);
+  };
+
+  // Abrir modal para agregar bloque
+  const abrirModalAgregar = () => {
+    if (!grupoSeleccionado) {
+      setError('Primero selecciona un grupo');
+      return;
+    }
+    // Establecer hora de inicio por defecto (primera hora disponible)
+    const primeraHora = horasGrid[0]?.time || '07:00';
+    setNuevoBloque({
+      materia_grupo_id: '',
+      dia_semana: 'Lunes',
+      hora_inicio: primeraHora,
+      duracion_minutos: configuracion?.duracion_bloque_minutos || 50,
+    });
+    setAddModal({ open: true });
+    setError('');
+  };
+
   const renderGrid = () => {
     if (!configuracion) return <div className={styles.loading}>Cargando configuración...</div>;
 
@@ -367,6 +450,83 @@ export default function HorariosPage() {
           </div>
         </div>
       </DndProvider>
+    );
+  };
+
+  const renderAddModal = () => {
+    if (!addModal.open) return null;
+    return (
+      <div className={styles.modalOverlay} onClick={() => setAddModal({ open: false })}>
+        <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+          <div className={styles.modalHeader}>
+            <h3 className={styles.modalTitle}>Agregar materia al horario</h3>
+            <button className={styles.modalClose} onClick={() => setAddModal({ open: false })}>
+              <X size={18} />
+            </button>
+          </div>
+          {error && <div className={styles.errorMsg}>{error}</div>}
+          <div className={styles.form}>
+            <div className={styles.field}>
+              <label className={styles.label}>Materia</label>
+              <select
+                className={styles.select}
+                value={nuevoBloque.materia_grupo_id}
+                onChange={(e) => setNuevoBloque({ ...nuevoBloque, materia_grupo_id: e.target.value })}
+              >
+                <option value="">Seleccionar materia...</option>
+                {materiasDisponibles.map((m) => (
+                  <option key={m.id} value={m.id}>{m.materia_nombre}</option>
+                ))}
+              </select>
+            </div>
+            <div className={styles.row2}>
+              <div className={styles.field}>
+                <label className={styles.label}>Día</label>
+                <select
+                  className={styles.select}
+                  value={nuevoBloque.dia_semana}
+                  onChange={(e) => setNuevoBloque({ ...nuevoBloque, dia_semana: e.target.value })}
+                >
+                  {DIAS.map((d) => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+              </div>
+              <div className={styles.field}>
+                <label className={styles.label}>Hora inicio</label>
+                <select
+                  className={styles.select}
+                  value={nuevoBloque.hora_inicio}
+                  onChange={(e) => setNuevoBloque({ ...nuevoBloque, hora_inicio: e.target.value })}
+                >
+                  {horasGrid.map((h) => (
+                    <option key={h.time} value={h.time}>{h.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label}>Duración (minutos)</label>
+              <input
+                type="number"
+                className={styles.input}
+                min="10"
+                step="10"
+                value={nuevoBloque.duracion_minutos}
+                onChange={(e) => setNuevoBloque({ ...nuevoBloque, duracion_minutos: parseInt(e.target.value) })}
+              />
+            </div>
+            <div className={styles.modalActions}>
+              <button type="button" className={styles.btnSecondary} onClick={() => setAddModal({ open: false })}>
+                Cancelar
+              </button>
+              <button type="button" className={styles.btnPrimary} onClick={handleAgregarBloque}>
+                Agregar bloque
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     );
   };
 
@@ -533,11 +693,20 @@ export default function HorariosPage() {
             ))}
           </select>
         )}
-        {(grupoSeleccionado || docenteSeleccionado || laboratorioSeleccionado) && (
-          <button className={styles.btnPrimary} onClick={handleGuardar} disabled={cargando}>
-            <Save size={16} /> {cargando ? 'Guardando...' : 'Guardar horario'}
-          </button>
-        )}
+        <div className={styles.selectorActions}>
+          {(grupoSeleccionado || docenteSeleccionado || laboratorioSeleccionado) && (
+            <>
+              <button className={styles.btnPrimary} onClick={handleGuardar} disabled={cargando}>
+                <Save size={16} /> {cargando ? 'Guardando...' : 'Guardar horario'}
+              </button>
+              {tabActiva === 'grupos' && (
+                <button className={styles.btnPrimary} onClick={abrirModalAgregar} style={{ background: '#2563eb', borderColor: '#1d4ed8' }}>
+                  <Plus size={16} /> Agregar materia
+                </button>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       <div className={styles.gridWrapper}>
@@ -554,10 +723,11 @@ export default function HorariosPage() {
           <span>Validaciones</span>
         </div>
         <div className={styles.validationContent}>
-          <p>✅ No hay conflictos detectados</p>
+          <p> No hay conflictos detectados</p>
         </div>
       </div>
 
+      {renderAddModal()}
       {renderConfigModal()}
     </div>
   );

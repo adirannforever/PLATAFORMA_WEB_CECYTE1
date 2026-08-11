@@ -638,3 +638,101 @@
 .gridRow {
   display: contents;
 }
+.gridContainer {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.gridHeader {
+  display: grid;
+  grid-template-columns: 60px repeat(5, 1fr);
+  border-bottom: 2px solid #d1d9e6;
+}
+
+.gridHeaderCell {
+  padding: 0.5rem;
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: #1e293b;
+  text-align: center;
+  background: #f8fafc;
+}
+
+.gridBody {
+  position: relative;
+}
+
+.gridTimeCell {
+  padding: 0.3rem 0.5rem;
+  font-size: 0.7rem;
+  color: #64748b;
+  text-align: right;
+  border-right: 1px solid #e9edf2;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.gridCell {
+  border-right: 1px solid #e9edf2;
+  border-bottom: 1px solid #e9edf2;
+  min-height: 40px;
+  padding: 0;
+  position: relative;
+  background: #fff;
+}
+
+.gridCell:last-child {
+  border-right: none;
+}
+
+.bloqueAbsoluto {
+  border-radius: 2px;
+  padding: 2px 4px;
+  font-size: 0.65rem;
+  overflow: hidden;
+  cursor: grab;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  user-select: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.bloqueAbsoluto:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.bloqueHoras {
+  font-size: 0.55rem;
+  opacity: 0.85;
+}
+
+.bloqueDocente {
+  font-size: 0.55rem;
+  opacity: 0.7;
+}
+
+.resizeHandle {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  cursor: ns-resize;
+  background-color: rgba(255,255,255,0.2);
+  transition: background-color 0.15s;
+}
+
+.resizeHandle:hover {
+  background-color: rgba(255,255,255,0.5);
+}
+
+.selectorActions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
