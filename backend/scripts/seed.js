@@ -5,9 +5,9 @@ import { query } from '../src/config/db.js';
 import bcrypt from 'bcryptjs';
 
 const CONFIG = {
-  CICLO_ACTUAL: '2025-2026',
-  CICLO_INICIO: '2025-09-01',
-  CICLO_FIN: '2026-07-31',
+  CICLO_ACTUAL: '2026-2027',
+  CICLO_INICIO: '2026-09-01',
+  CICLO_FIN: '2027-07-31',
   SEMESTRES: [1, 2, 3, 4, 5, 6],
   TURNOS: [
     { id: 1, nombre: 'Matutino', hora_inicio: '07:00', hora_fin: '14:10' },
@@ -341,12 +341,12 @@ async function runSeed() {
 
     // Alumnos de ejemplo
     const alumnosEjemplo = [
-      { nombre: 'Pedro', apellidos: 'Gomez Lopez', email: 'pedro.gomez@cecyte.edu.mx', matricula: '2025001', especialidad: 'DGD', semestre: 1 },
-      { nombre: 'Laura', apellidos: 'Garcia Romero', email: 'laura.garcia@cecyte.edu.mx', matricula: '2025002', especialidad: 'ELEC', semestre: 2 },
-      { nombre: 'Jose', apellidos: 'Ramirez Perez', email: 'jose.ramirez@cecyte.edu.mx', matricula: '2025003', especialidad: 'PIA', semestre: 3 },
-      { nombre: 'Sofia', apellidos: 'Martinez Cruz', email: 'sofia.martinez@cecyte.edu.mx', matricula: '2025004', especialidad: 'DGD', semestre: 4 },
-      { nombre: 'Miguel', apellidos: 'Gonzalez Hernandez', email: 'miguel.gonzalez@cecyte.edu.mx', matricula: '2025005', especialidad: 'ELEC', semestre: 5 },
-      { nombre: 'Fernanda', apellidos: 'Lopez Diaz', email: 'fernanda.lopez@cecyte.edu.mx', matricula: '2025006', especialidad: 'PIA', semestre: 6 }
+      { nombre: 'Pedro', apellidos: 'Gomez Lopez', email: 'pedro.gomez@cecyte.edu.mx', matricula: '2026001', especialidad: 'DGD', semestre: 1 },
+      { nombre: 'Laura', apellidos: 'Garcia Romero', email: 'laura.garcia@cecyte.edu.mx', matricula: '2026002', especialidad: 'ELEC', semestre: 2 },
+      { nombre: 'Jose', apellidos: 'Ramirez Perez', email: 'jose.ramirez@cecyte.edu.mx', matricula: '2026003', especialidad: 'PIA', semestre: 3 },
+      { nombre: 'Sofia', apellidos: 'Martinez Cruz', email: 'sofia.martinez@cecyte.edu.mx', matricula: '2026004', especialidad: 'DGD', semestre: 4 },
+      { nombre: 'Miguel', apellidos: 'Gonzalez Hernandez', email: 'miguel.gonzalez@cecyte.edu.mx', matricula: '2026005', especialidad: 'ELEC', semestre: 5 },
+      { nombre: 'Fernanda', apellidos: 'Lopez Diaz', email: 'fernanda.lopez@cecyte.edu.mx', matricula: '2026006', especialidad: 'PIA', semestre: 6 }
     ];
     for (const alumno of alumnosEjemplo) {
       const userIdRes = await query(
@@ -575,7 +575,7 @@ async function runSeed() {
     await query(
       `INSERT INTO comunicados (titulo, contenido, autor_id, fecha_publicacion, activo, dirigido_a_rol)
        VALUES ($1, $2, $3, NOW(), TRUE, $4)`,
-      ['Bienvenida al ciclo 2025-2026', 'Les damos la bienvenida al nuevo ciclo escolar. Exito en sus estudios.', adminId, null]
+      ['Bienvenida al ciclo 2026-2027', 'Les damos la bienvenida al nuevo ciclo escolar. Exito en sus estudios.', adminId, null]
     );
     await query(
       `INSERT INTO comunicados (titulo, contenido, autor_id, fecha_publicacion, activo, dirigido_a_rol)
