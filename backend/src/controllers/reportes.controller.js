@@ -174,3 +174,30 @@ export const generarEstadisticas = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+export const generarExcelCalificacionesMateria = async (req, res) => {
+  try {
+    const { materia_grupo_id, ciclo_id } = req.query;
+    if (!materia_grupo_id) {
+      return res.status(400).json({ success: false, message: 'Se requiere materia_grupo_id' });
+    }
+
+    // Verificar permisos (solo admin y docente pueden exportar)
+    if (req.user.rol === 'alumno') {
+      return res.status(403).json({ success: false, message: 'No autorizado' });
+    }
+
+    const buffer = await generarExcelCalificacionesMateria(
+      parseInt(materia_grupo_id),
+      ciclo_id ? parseInt(ciclo_id) : null
+    );
+
+    const filename = `calificaciones_materia_${materia_grupo_id}_${new Date().toISOString().split('T')[0]}.xlsx`;
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
+    res.send(buffer);
+  } catch (err) {
+    console.error('Error exportando calificaciones a Excel:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
