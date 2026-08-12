@@ -630,6 +630,12 @@ export const reportesService = {
     const response = await api.get('/reportes/estadisticas', { params, responseType: 'blob' });
     return response.data;
   },
+  generarExcelCalificacionesMateria: (params) => {
+    return api.get('/reportes/calificaciones-excel', { 
+      params, 
+      responseType: 'blob' 
+    }).then(res => res.data);
+  },
 };
 
 export default api;

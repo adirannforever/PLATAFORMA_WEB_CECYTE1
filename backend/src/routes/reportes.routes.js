@@ -5,6 +5,7 @@ import {
   generarConstancia,
   generarListadoAlumnos,
   generarEstadisticas,
+  generarExcelCalificacionesMateria,
 } from '../controllers/reportes.controller.js';
 
 const router = Router();
@@ -16,5 +17,6 @@ router.get('/boleta', generarBoleta);
 router.get('/constancia', generarConstancia);
 router.get('/listado-alumnos', generarListadoAlumnos);
 router.get('/estadisticas', generarEstadisticas);
+router.get('/calificaciones-excel', generarExcelCalificacionesMateria);
 
 export default router;
