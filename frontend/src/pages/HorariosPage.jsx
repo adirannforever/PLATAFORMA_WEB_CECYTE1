@@ -94,6 +94,28 @@ export default function HorariosPage() {
   // ===== CONFIRMACIÓN =====
   const [confirmModal, setConfirmModal] = useState({ open: false, message: '', onConfirm: null });
 
+  // ===== HELPERS DE ESPECIALIDAD -> LETRA =====
+  const getLetrasPorEspecialidad = useCallback((especialidadId) => {
+    if (!especialidadId) return ['A', 'B', 'C', 'D'];
+    const especialidad = especialidades.find(e => e.id === parseInt(especialidadId));
+    if (!especialidad) return ['A', 'B', 'C', 'D'];
+    const clave = especialidad.clave?.toUpperCase() || '';
+    if (clave === 'DGD') return ['A', 'B'];
+    if (clave === 'ELEC') return ['C'];
+    if (clave === 'PIA') return ['D'];
+    return ['A', 'B', 'C', 'D'];
+  }, [especialidades]);
+
+  const getLetraDefault = useCallback((especialidadId) => {
+    if (!especialidadId) return '';
+    const especialidad = especialidades.find(e => e.id === parseInt(especialidadId));
+    if (!especialidad) return '';
+    const clave = especialidad.clave?.toUpperCase() || '';
+    if (clave === 'ELEC') return 'C';
+    if (clave === 'PIA') return 'D';
+    return '';
+  }, [especialidades]);
+
   // ===== SEMESTRE ACTUAL =====
   useEffect(() => {
     const cargarSemestreActual = async () => {
@@ -151,6 +173,42 @@ export default function HorariosPage() {
            g.ciclo_id === parseInt(ciclo_id)
     ) || null;
   };
+
+  // ===== EFECTOS PARA AUTOSELECCIÓN DE LETRA POR ESPECIALIDAD (UPLOAD) =====
+  useEffect(() => {
+    const letras = getLetrasPorEspecialidad(uploadForm.especialidad_id);
+    const defaultLetra = getLetraDefault(uploadForm.especialidad_id);
+    if (uploadForm.letra && !letras.includes(uploadForm.letra)) {
+      setUploadForm(prev => ({ ...prev, letra: defaultLetra || '' }));
+    }
+    if (!uploadForm.letra && letras.length === 1) {
+      setUploadForm(prev => ({ ...prev, letra: letras[0] }));
+    }
+  }, [uploadForm.especialidad_id, getLetrasPorEspecialidad, getLetraDefault]);
+
+  // ===== EFECTOS PARA AUTOSELECCIÓN DE LETRA POR ESPECIALIDAD (BATCH) =====
+  useEffect(() => {
+    const letras = getLetrasPorEspecialidad(batchForm.especialidad_id);
+    const defaultLetra = getLetraDefault(batchForm.especialidad_id);
+    if (batchForm.letra && !letras.includes(batchForm.letra)) {
+      setBatchForm(prev => ({ ...prev, letra: defaultLetra || '' }));
+    }
+    if (!batchForm.letra && letras.length === 1) {
+      setBatchForm(prev => ({ ...prev, letra: letras[0] }));
+    }
+  }, [batchForm.especialidad_id, getLetrasPorEspecialidad, getLetraDefault]);
+
+  // ===== EFECTOS PARA AUTOSELECCIÓN DE LETRA POR ESPECIALIDAD (EDIT) =====
+  useEffect(() => {
+    const letras = getLetrasPorEspecialidad(editForm.especialidad_id);
+    const defaultLetra = getLetraDefault(editForm.especialidad_id);
+    if (editForm.letra && !letras.includes(editForm.letra)) {
+      setEditForm(prev => ({ ...prev, letra: defaultLetra || '' }));
+    }
+    if (!editForm.letra && letras.length === 1) {
+      setEditForm(prev => ({ ...prev, letra: letras[0] }));
+    }
+  }, [editForm.especialidad_id, getLetrasPorEspecialidad, getLetraDefault]);
 
   // ===== EFECTOS PARA BUSCAR GRUPO EN CADA MODAL =====
   useEffect(() => {
@@ -623,6 +681,22 @@ export default function HorariosPage() {
                 </select>
               </div>
               <div className={styles.field}>
+                <label className={styles.label}>Especialidad</label>
+                <select
+                  className={styles.select}
+                  value={uploadForm.especialidad_id}
+                  onChange={e => setUploadForm({ ...uploadForm, especialidad_id: e.target.value })}
+                >
+                  <option value="">Seleccionar...</option>
+                  {especialidades.map(e => (
+                    <option key={e.id} value={e.id}>{e.nombre}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className={styles.row2}>
+              <div className={styles.field}>
                 <label className={styles.label}>Letra *</label>
                 <select
                   className={styles.select}
@@ -630,14 +704,11 @@ export default function HorariosPage() {
                   onChange={e => setUploadForm({ ...uploadForm, letra: e.target.value })}
                 >
                   <option value="">Seleccionar...</option>
-                  {['A','B','C','D'].map(l => (
+                  {getLetrasPorEspecialidad(uploadForm.especialidad_id).map(l => (
                     <option key={l} value={l}>{l}</option>
                   ))}
                 </select>
               </div>
-            </div>
-
-            <div className={styles.row2}>
               <div className={styles.field}>
                 <label className={styles.label}>Ciclo escolar *</label>
                 <select
@@ -651,46 +722,34 @@ export default function HorariosPage() {
                   ))}
                 </select>
               </div>
-              <div className={styles.field}>
-                <label className={styles.label}>Turno *</label>
-                <select
-                  className={styles.select}
-                  value={uploadForm.turno_id}
-                  onChange={e => setUploadForm({ ...uploadForm, turno_id: e.target.value })}
-                >
-                  <option value="">Seleccionar turno...</option>
-                  {turnos.map(t => (
-                    <option key={t.id} value={t.id}>{t.nombre}</option>
-                  ))}
-                </select>
-              </div>
+            </div>
+
+            <div className={styles.field}>
+              <label className={styles.label}>Turno *</label>
+              <select
+                className={styles.select}
+                value={uploadForm.turno_id}
+                onChange={e => setUploadForm({ ...uploadForm, turno_id: e.target.value })}
+              >
+                <option value="">Seleccionar turno...</option>
+                {turnos.map(t => (
+                  <option key={t.id} value={t.id}>{t.nombre}</option>
+                ))}
+              </select>
             </div>
 
             {/* Estado del grupo */}
             {uploadForm.semestre && uploadForm.letra && uploadForm.turno_id && uploadForm.ciclo_id && (
               <div className={styles.grupoStatus}>
                 {grupoEncontrado ? (
-                  <span className={styles.grupoOk}> Grupo encontrado: {grupoEncontrado.nombre}</span>
+                  <span className={styles.grupoOk}>✅ Grupo encontrado: {grupoEncontrado.nombre}</span>
                 ) : (
-                  <span className={styles.grupoError}> No existe un grupo con esa combinación</span>
+                  <span className={styles.grupoError}>❌ No existe un grupo con esa combinación</span>
                 )}
               </div>
             )}
 
             <div className={styles.row2}>
-              <div className={styles.field}>
-                <label className={styles.label}>Especialidad</label>
-                <select
-                  className={styles.select}
-                  value={uploadForm.especialidad_id}
-                  onChange={e => setUploadForm({ ...uploadForm, especialidad_id: e.target.value })}
-                >
-                  <option value="">Todas</option>
-                  {especialidades.map(e => (
-                    <option key={e.id} value={e.id}>{e.nombre}</option>
-                  ))}
-                </select>
-              </div>
               <div className={styles.field}>
                 <label className={styles.label}>Tipo de horario</label>
                 <select
@@ -703,17 +762,16 @@ export default function HorariosPage() {
                   <option value="laboratorio">Laboratorio</option>
                 </select>
               </div>
-            </div>
-
-            <div className={styles.field}>
-              <label className={styles.label}>Descripción</label>
-              <textarea
-                className={styles.textarea}
-                value={uploadForm.descripcion}
-                onChange={e => setUploadForm({ ...uploadForm, descripcion: e.target.value })}
-                placeholder="Observaciones adicionales..."
-                rows={2}
-              />
+              <div className={styles.field}>
+                <label className={styles.label}>Descripción</label>
+                <textarea
+                  className={styles.textarea}
+                  value={uploadForm.descripcion}
+                  onChange={e => setUploadForm({ ...uploadForm, descripcion: e.target.value })}
+                  placeholder="Observaciones adicionales..."
+                  rows={2}
+                />
+              </div>
             </div>
 
             <div className={styles.modalActions}>
@@ -757,6 +815,22 @@ export default function HorariosPage() {
                 </select>
               </div>
               <div className={styles.field}>
+                <label className={styles.label}>Especialidad</label>
+                <select
+                  className={styles.select}
+                  value={editForm.especialidad_id}
+                  onChange={e => setEditForm({ ...editForm, especialidad_id: e.target.value })}
+                >
+                  <option value="">Seleccionar...</option>
+                  {especialidades.map(e => (
+                    <option key={e.id} value={e.id}>{e.nombre}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className={styles.row2}>
+              <div className={styles.field}>
                 <label className={styles.label}>Letra</label>
                 <select
                   className={styles.select}
@@ -764,14 +838,11 @@ export default function HorariosPage() {
                   onChange={e => setEditForm({ ...editForm, letra: e.target.value })}
                 >
                   <option value="">Seleccionar...</option>
-                  {['A','B','C','D'].map(l => (
+                  {getLetrasPorEspecialidad(editForm.especialidad_id).map(l => (
                     <option key={l} value={l}>{l}</option>
                   ))}
                 </select>
               </div>
-            </div>
-
-            <div className={styles.row2}>
               <div className={styles.field}>
                 <label className={styles.label}>Ciclo escolar</label>
                 <select
@@ -785,45 +856,33 @@ export default function HorariosPage() {
                   ))}
                 </select>
               </div>
-              <div className={styles.field}>
-                <label className={styles.label}>Turno</label>
-                <select
-                  className={styles.select}
-                  value={editForm.turno_id}
-                  onChange={e => setEditForm({ ...editForm, turno_id: e.target.value })}
-                >
-                  <option value="">Seleccionar turno...</option>
-                  {turnos.map(t => (
-                    <option key={t.id} value={t.id}>{t.nombre}</option>
-                  ))}
-                </select>
-              </div>
+            </div>
+
+            <div className={styles.field}>
+              <label className={styles.label}>Turno</label>
+              <select
+                className={styles.select}
+                value={editForm.turno_id}
+                onChange={e => setEditForm({ ...editForm, turno_id: e.target.value })}
+              >
+                <option value="">Seleccionar turno...</option>
+                {turnos.map(t => (
+                  <option key={t.id} value={t.id}>{t.nombre}</option>
+                ))}
+              </select>
             </div>
 
             {editForm.semestre && editForm.letra && editForm.turno_id && editForm.ciclo_id && (
               <div className={styles.grupoStatus}>
                 {editGrupoEncontrado ? (
-                  <span className={styles.grupoOk}> Grupo encontrado: {editGrupoEncontrado.nombre}</span>
+                  <span className={styles.grupoOk}>✅ Grupo encontrado: {editGrupoEncontrado.nombre}</span>
                 ) : (
-                  <span className={styles.grupoError}> No existe un grupo con esa combinación</span>
+                  <span className={styles.grupoError}>❌ No existe un grupo con esa combinación</span>
                 )}
               </div>
             )}
 
             <div className={styles.row2}>
-              <div className={styles.field}>
-                <label className={styles.label}>Especialidad</label>
-                <select
-                  className={styles.select}
-                  value={editForm.especialidad_id}
-                  onChange={e => setEditForm({ ...editForm, especialidad_id: e.target.value })}
-                >
-                  <option value="">Todas</option>
-                  {especialidades.map(e => (
-                    <option key={e.id} value={e.id}>{e.nombre}</option>
-                  ))}
-                </select>
-              </div>
               <div className={styles.field}>
                 <label className={styles.label}>Tipo de horario</label>
                 <select
@@ -836,17 +895,16 @@ export default function HorariosPage() {
                   <option value="laboratorio">Laboratorio</option>
                 </select>
               </div>
-            </div>
-
-            <div className={styles.field}>
-              <label className={styles.label}>Descripción</label>
-              <textarea
-                className={styles.textarea}
-                value={editForm.descripcion}
-                onChange={e => setEditForm({ ...editForm, descripcion: e.target.value })}
-                placeholder="Observaciones adicionales..."
-                rows={2}
-              />
+              <div className={styles.field}>
+                <label className={styles.label}>Descripción</label>
+                <textarea
+                  className={styles.textarea}
+                  value={editForm.descripcion}
+                  onChange={e => setEditForm({ ...editForm, descripcion: e.target.value })}
+                  placeholder="Observaciones adicionales..."
+                  rows={2}
+                />
+              </div>
             </div>
 
             <div className={styles.modalActions}>
@@ -890,6 +948,22 @@ export default function HorariosPage() {
                 </select>
               </div>
               <div className={styles.field}>
+                <label className={styles.label}>Especialidad</label>
+                <select
+                  className={styles.select}
+                  value={batchForm.especialidad_id}
+                  onChange={e => setBatchForm({ ...batchForm, especialidad_id: e.target.value })}
+                >
+                  <option value="">Seleccionar...</option>
+                  {especialidades.map(e => (
+                    <option key={e.id} value={e.id}>{e.nombre}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className={styles.batchRow}>
+              <div className={styles.field}>
                 <label className={styles.label}>Letra *</label>
                 <select
                   className={styles.select}
@@ -897,14 +971,11 @@ export default function HorariosPage() {
                   onChange={e => setBatchForm({ ...batchForm, letra: e.target.value })}
                 >
                   <option value="">Seleccionar...</option>
-                  {['A','B','C','D'].map(l => (
+                  {getLetrasPorEspecialidad(batchForm.especialidad_id).map(l => (
                     <option key={l} value={l}>{l}</option>
                   ))}
                 </select>
               </div>
-            </div>
-
-            <div className={styles.batchRow}>
               <div className={styles.field}>
                 <label className={styles.label}>Ciclo *</label>
                 <select
@@ -918,45 +989,33 @@ export default function HorariosPage() {
                   ))}
                 </select>
               </div>
-              <div className={styles.field}>
-                <label className={styles.label}>Turno *</label>
-                <select
-                  className={styles.select}
-                  value={batchForm.turno_id}
-                  onChange={e => setBatchForm({ ...batchForm, turno_id: e.target.value })}
-                >
-                  <option value="">Seleccionar turno...</option>
-                  {turnos.map(t => (
-                    <option key={t.id} value={t.id}>{t.nombre}</option>
-                  ))}
-                </select>
-              </div>
+            </div>
+
+            <div className={styles.field}>
+              <label className={styles.label}>Turno *</label>
+              <select
+                className={styles.select}
+                value={batchForm.turno_id}
+                onChange={e => setBatchForm({ ...batchForm, turno_id: e.target.value })}
+              >
+                <option value="">Seleccionar turno...</option>
+                {turnos.map(t => (
+                  <option key={t.id} value={t.id}>{t.nombre}</option>
+                ))}
+              </select>
             </div>
 
             {batchForm.semestre && batchForm.letra && batchForm.turno_id && batchForm.ciclo_id && (
               <div className={styles.grupoStatus}>
                 {batchGrupoEncontrado ? (
-                  <span className={styles.grupoOk}> Grupo encontrado: {batchGrupoEncontrado.nombre}</span>
+                  <span className={styles.grupoOk}>✅ Grupo encontrado: {batchGrupoEncontrado.nombre}</span>
                 ) : (
-                  <span className={styles.grupoError}> No existe un grupo con esa combinación</span>
+                  <span className={styles.grupoError}>❌ No existe un grupo con esa combinación</span>
                 )}
               </div>
             )}
 
             <div className={styles.batchRow}>
-              <div className={styles.field}>
-                <label className={styles.label}>Especialidad</label>
-                <select
-                  className={styles.select}
-                  value={batchForm.especialidad_id}
-                  onChange={e => setBatchForm({ ...batchForm, especialidad_id: e.target.value })}
-                >
-                  <option value="">Todas</option>
-                  {especialidades.map(e => (
-                    <option key={e.id} value={e.id}>{e.nombre}</option>
-                  ))}
-                </select>
-              </div>
               <div className={styles.field}>
                 <label className={styles.label}>Tipo</label>
                 <select
@@ -969,17 +1028,16 @@ export default function HorariosPage() {
                   <option value="laboratorio">Laboratorio</option>
                 </select>
               </div>
-            </div>
-
-            <div className={styles.field}>
-              <label className={styles.label}>Descripción</label>
-              <textarea
-                className={styles.textarea}
-                value={batchForm.descripcion}
-                onChange={e => setBatchForm({ ...batchForm, descripcion: e.target.value })}
-                placeholder="Descripción general para todos los horarios..."
-                rows={2}
-              />
+              <div className={styles.field}>
+                <label className={styles.label}>Descripción</label>
+                <textarea
+                  className={styles.textarea}
+                  value={batchForm.descripcion}
+                  onChange={e => setBatchForm({ ...batchForm, descripcion: e.target.value })}
+                  placeholder="Descripción general para todos los horarios..."
+                  rows={2}
+                />
+              </div>
             </div>
 
             <div className={styles.batchRow}>
@@ -1225,7 +1283,7 @@ export default function HorariosPage() {
           <span className={styles.contadorTotal}>Total: {total} grupos</span>
           <span className={styles.contadorSubidos}>Subidos: {subidos}</span>
           <span className={faltantes > 0 ? styles.contadorFaltantes : styles.contadorCompleto}>
-            {faltantes > 0 ? `Faltan: ${faltantes}` : ' Completo'}
+            {faltantes > 0 ? `Faltan: ${faltantes}` : '✅ Completo'}
           </span>
         </div>
         <div className={styles.contadorBarra}>

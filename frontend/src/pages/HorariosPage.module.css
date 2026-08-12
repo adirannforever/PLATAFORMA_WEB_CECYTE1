@@ -748,3 +748,24 @@
   border-radius: 2px;
   display: inline-block;
 }
+/* ===== GRUPO STATUS ===== */
+.grupoStatus {
+  padding: 0.5rem 0.8rem;
+  border-radius: 2px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+.grupoOk {
+  color: #1A6B35;
+  background: #e6f0ea;
+  padding: 0.3rem 0.8rem;
+  border-radius: 2px;
+  display: inline-block;
+}
+.grupoError {
+  color: #b91c1c;
+  background: #fee2e2;
+  padding: 0.3rem 0.8rem;
+  border-radius: 2px;
+  display: inline-block;
+}
