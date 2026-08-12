@@ -53,7 +53,9 @@ export default function CalificacionesPage() {
   const esAdmin = usuario.rol === 'administrador';
   const esDocente = usuario.rol === 'docente';
 
-  // ===== ESTADOS GENERALES =====
+  // ===== TODOS LOS HOOKS AQUÍ (SIEMPRE SE EJECUTAN) =====
+  
+  // Estados generales
   const [datos, setDatos] = useState([]);
   const [periodos, setPeriodos] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -61,7 +63,7 @@ export default function CalificacionesPage() {
   const [exito, setExito] = useState('');
   const [toast, setToast] = useState('');
 
-  // ===== SELECTOR DE GRUPOS =====
+  // Selector de grupos
   const [grupos, setGrupos] = useState([]);
   const [cargandoGrupos, setCargandoGrupos] = useState(false);
   const [filtros, setFiltros] = useState({
@@ -71,15 +73,15 @@ export default function CalificacionesPage() {
   });
   const [ciclos, setCiclos] = useState([]);
 
-  // ===== DETALLE DE GRUPO (MATERIAS) =====
+  // Detalle de grupo (materias)
   const [materiasGrupo, setMateriasGrupo] = useState([]);
   const [cargandoMaterias, setCargandoMaterias] = useState(false);
   const [materiaExpandida, setMateriaExpandida] = useState(null);
 
-  // ===== BÚSQUEDA EN TABLA DE CALIFICACIONES =====
+  // Búsqueda en tabla de calificaciones
   const [busquedaAlumno, setBusquedaAlumno] = useState('');
 
-  // ===== EDICIÓN DE CALIFICACIONES =====
+  // Edición de calificaciones
   const [editando, setEditando] = useState(null);
   const [registrando, setRegistrando] = useState(null);
   const [valorNuevo, setValorNuevo] = useState('');
@@ -90,6 +92,44 @@ export default function CalificacionesPage() {
   const [calificacionesTemp, setCalificacionesTemp] = useState({});
   const [guardandoColumna, setGuardandoColumna] = useState(false);
   const [camposVacios, setCamposVacios] = useState({});
+
+  // ===== useMemo para alumnosList (SIEMPRE se ejecuta) =====
+  // Construir lista de alumnos a partir de datos
+  const porAlumno = useMemo(() => {
+    const mapa = {};
+    datos.forEach(row => {
+      const key = row.alumno_id;
+      if (!mapa[key]) {
+        mapa[key] = {
+          alumno_id: row.alumno_id,
+          usuario_id: row.usuario_id,
+          nombre: `${row.apellidos}, ${row.nombre}`,
+          matricula: row.matricula || '',
+          calificaciones: {},
+        };
+      }
+      if (row.parcial) {
+        mapa[key].calificaciones[row.parcial] = {
+          id: row.calificacion_id,
+          valor: row.calificacion,
+        };
+      }
+    });
+    return mapa;
+  }, [datos]);
+
+  // Filtro de alumnos por búsqueda (SIEMPRE se ejecuta)
+  const alumnosList = useMemo(() => {
+    const lista = Object.values(porAlumno);
+    if (!busquedaAlumno.trim()) return lista.sort((a, b) => a.nombre.localeCompare(b.nombre));
+    const term = busquedaAlumno.toLowerCase().trim();
+    return lista
+      .filter(alumno =>
+        alumno.nombre.toLowerCase().includes(term) ||
+        (alumno.matricula && alumno.matricula.toLowerCase().includes(term))
+      )
+      .sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }, [porAlumno, busquedaAlumno]);
 
   // ===== EFECTOS =====
   // Cargar ciclos (solo si estamos en lista de grupos)
@@ -158,7 +198,8 @@ export default function CalificacionesPage() {
   }, [grupo_id]);
 
   // Cargar calificaciones cuando hay materia_grupo_id
-  const cargarCalificaciones = async () => {
+  const cargarCalificaciones = useCallback(async () => {
+    if (!materia_grupo_id) return;
     setCargando(true);
     setError('');
     try {
@@ -171,9 +212,9 @@ export default function CalificacionesPage() {
     } finally {
       setCargando(false);
     }
-  };
+  }, [materia_grupo_id]);
 
-  const cargarPeriodos = async () => {
+  const cargarPeriodos = useCallback(async () => {
     if (!materia_grupo_id) return;
     try {
       const res = await calificacionesService.getPeriodosEvaluacion(materia_grupo_id);
@@ -182,23 +223,25 @@ export default function CalificacionesPage() {
       console.error('Error cargando períodos:', e);
       setPeriodos([]);
     }
-  };
+  }, [materia_grupo_id]);
+
+  // Cargar mis calificaciones (alumno)
+  const cargarMisCalificaciones = useCallback(async () => {
+    setCargando(true);
+    try {
+      const res = await calificacionesService.misCalificaciones();
+      setDatos(res.calificaciones || []);
+    } catch (e) {
+      console.error('Error cargando mis calificaciones:', e);
+      setDatos([]);
+      setError('No se pudieron cargar tus calificaciones.');
+    } finally {
+      setCargando(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (esAlumno) {
-      const cargarMisCalificaciones = async () => {
-        setCargando(true);
-        try {
-          const res = await calificacionesService.misCalificaciones();
-          setDatos(res.calificaciones || []);
-        } catch (e) {
-          console.error('Error cargando mis calificaciones:', e);
-          setDatos([]);
-          setError('No se pudieron cargar tus calificaciones.');
-        } finally {
-          setCargando(false);
-        }
-      };
       cargarMisCalificaciones();
       return;
     }
@@ -206,7 +249,7 @@ export default function CalificacionesPage() {
       cargarCalificaciones();
       cargarPeriodos();
     }
-  }, [materia_grupo_id, esAlumno]);
+  }, [materia_grupo_id, esAlumno, cargarCalificaciones, cargarPeriodos, cargarMisCalificaciones]);
 
   // ===== HANDLERS =====
   const handleFiltroChange = (e) => {
@@ -434,7 +477,9 @@ export default function CalificacionesPage() {
     setError('');
   };
 
-  // ===== RENDERIZADO CONDICIONAL (SIEMPRE DESPUÉS DE TODOS LOS HOOKS) =====
+  const parcialesEditables = PARCIALES.filter(p => esAdmin || isParcialEditable(p));
+
+  // ===== RENDERIZADO CONDICIONAL (DESPUÉS DE TODOS LOS HOOKS) =====
 
   // 1. Vista de alumno
   if (esAlumno) {
@@ -570,42 +615,6 @@ export default function CalificacionesPage() {
 
   // 3. Vista de detalle de calificaciones de una materia
   if (materia_grupo_id) {
-    // Construir lista de alumnos
-    const porAlumno = {};
-    datos.forEach(row => {
-      const key = row.alumno_id;
-      if (!porAlumno[key]) {
-        porAlumno[key] = {
-          alumno_id: row.alumno_id,
-          usuario_id: row.usuario_id,
-          nombre: `${row.apellidos}, ${row.nombre}`,
-          matricula: row.matricula || '',
-          calificaciones: {},
-        };
-      }
-      if (row.parcial) {
-        porAlumno[key].calificaciones[row.parcial] = {
-          id: row.calificacion_id,
-          valor: row.calificacion,
-        };
-      }
-    });
-
-    // Filtro de alumnos por búsqueda
-    const alumnosList = useMemo(() => {
-      const lista = Object.values(porAlumno);
-      if (!busquedaAlumno.trim()) return lista.sort((a, b) => a.nombre.localeCompare(b.nombre));
-      const term = busquedaAlumno.toLowerCase().trim();
-      return lista
-        .filter(alumno =>
-          alumno.nombre.toLowerCase().includes(term) ||
-          (alumno.matricula && alumno.matricula.toLowerCase().includes(term))
-        )
-        .sort((a, b) => a.nombre.localeCompare(b.nombre));
-    }, [porAlumno, busquedaAlumno]);
-
-    const parcialesEditables = PARCIALES.filter(p => esAdmin || isParcialEditable(p));
-
     return (
       <div className={styles.page}>
         {toast && <div className={styles.toast}>{toast}</div>}
