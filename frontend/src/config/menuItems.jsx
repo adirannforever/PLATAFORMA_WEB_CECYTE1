@@ -16,7 +16,7 @@ import {
   BarChart3,
 } from 'lucide-react';
 
-// Iconos personalizados 
+// Iconos personalizados (los que ya tenías)
 const IconDashboard = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="3" width="7" height="7" />
@@ -80,7 +80,7 @@ const IconAsistencia = () => (
 );
 
 export const menuItems = [
-  // comunes
+  // ===== COMUNES A TODOS =====
   {
     to: '/dashboard',
     label: 'Inicio',
@@ -94,7 +94,7 @@ export const menuItems = [
     roles: ['administrador', 'docente', 'alumno'],
   },
 
-  // para alumno
+  // ===== ALUMNO (exclusivo) =====
   {
     to: '/mis-calificaciones',
     label: 'Mis Calificaciones',
@@ -102,7 +102,7 @@ export const menuItems = [
     roles: ['alumno'],
   },
 
-  // admin + docente
+  // ===== ADMIN + DOCENTE =====
   {
     to: '/grupos',
     label: 'Grupos',
@@ -116,7 +116,7 @@ export const menuItems = [
     roles: ['administrador', 'docente'],
   },
 
-  // admin + docente especificados
+  // ===== ADMIN + DOCENTE + ALUMNO (con especificaciones) =====
   {
     to: '/calificaciones',
     label: 'Calificaciones',
@@ -204,7 +204,6 @@ export const menuItems = [
     roles: ['administrador'],
   },
 
-  // el mismo formato anterior se debe emplear para nuevos to:
 ];
 
 /**

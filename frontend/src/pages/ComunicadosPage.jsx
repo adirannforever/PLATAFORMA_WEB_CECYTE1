@@ -1,44 +1,55 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { comunicadosService } from '../services/api';
+import { usePermissions } from '../hooks/usePermissions';
+import { comunicadosService, catalogosService } from '../services/api';
 import Skeleton from '../components/Skeleton';
 import styles from './ComunicadosPage.module.css';
-import { catalogosService } from '../services/api';
 import { Plus } from 'lucide-react';
 
 export default function ComunicadosPage() {
   const { usuario } = useAuth();
+  const { isAdmin } = usePermissions(); // ← hook centralizado
   const [grupos, setGrupos] = useState([]);
   const [comunicados, setComunicados] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [modalAbierto, setModalAbierto] = useState(false);
-  const [form, setForm] = useState({ 
-  titulo: '', 
-  contenido: '', 
-  dirigido_a_rol: null, 
-  dirigido_a_grupo: null 
+  const [form, setForm] = useState({
+    titulo: '',
+    contenido: '',
+    dirigido_a_rol: null,
+    dirigido_a_grupo: null,
   });
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState('');
 
-  const cargar = async () => {
-  setCargando(true);
-  try {
-    const res = await comunicadosService.getAll();
-    setComunicados(res.data || []);
-  } catch (e) {
-    console.error('Error al cargar comunicados:', e);
-    setComunicados([]);
-  } finally {
-    setCargando(false); // Siempre se ejecuta
-  }
-};
+  const cargarComunicados = async () => {
+    setCargando(true);
+    try {
+      const res = await comunicadosService.getAll();
+      setComunicados(res.data || []);
+    } catch (e) {
+      console.error('Error al cargar comunicados:', e);
+      setComunicados([]);
+    } finally {
+      setCargando(false);
+    }
+  };
 
-useEffect(() => {
-  if (usuario) {
-    cargar();
-  }
-}, [usuario]);
+  const cargarGrupos = async () => {
+    try {
+      const res = await catalogosService.getGrupos();
+      setGrupos(res.data || []);
+    } catch (e) {
+      console.error('Error al cargar grupos:', e);
+    }
+  };
+
+  useEffect(() => {
+    if (usuario) {
+      cargarComunicados();
+      cargarGrupos();
+    }
+  }, [usuario]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -46,9 +57,9 @@ useEffect(() => {
     setEnviando(true);
     try {
       await comunicadosService.crear(form);
-      setForm({ titulo: '', contenido: '' });
+      setForm({ titulo: '', contenido: '', dirigido_a_rol: null, dirigido_a_grupo: null });
       setModalAbierto(false);
-      await cargar();
+      await cargarComunicados();
     } catch (err) {
       setError(err.response?.data?.message || 'Error al publicar.');
     } finally {
@@ -60,7 +71,7 @@ useEffect(() => {
     if (!confirm('¿Archivar este comunicado?')) return;
     try {
       await comunicadosService.actualizar(id, { activo: false });
-      await cargar();
+      await cargarComunicados();
     } catch (e) {
       console.error('Error al archivar:', e);
       alert('No se pudo archivar el comunicado.');
@@ -74,9 +85,9 @@ useEffect(() => {
           <h1 className={styles.title}>Comunicados Institucionales</h1>
           <p className={styles.subtitle}>Avisos y noticias del CECyTE Plantel 1</p>
         </div>
-        {usuario.rol === 'administrador' && (
+        {isAdmin && (
           <button className={styles.btnPrimary} onClick={() => setModalAbierto(true)}>
-              <Plus size={18} strokeWidth={6} style={{ marginRight: '6px' }} />
+            <Plus size={18} strokeWidth={6} style={{ marginRight: '6px' }} />
           </button>
         )}
       </div>
@@ -109,11 +120,21 @@ useEffect(() => {
                   <span className={styles.badge}>Comunicado oficial</span>
                   <span className={styles.fecha}>
                     {new Date(c.fecha_publicacion).toLocaleDateString('es-MX', {
-                      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+                      weekday: 'long',
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
                     })}
                   </span>
+                  {c.dirigido_a_rol && (
+                    <span className={styles.badgeDirigido}>
+                      {c.dirigido_a_grupo
+                        ? `Para: ${c.dirigido_a_rol} - Grupo ${c.dirigido_a_grupo}`
+                        : `Para: ${c.dirigido_a_rol}s`}
+                    </span>
+                  )}
                 </div>
-                {usuario.rol === 'administrador' && (
+                {isAdmin && (
                   <button className={styles.btnArchivar} onClick={() => handleArchivar(c.id)}>
                     Archivar
                   </button>
@@ -134,9 +155,7 @@ useEffect(() => {
           <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
             <h3 className={styles.modalTitle}>Nuevo comunicado</h3>
             {error && <div className={styles.errorMsg}>{error}</div>}
-
             <form onSubmit={handleSubmit} className={styles.form}>
-              {/* Título */}
               <div className={styles.field}>
                 <label className={styles.label}>Título</label>
                 <input
@@ -147,8 +166,6 @@ useEffect(() => {
                   required
                 />
               </div>
-
-              {/* Contenido */}
               <div className={styles.field}>
                 <label className={styles.label}>Contenido</label>
                 <textarea
@@ -160,8 +177,6 @@ useEffect(() => {
                   required
                 />
               </div>
-
-              {/*  Dirigido a (rol) */}
               <div className={styles.field}>
                 <label className={styles.label}>Dirigido a</label>
                 <select
@@ -169,11 +184,10 @@ useEffect(() => {
                   value={form.dirigido_a_rol || ''}
                   onChange={(e) => {
                     const val = e.target.value || null;
-                    setForm({ 
-                      ...form, 
+                    setForm({
+                      ...form,
                       dirigido_a_rol: val,
-                      // Si cambia a otro rol que no sea 'alumno', limpia el grupo
-                      dirigido_a_grupo: val === 'alumno' ? form.dirigido_a_grupo : null
+                      dirigido_a_grupo: val === 'alumno' ? form.dirigido_a_grupo : null,
                     });
                   }}
                 >
@@ -183,8 +197,6 @@ useEffect(() => {
                   <option value="administrador">Administradores</option>
                 </select>
               </div>
-
-              {/*  Grupo específico (solo si rol = alumno) */}
               {form.dirigido_a_rol === 'alumno' && (
                 <div className={styles.field}>
                   <label className={styles.label}>Grupo específico (opcional)</label>
@@ -202,8 +214,6 @@ useEffect(() => {
                   </select>
                 </div>
               )}
-
-              {/* Botones */}
               <div className={styles.modalActions}>
                 <button
                   type="button"
