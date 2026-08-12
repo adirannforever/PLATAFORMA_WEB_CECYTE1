@@ -28,7 +28,7 @@ export async function generarBoletaPDF(alumnoId, cicloId) {
 
   const alumnoData = alumno.rows[0];
 
-  // Obtener calificaciones del alumno en este ciclo
+  // Obtener calificaciones del alumno en este ciclo (solo ordinarias)
   const calificaciones = await query(
     `SELECT 
       mc.nombre AS materia_nombre,
@@ -37,7 +37,7 @@ export async function generarBoletaPDF(alumnoId, cicloId) {
      FROM calificaciones c
      JOIN materias_grupo mg ON mg.id = c.materia_grupo_id
      JOIN materias_catalogo mc ON mc.id = mg.materia_catalogo_id
-     WHERE c.alumno_id = $1 AND c.ciclo_id = $2
+     WHERE c.alumno_id = $1 AND c.ciclo_id = $2 AND c.tipo_evaluacion = 'ordinaria'
      ORDER BY mc.nombre, c.parcial`,
     [alumnoId, cicloId]
   );
@@ -51,22 +51,31 @@ export async function generarBoletaPDF(alumnoId, cicloId) {
         parciales: {},
       };
     }
-    materiasMap[row.materia_nombre].parciales[row.parcial] = row.calificacion;
+    // Guardar solo si la calificación es un número válido
+    const calif = parseFloat(row.calificacion);
+    if (!isNaN(calif)) {
+      materiasMap[row.materia_nombre].parciales[row.parcial] = calif;
+    }
   });
 
   const materias = Object.values(materiasMap);
 
-  // Calcular promedios
+  // Calcular promedios por materia (solo con valores numéricos)
   materias.forEach(m => {
-    const valores = Object.values(m.parciales);
-    m.promedio = valores.length > 0 
-      ? Math.round((valores.reduce((a, b) => a + b, 0) / valores.length) * 10) / 10
-      : 0;
+    const valores = Object.values(m.parciales).filter(v => !isNaN(v) && v !== null && v !== undefined);
+    if (valores.length > 0) {
+      const suma = valores.reduce((a, b) => a + b, 0);
+      m.promedio = Math.round((suma / valores.length) * 10) / 10;
+    } else {
+      m.promedio = null; // sin calificaciones
+    }
   });
 
-  const promedioGeneral = materias.length > 0
-    ? Math.round((materias.reduce((a, b) => a + b.promedio, 0) / materias.length) * 10) / 10
-    : 0;
+  // Promedio general (solo materias que tengan al menos un parcial)
+  const materiasConPromedio = materias.filter(m => m.promedio !== null && !isNaN(m.promedio));
+  const promedioGeneral = materiasConPromedio.length > 0
+    ? Math.round((materiasConPromedio.reduce((a, b) => a + b.promedio, 0) / materiasConPromedio.length) * 10) / 10
+    : null;
 
   // Generar PDF
   const doc = new PDFDocument({ margin: 50 });
@@ -86,7 +95,7 @@ export async function generarBoletaPDF(alumnoId, cicloId) {
   doc.text(`Estatus: ${alumnoData.estatus}`);
   doc.moveDown();
 
-  if (materias.length === 0) {
+  if (materias.length === 0 || materias.every(m => Object.keys(m.parciales).length === 0)) {
     doc.fontSize(12).text('El alumno no tiene calificaciones registradas en este ciclo.', { align: 'center' });
     doc.end();
     return new Promise((resolve) => {
@@ -110,17 +119,23 @@ export async function generarBoletaPDF(alumnoId, cicloId) {
   y += 20;
 
   materias.forEach(m => {
+    const p1 = (m.parciales[1] !== undefined && !isNaN(m.parciales[1])) ? m.parciales[1] : '-';
+    const p2 = (m.parciales[2] !== undefined && !isNaN(m.parciales[2])) ? m.parciales[2] : '-';
+    const p3 = (m.parciales[3] !== undefined && !isNaN(m.parciales[3])) ? m.parciales[3] : '-';
+    const prom = (m.promedio !== null && !isNaN(m.promedio)) ? m.promedio : '-';
+
     doc.text(m.nombre.substring(0, 30), 50, y, { width: 200 });
-    doc.text(m.parciales[1]?.toString() || '-', 250, y, { width: 40, align: 'center' });
-    doc.text(m.parciales[2]?.toString() || '-', 290, y, { width: 40, align: 'center' });
-    doc.text(m.parciales[3]?.toString() || '-', 330, y, { width: 40, align: 'center' });
-    doc.text(m.promedio?.toString() || '-', 370, y, { width: 80, align: 'right' });
+    doc.text(String(p1), 250, y, { width: 40, align: 'center' });
+    doc.text(String(p2), 290, y, { width: 40, align: 'center' });
+    doc.text(String(p3), 330, y, { width: 40, align: 'center' });
+    doc.text(String(prom), 370, y, { width: 80, align: 'right' });
     y += 18;
   });
 
   y += 10;
   doc.fontSize(10);
-  doc.text(`Promedio General: ${promedioGeneral}`, 50, y);
+  const promedioTexto = (promedioGeneral !== null && !isNaN(promedioGeneral)) ? promedioGeneral : 'Sin calificaciones';
+  doc.text(`Promedio General: ${promedioTexto}`, 50, y);
 
   doc.end();
 
@@ -188,7 +203,7 @@ export async function generarConstanciaPDF(alumnoId) {
 // SERVICIO: Listado de alumnos (Excel)
 // ============================================================
 export async function generarListadoAlumnosExcel(filtros = {}) {
-  const { grupo_id, especialidad_id, semestre, estatus } = filtros;
+  const { grupo_id, especialidad_id, semestre, estatus, grupo_ids } = filtros;
 
   let sql = `
     SELECT 
@@ -223,6 +238,11 @@ export async function generarListadoAlumnosExcel(filtros = {}) {
   if (estatus) {
     sql += ` AND a.estatus = $${params.length + 1}`;
     params.push(estatus);
+  }
+  if (grupo_ids && Array.isArray(grupo_ids) && grupo_ids.length > 0) {
+    // grupo_ids viene del controlador cuando es docente
+    sql += ` AND a.grupo_actual_id = ANY($${params.length + 1}::int[])`;
+    params.push(grupo_ids);
   }
   sql += ' ORDER BY a.semestre_actual, g.letra, u.apellidos';
 
