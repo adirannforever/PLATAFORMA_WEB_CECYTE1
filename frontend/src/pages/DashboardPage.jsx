@@ -159,7 +159,6 @@ export default function DashboardPage() {
         <div className={styles.statsGrid}>
           <StatCard label="Materias cursando" value={stats.materias} to="/mis-calificaciones" color="green" />
           <StatCard label="Calificaciones registradas" value={stats.calificaciones} to="/mis-calificaciones" color="blue" />
-          <StatCard label="Mi Expediente" value="Ver" to={`/expediente/${usuario.id}`} color="gold" />
         </div>
       )}
 
