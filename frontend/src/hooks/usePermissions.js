@@ -11,7 +11,7 @@ export const usePermissions = () => {
 
   /**
    * Verifica si el usuario tiene un rol específico
-   * @param {string|string[]} roles 
+   * @param {string|string[]} roles - Rol o lista de roles permitidos
    * @returns {boolean}
    */
   const checkRole = (roles) => {
@@ -31,6 +31,7 @@ export const usePermissions = () => {
     return checkRole(requiredRoles);
   };
 
+  // Atajos para verificar roles específicos
   const isAdmin = rol === 'administrador';
   const isDocente = rol === 'docente';
   const isAlumno = rol === 'alumno';

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getMenuItems } from '../../config/menuItems';
+import { getMenuItems } from '../../config/menuItems'; // ← importa .jsx automáticamente
 import { usePermissions } from '../../hooks/usePermissions';
 import styles from './DashboardLayout.module.css';
 import logoCecyte from '../../assets/logo_cecyte.png';
@@ -120,7 +120,7 @@ const ETIQUETA_ROL = {
 export default function DashboardLayout() {
   const { usuario, logout } = useAuth();
   const navigate = useNavigate();
-  const { hasPermission } = usePermissions(); // Hook para permisos
+  const { hasPermission } = usePermissions();
 
   const [sidebarAbierto, setSidebarAbierto] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -134,7 +134,6 @@ export default function DashboardLayout() {
     }
   };
 
-  // Obtener items del menú según el rol del usuario
   const navItems = getMenuItems(usuario?.rol);
 
   return (
