@@ -123,12 +123,12 @@ export const menuItems = [
     icon: <BookOpen size={18} />,
     roles: ['administrador', 'docente'],
   },
-  {
-    to: '/tutorias',
-    label: 'Tutorías',
-    icon: <UserCheck size={18} />,
-    roles: ['administrador', 'docente'],
-  },
+  // {
+  //   to: '/tutorias',
+  //   label: 'Tutorías',
+  //   icon: <UserCheck size={18} />,
+  //   roles: ['administrador', 'docente'],
+  // },
   {
     to: '/incidencias',
     label: 'Incidencias',
