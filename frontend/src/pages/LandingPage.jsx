@@ -295,7 +295,7 @@ export default function LandingPage() {
             </a>
 
             <a
-              href="https://mail.google.com/mail/?view=cm&fs=1&to=contacto.dirpla01@cecytab.edu.mx&su=Consulta+sobre+Inscripciones+y+Fichas"
+              href="https://mail.google.com/mail/?view=cm&fs=1&to=dirpla01@cecytab.edu.mx&su=Consulta+sobre+Inscripciones+y+Fichas"
               target="_blank"
               rel="noopener noreferrer"
               className={styles.socialBtn}
