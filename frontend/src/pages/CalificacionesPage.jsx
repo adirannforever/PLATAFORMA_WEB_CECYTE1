@@ -1,10 +1,10 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { 
-  calificacionesService, 
-  gruposService, 
-  catalogosService 
+import {
+  calificacionesService,
+  gruposService,
+  catalogosService,
 } from '../services/api';
 import Skeleton from '../components/Skeleton';
 import styles from './CalificacionesPage.module.css';
@@ -53,8 +53,8 @@ export default function CalificacionesPage() {
   const esAdmin = usuario.rol === 'administrador';
   const esDocente = usuario.rol === 'docente';
 
-  // ===== TODOS LOS HOOKS AQUÍ (SIEMPRE SE EJECUTAN) =====
-  
+  // ===== TODOS LOS HOOKS (SIEMPRE AL NIVEL SUPERIOR) =====
+
   // Estados generales
   const [datos, setDatos] = useState([]);
   const [periodos, setPeriodos] = useState([]);
@@ -63,7 +63,7 @@ export default function CalificacionesPage() {
   const [exito, setExito] = useState('');
   const [toast, setToast] = useState('');
 
-  // Selector de grupos
+  // Selector de grupos (para admin/docente)
   const [grupos, setGrupos] = useState([]);
   const [cargandoGrupos, setCargandoGrupos] = useState(false);
   const [filtros, setFiltros] = useState({
@@ -78,10 +78,10 @@ export default function CalificacionesPage() {
   const [cargandoMaterias, setCargandoMaterias] = useState(false);
   const [materiaExpandida, setMateriaExpandida] = useState(null);
 
-  // Búsqueda en tabla de calificaciones
+  // Búsqueda en tabla de calificaciones (para admin/docente)
   const [busquedaAlumno, setBusquedaAlumno] = useState('');
 
-  // Edición de calificaciones
+  // Edición de calificaciones (para admin/docente)
   const [editando, setEditando] = useState(null);
   const [registrando, setRegistrando] = useState(null);
   const [valorNuevo, setValorNuevo] = useState('');
@@ -93,8 +93,7 @@ export default function CalificacionesPage() {
   const [guardandoColumna, setGuardandoColumna] = useState(false);
   const [camposVacios, setCamposVacios] = useState({});
 
-  // ===== useMemo para alumnosList (SIEMPRE se ejecuta) =====
-  // Construir lista de alumnos a partir de datos
+  // ===== useMemo para alumnosList (para admin/docente) =====
   const porAlumno = useMemo(() => {
     const mapa = {};
     datos.forEach(row => {
@@ -118,7 +117,6 @@ export default function CalificacionesPage() {
     return mapa;
   }, [datos]);
 
-  // Filtro de alumnos por búsqueda (SIEMPRE se ejecuta)
   const alumnosList = useMemo(() => {
     const lista = Object.values(porAlumno);
     if (!busquedaAlumno.trim()) return lista.sort((a, b) => a.nombre.localeCompare(b.nombre));
@@ -132,7 +130,8 @@ export default function CalificacionesPage() {
   }, [porAlumno, busquedaAlumno]);
 
   // ===== EFECTOS =====
-  // Cargar ciclos (solo si estamos en lista de grupos)
+
+  // Cargar ciclos (solo para admin/docente en vista de lista)
   useEffect(() => {
     if (esAlumno || materia_grupo_id || grupo_id) return;
     const cargarCiclos = async () => {
@@ -151,7 +150,7 @@ export default function CalificacionesPage() {
     cargarCiclos();
   }, [esAlumno, materia_grupo_id, grupo_id]);
 
-  // Cargar grupos con filtros (solo si estamos en lista)
+  // Cargar grupos con filtros (solo para admin/docente en vista de lista)
   const cargarGrupos = useCallback(async () => {
     if (esAlumno || materia_grupo_id || grupo_id) return;
     setCargandoGrupos(true);
@@ -177,7 +176,7 @@ export default function CalificacionesPage() {
     cargarGrupos();
   }, [cargarGrupos, esAlumno, materia_grupo_id, grupo_id]);
 
-  // Cargar materias del grupo cuando hay grupo_id
+  // Cargar materias del grupo (para vista de detalle de grupo)
   useEffect(() => {
     if (!grupo_id) return;
     const cargarMaterias = async () => {
@@ -197,7 +196,7 @@ export default function CalificacionesPage() {
     cargarMaterias();
   }, [grupo_id]);
 
-  // Cargar calificaciones cuando hay materia_grupo_id
+  // Cargar calificaciones (para admin/docente en vista de materia)
   const cargarCalificaciones = useCallback(async () => {
     if (!materia_grupo_id) return;
     setCargando(true);
@@ -225,7 +224,7 @@ export default function CalificacionesPage() {
     }
   }, [materia_grupo_id]);
 
-  // Cargar mis calificaciones (alumno)
+  // Cargar calificaciones del alumno
   const cargarMisCalificaciones = useCallback(async () => {
     setCargando(true);
     try {
@@ -240,6 +239,7 @@ export default function CalificacionesPage() {
     }
   }, []);
 
+  // Efecto principal para alumno
   useEffect(() => {
     if (esAlumno) {
       cargarMisCalificaciones();
@@ -249,9 +249,9 @@ export default function CalificacionesPage() {
       cargarCalificaciones();
       cargarPeriodos();
     }
-  }, [materia_grupo_id, esAlumno, cargarCalificaciones, cargarPeriodos, cargarMisCalificaciones]);
+  }, [esAlumno, materia_grupo_id, cargarMisCalificaciones, cargarCalificaciones, cargarPeriodos]);
 
-  // ===== HANDLERS =====
+  // ===== HANDLERS (compartidos) =====
   const handleFiltroChange = (e) => {
     const { name, value } = e.target;
     setFiltros(prev => ({ ...prev, [name]: value }));
@@ -282,7 +282,7 @@ export default function CalificacionesPage() {
     setMateriaExpandida(materiaExpandida === id ? null : id);
   };
 
-  // ===== LÓGICA DE EDICIÓN DE CALIFICACIONES =====
+  // ===== LÓGICA DE EDICIÓN (para admin/docente) =====
   const isParcialEditable = (parcial) => {
     if (esAlumno) return false;
     if (esAdmin) return true;
@@ -412,7 +412,7 @@ export default function CalificacionesPage() {
   const guardarColumna = async () => {
     const vacios = [];
     const errores = [];
-    
+
     for (const alumno of alumnosList) {
       const val = calificacionesTemp[alumno.alumno_id]?.trim();
       if (!val) {
@@ -425,12 +425,12 @@ export default function CalificacionesPage() {
         }
       }
     }
-    
+
     if (vacios.length > 0) {
       setError(` Faltan calificaciones para: ${vacios.join(', ')}`);
       return;
     }
-    
+
     if (errores.length > 0) {
       setError(` Errores: ${errores.join('; ')}`);
       return;
@@ -479,16 +479,53 @@ export default function CalificacionesPage() {
 
   const parcialesEditables = PARCIALES.filter(p => esAdmin || isParcialEditable(p));
 
+  // ============================================================
   // ===== RENDERIZADO CONDICIONAL (DESPUÉS DE TODOS LOS HOOKS) =====
+  // ============================================================
 
-  // 1. Vista de alumno
+  // 1. VISTA DE ALUMNO (TABLA CON PROMEDIOS)
   if (esAlumno) {
-    const porMateria = datos.reduce((acc, c) => {
-      const key = c.materia;
-      if (!acc[key]) acc[key] = { materia: c.materia, ciclo: c.ciclo_escolar, parciales: {} };
-      acc[key].parciales[c.parcial] = c.calificacion;
-      return acc;
-    }, {});
+    // Obtener información del grupo y ciclo desde el primer elemento de datos
+    const primeraMateria = datos.length > 0 ? datos[0] : null;
+    const grupoInfo = primeraMateria
+      ? { grupo: primeraMateria.grupo, ciclo: primeraMateria.ciclo, semestre: primeraMateria.semestre }
+      : { grupo: 'Sin grupo', ciclo: 'Sin ciclo', semestre: '' };
+
+    // Procesar materias y calcular promedios (convirtiendo a número)
+    const materiasConPromedio = datos.map(m => {
+      // Convertir cada parcial a número, si es null/undefined queda null
+      const p1 = m.parciales[1] !== null && m.parciales[1] !== undefined ? parseFloat(m.parciales[1]) : null;
+      const p2 = m.parciales[2] !== null && m.parciales[2] !== undefined ? parseFloat(m.parciales[2]) : null;
+      const p3 = m.parciales[3] !== null && m.parciales[3] !== undefined ? parseFloat(m.parciales[3]) : null;
+
+      const valores = [p1, p2, p3].filter(v => v !== null && !isNaN(v));
+      const promedio = valores.length > 0
+        ? Math.round((valores.reduce((a, b) => a + b, 0) / valores.length) * 10) / 10
+        : null;
+
+      return {
+        ...m,
+        parciales: { 1: p1, 2: p2, 3: p3 },
+        promedio,
+      };
+    });
+
+    // Calcular promedios por parcial y promedio de promedios
+    const totalMaterias = materiasConPromedio.length;
+    let sumP1 = 0, sumP2 = 0, sumP3 = 0, countP1 = 0, countP2 = 0, countP3 = 0;
+    let sumPromedios = 0, countPromedios = 0;
+
+    materiasConPromedio.forEach(m => {
+      if (m.parciales[1] !== null) { sumP1 += m.parciales[1]; countP1++; }
+      if (m.parciales[2] !== null) { sumP2 += m.parciales[2]; countP2++; }
+      if (m.parciales[3] !== null) { sumP3 += m.parciales[3]; countP3++; }
+      if (m.promedio !== null) { sumPromedios += m.promedio; countPromedios++; }
+    });
+
+    const promedioParcial1 = countP1 > 0 ? Math.round((sumP1 / countP1) * 10) / 10 : null;
+    const promedioParcial2 = countP2 > 0 ? Math.round((sumP2 / countP2) * 10) / 10 : null;
+    const promedioParcial3 = countP3 > 0 ? Math.round((sumP3 / countP3) * 10) / 10 : null;
+    const promedioGeneral = countPromedios > 0 ? Math.round((sumPromedios / countPromedios) * 10) / 10 : null;
 
     return (
       <div className={styles.page}>
@@ -496,66 +533,106 @@ export default function CalificacionesPage() {
           <button className={styles.btnVolver} onClick={() => navigate(-1)}>← Volver</button>
           <div>
             <h1 className={styles.title}>Mis Calificaciones</h1>
-            <p className={styles.subtitle}>Ciclo escolar actual</p>
+            <p className={styles.subtitle}>
+              {grupoInfo.grupo !== 'Sin grupo' ? `Grupo ${grupoInfo.grupo}` : 'Sin grupo'} · 
+              {grupoInfo.semestre ? ` Semestre ${grupoInfo.semestre}°` : ' Sin semestre'} · 
+              {grupoInfo.ciclo || 'Sin ciclo'}
+            </p>
           </div>
         </div>
+
+        {error && <div className={styles.errorMsg}>{error}</div>}
+        {exito && <div className={styles.successMsg}>{exito}</div>}
+
         {cargando ? (
           <div className={styles.skeletonContainer}>
-            {[1, 2].map(n => (
-              <div key={n} className={styles.card}>
-                <div className={styles.cardHead}>
-                  <Skeleton width="200px" height="22px" variant="text" />
-                  <Skeleton width="100px" height="16px" variant="text" />
-                </div>
-                <div className={styles.parcialesRow}>
-                  {[1, 2, 3, 4].map(p => (
-                    <div key={p} className={styles.parcialBox}>
-                      <Skeleton width="50px" height="12px" variant="text" />
-                      <Skeleton width="30px" height="22px" variant="text" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : Object.keys(porMateria).length === 0 ? (
-          <div className={styles.empty}>Aún no tienes calificaciones registradas.</div>
-        ) : (
-          Object.values(porMateria).map(m => (
-            <div key={m.materia} className={styles.card}>
+            <div className={styles.card}>
               <div className={styles.cardHead}>
-                <h2 className={styles.cardTitle}>{m.materia}</h2>
-                <span className={styles.ciclo}>{m.ciclo}</span>
+                <Skeleton width="200px" height="22px" variant="text" />
+                <Skeleton width="100px" height="16px" variant="text" />
               </div>
               <div className={styles.parcialesRow}>
-                {PARCIALES.map(p => {
-                  const cal = m.parciales[p];
-                  return (
-                    <div key={p} className={styles.parcialBox}>
-                      <span className={styles.parcialLabel}>Parcial {p}</span>
-                      <span className={styles.parcialValor} style={{ color: cal != null ? COLOR_CALIF(cal) : '#94a3b8' }}>
-                        {cal != null ? cal : '—'}
-                      </span>
-                    </div>
-                  );
-                })}
-                <div className={styles.parcialBox}>
-                  <span className={styles.parcialLabel}>Promedio</span>
-                  <span className={styles.parcialValor} style={{ color: '#1A6B35' }}>
-                    {Object.values(m.parciales).length > 0
-                      ? (Object.values(m.parciales).reduce((a, b) => a + parseFloat(b), 0) / Object.values(m.parciales).length).toFixed(1)
-                      : '—'}
-                  </span>
-                </div>
+                {[1, 2, 3, 4].map(p => (
+                  <div key={p} className={styles.parcialBox}>
+                    <Skeleton width="50px" height="12px" variant="text" />
+                    <Skeleton width="30px" height="22px" variant="text" />
+                  </div>
+                ))}
               </div>
             </div>
-          ))
+          </div>
+        ) : datos.length === 0 ? (
+          <div className={styles.empty}>
+            <p>No estás cursando materias en este momento.</p>
+            <p className={styles.emptySub}>Contacta a la Coordinación Académica si crees que esto es un error.</p>
+          </div>
+        ) : (
+          <div className={styles.tableWrapper}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th className={styles.th}>Materia</th>
+                  <th className={styles.th}>Parcial 1</th>
+                  <th className={styles.th}>Parcial 2</th>
+                  <th className={styles.th}>Parcial 3</th>
+                  <th className={styles.th}>Promedio</th>
+                </tr>
+              </thead>
+              <tbody>
+                {materiasConPromedio.map((m, idx) => (
+                  <tr key={idx} className={styles.tr}>
+                    <td className={styles.td}>{m.materia}</td>
+                    {[1, 2, 3].map(p => {
+                      const cal = m.parciales[p];
+                      return (
+                        <td key={p} className={styles.td} style={{ textAlign: 'center' }}>
+                          {cal !== null && !isNaN(cal) ? (
+                            <span style={{ color: COLOR_CALIF(cal), fontWeight: 700 }}>
+                              {cal}
+                            </span>
+                          ) : (
+                            <span style={{ color: '#94a3b8' }}>—</span>
+                          )}
+                        </td>
+                      );
+                    })}
+                    <td className={styles.td} style={{ textAlign: 'center', fontWeight: 700 }}>
+                      {m.promedio !== null && !isNaN(m.promedio) ? (
+                        <span style={{ color: COLOR_CALIF(m.promedio) }}>
+                          {m.promedio.toFixed(1)}
+                        </span>
+                      ) : (
+                        <span style={{ color: '#94a3b8' }}>—</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+
+                {/* FILA DE PROMEDIOS POR PARCIAL Y PROMEDIO GENERAL */}
+                <tr className={styles.tr} style={{ background: '#e6f0ea', fontWeight: 'bold' }}>
+                  <td className={styles.td} style={{ fontWeight: 700, color: '#1A6B35' }}>Promedio</td>
+                  <td className={styles.td} style={{ textAlign: 'center' }}>
+                    {promedioParcial1 !== null ? promedioParcial1 : '—'}
+                  </td>
+                  <td className={styles.td} style={{ textAlign: 'center' }}>
+                    {promedioParcial2 !== null ? promedioParcial2 : '—'}
+                  </td>
+                  <td className={styles.td} style={{ textAlign: 'center' }}>
+                    {promedioParcial3 !== null ? promedioParcial3 : '—'}
+                  </td>
+                  <td className={styles.td} style={{ textAlign: 'center', fontWeight: 700, color: '#1A6B35' }}>
+                    {promedioGeneral !== null ? promedioGeneral : '—'}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     );
   }
 
-  // 2. Vista de detalle de grupo (materias)
+  // 2. VISTA DE DETALLE DE GRUPO (materias)
   if (grupo_id) {
     return (
       <div className={styles.page}>
@@ -573,7 +650,7 @@ export default function CalificacionesPage() {
 
         {cargandoMaterias ? (
           <div className={styles.skeletonContainer}>
-            {[1,2,3].map(n => (
+            {[1, 2, 3].map(n => (
               <div key={n} className={styles.card} style={{ padding: '1rem' }}>
                 <Skeleton width="200px" height="20px" variant="text" />
               </div>
@@ -613,7 +690,7 @@ export default function CalificacionesPage() {
     );
   }
 
-  // 3. Vista de detalle de calificaciones de una materia
+  // 3. VISTA DE DETALLE DE CALIFICACIONES DE UNA MATERIA (admin/docente)
   if (materia_grupo_id) {
     return (
       <div className={styles.page}>
@@ -624,8 +701,8 @@ export default function CalificacionesPage() {
           <div>
             <h1 className={styles.title}>Calificaciones</h1>
             <p className={styles.subtitle}>
-              {modoColumna 
-                ? `️ Editando Parcial ${parcialSeleccionado} (todos los alumnos)` 
+              {modoColumna
+                ? `️ Editando Parcial ${parcialSeleccionado} (todos los alumnos)`
                 : 'Haz clic en una celda o en el ️ del encabezado para edición masiva'}
             </p>
           </div>
@@ -699,7 +776,7 @@ export default function CalificacionesPage() {
                     <th key={p} className={styles.th}>
                       Parcial {p}
                       {!modoColumna && parcialesEditables.includes(p) && (
-                        <button 
+                        <button
                           className={styles.btnEditarColumna}
                           onClick={() => activarModoColumna(p)}
                           title={`Editar Parcial ${p} para todos los alumnos`}
@@ -713,7 +790,7 @@ export default function CalificacionesPage() {
                 </tr>
               </thead>
               <tbody>
-                {[1,2,3,4].map(row => (
+                {[1, 2, 3, 4].map(row => (
                   <tr key={row} className={styles.tr}>
                     <td className={styles.tdNombre}><Skeleton width="180px" height="18px" variant="text" /></td>
                     {PARCIALES.map(p => (
@@ -739,7 +816,7 @@ export default function CalificacionesPage() {
                     <th key={p} className={styles.th}>
                       Parcial {p}
                       {!modoColumna && parcialesEditables.includes(p) && (
-                        <button 
+                        <button
                           className={styles.btnEditarColumna}
                           onClick={() => activarModoColumna(p)}
                           title={`Editar Parcial ${p} para todos los alumnos`}
@@ -754,8 +831,10 @@ export default function CalificacionesPage() {
               </thead>
               <tbody>
                 {alumnosList.map(alumno => {
-                  const vals = Object.values(alumno.calificaciones).map(c => parseFloat(c.valor));
-                  const prom = vals.length > 0 ? vals.reduce((x,y) => x+y,0)/vals.length : null;
+                  const vals = Object.values(alumno.calificaciones)
+                    .map(c => parseFloat(c.valor))
+                    .filter(v => !isNaN(v));
+                  const prom = vals.length > 0 ? vals.reduce((x, y) => x + y, 0) / vals.length : null;
                   return (
                     <tr key={alumno.alumno_id} className={styles.tr}>
                       <td className={styles.tdNombre}>
@@ -791,9 +870,9 @@ export default function CalificacionesPage() {
                                 handleClicCelda(alumno.alumno_id, p, cal);
                               }
                             }}
-                            style={{ 
+                            style={{
                               cursor: clickeable ? 'pointer' : 'default',
-                              opacity: clickeable ? 1 : 0.6
+                              opacity: clickeable ? 1 : 0.6,
                             }}
                           >
                             <span className={styles.calCell} style={{ color: cal ? COLOR_CALIF(cal.valor) : '#94a3b8' }}>
@@ -818,7 +897,7 @@ export default function CalificacionesPage() {
     );
   }
 
-  // 4. Vista principal: selector de grupos
+  // 4. VISTA PRINCIPAL: SELECCIONAR GRUPO (admin/docente)
   return (
     <div className={styles.page}>
       <div className={styles.pageHeader}>
@@ -858,7 +937,7 @@ export default function CalificacionesPage() {
               onChange={handleFiltroChange}
             >
               <option value="">Todos</option>
-              {[1,2,3,4,5,6].map(s => (
+              {[1, 2, 3, 4, 5, 6].map(s => (
                 <option key={s} value={s}>{s}°</option>
               ))}
             </select>

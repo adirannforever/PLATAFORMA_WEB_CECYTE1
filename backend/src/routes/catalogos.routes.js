@@ -14,6 +14,7 @@ import {
   getCatalogoDocumentos,
   getDocentes,
   getAlumnos,
+  getAlumnoByUsuario,
 } from '../controllers/catalogos.controller.js';
 
 const router = Router();
@@ -33,5 +34,6 @@ router.get('/conceptos-pago',   requireRole('administrador'), getConceptosPago);
 router.get('/documentos',       requireRole('administrador'), getCatalogoDocumentos);
 router.get('/docentes',         requireRole('administrador', 'docente'), getDocentes);
 router.get('/alumnos',          requireRole('administrador', 'docente'), getAlumnos);
+router.get('/alumno/:usuarioId', getAlumnoByUsuario);
 
 export default router;

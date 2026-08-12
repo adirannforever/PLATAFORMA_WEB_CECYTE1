@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom'; 
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { comunicadosService, calificacionesService, catalogosService } from '../services/api';
+import { comunicadosService, calificacionesService, catalogosService, gruposService } from '../services/api';
 import styles from './DashboardPage.module.css';
 
 const SALUDO = () => {
@@ -13,38 +13,51 @@ const SALUDO = () => {
 
 export default function DashboardPage() {
   const { usuario } = useAuth();
-  const location = useLocation(); 
+  const location = useLocation();
   const [comunicados, setComunicados] = useState([]);
   const [stats, setStats] = useState({});
   const [cargando, setCargando] = useState(true);
 
-  
   const cargar = async () => {
     if (!usuario?.rol) return;
-    
+
     try {
+      // Comunicados (común para todos)
       const comRes = await comunicadosService.getAll();
       const listaComunicados = comRes?.data || [];
       setComunicados(listaComunicados.slice(0, 3));
 
+      // Estadísticas según rol
       if (usuario.rol === 'administrador') {
-        const [alumnos, docentes, materias] = await Promise.all([
+        const [alumnosRes, docentesRes, materiasRes, gruposRes] = await Promise.all([
           catalogosService.getAlumnos(),
           catalogosService.getDocentes(),
           catalogosService.getMaterias(),
+          catalogosService.getGrupos(),
         ]);
         setStats({
-          alumnos: alumnos?.data?.length ?? 0,
-          docentes: docentes?.data?.length ?? 0,
-          materias: materias?.data?.length ?? 0,
+          alumnos: alumnosRes?.data?.length ?? 0,
+          docentes: docentesRes?.data?.length ?? 0,
+          materias: materiasRes?.data?.length ?? 0,
+          grupos: gruposRes?.data?.length ?? 0,
           comunicados: listaComunicados.length,
         });
       } else if (usuario.rol === 'docente') {
-        const materias = await catalogosService.getMaterias();
-        setStats({ materias: materias?.data?.length ?? 0 });
+        // Obtener materias asignadas al docente
+        const materiasRes = await gruposService.getMateriasByDocente(usuario.id);
+        const materias = materiasRes?.materias || [];
+        setStats({
+          materias: materias.length,
+          grupos: new Set(materias.map(m => m.grupo_id)).size, // grupos distintos
+        });
       } else if (usuario.rol === 'alumno') {
-        const califs = await calificacionesService.misCalificaciones();
-        setStats({ calificaciones: califs?.data?.calificaciones?.length ?? 0 });
+        // Obtener calificaciones y materias del alumno
+        const califsRes = await calificacionesService.misCalificaciones();
+        const calificaciones = califsRes?.calificaciones || [];
+        setStats({
+          calificaciones: calificaciones.length,
+          materias: calificaciones.length, // cada materia tiene al menos una calificación
+        });
       }
     } catch (err) {
       console.error('Error al cargar datos del Dashboard:', err);
@@ -53,11 +66,9 @@ export default function DashboardPage() {
     }
   };
 
-  
   useEffect(() => {
     cargar();
 
-    
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         cargar();
@@ -68,17 +79,12 @@ export default function DashboardPage() {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [usuario?.rol, location.pathname]); 
+  }, [usuario?.rol, location.pathname]);
 
-  
-  
-
-  
   if (!usuario) {
     return <div className={styles.loading}>Verificando sesión...</div>;
   }
 
-  
   if (cargando) {
     return (
       <div className={styles.page}>
@@ -136,22 +142,24 @@ export default function DashboardPage() {
         <div className={styles.statsGrid}>
           <StatCard label="Alumnos registrados" value={stats.alumnos} to="/usuarios" color="green" />
           <StatCard label="Docentes activos" value={stats.docentes} to="/usuarios" color="blue" />
-          <StatCard label="Materias" value={stats.materias} to="/materias" color="gold" />
-          <StatCard label="Comunicados" value={stats.comunicados} to="/comunicados" color="gray" />
+          <StatCard label="Materias" value={stats.materias} to="/configuracion-academica" color="gold" />
+          <StatCard label="Grupos" value={stats.grupos} to="/grupos" color="gray" />
+          <StatCard label="Comunicados" value={stats.comunicados} to="/comunicados" color="purple" />
         </div>
       )}
 
       {usuario.rol === 'docente' && (
         <div className={styles.statsGrid}>
-          <StatCard label="MATERIAS ASIGNADAS" value={stats.materias} to="/materias" color="green" />
+          <StatCard label="Materias asignadas" value={stats.materias} to="/calificaciones" color="green" />
+          <StatCard label="Grupos asignados" value={stats.grupos} to="/grupos" color="blue" />
         </div>
       )}
 
       {usuario.rol === 'alumno' && (
         <div className={styles.statsGrid}>
-          <StatCard label="CALIFICACIONES REGISTRADAS" value={stats.calificaciones} to="/mis-calificaciones" color="green" />
-          {/* Acceso directo al expediente personal del alumno usando su id */}
-          <StatCard label="MI EXPEDIENTE ESCOLAR" value="Ver" to={`/expediente/${usuario.id}`} color="blue" />
+          <StatCard label="Materias cursando" value={stats.materias} to="/mis-calificaciones" color="green" />
+          <StatCard label="Calificaciones registradas" value={stats.calificaciones} to="/mis-calificaciones" color="blue" />
+          <StatCard label="Mi Expediente" value="Ver" to={`/expediente/${usuario.id}`} color="gold" />
         </div>
       )}
 
@@ -179,9 +187,11 @@ export default function DashboardPage() {
                       {textoContenido.length > 120 ? textoContenido.slice(0, 120) + '...' : textoContenido}
                     </p>
                     <span className={styles.comunicadoMeta}>
-                      {!isNaN(fechaSegura) 
+                      {!isNaN(fechaSegura)
                         ? fechaSegura.toLocaleDateString('es-MX', {
-                            day: 'numeric', month: 'long', year: 'numeric'
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric',
                           })
                         : 'Fecha no disponible'}{' '}
                       · {c.autor_nombre || ''} {c.autor_apellidos || ''}
@@ -200,9 +210,10 @@ export default function DashboardPage() {
 function StatCard({ label, value, to, color }) {
   const colorMap = {
     green: { bg: 'var(--color-primary-muted)', accent: 'var(--color-primary)' },
-    blue:  { bg: 'var(--color-info-light)',     accent: 'var(--color-info)' },
-    gold:  { bg: 'var(--color-accent-light)',   accent: 'var(--color-accent)' },
-    gray:  { bg: 'var(--color-gray-100)',       accent: 'var(--color-gray-600)' },
+    blue: { bg: 'var(--color-info-light)', accent: 'var(--color-info)' },
+    gold: { bg: 'var(--color-accent-light)', accent: 'var(--color-accent)' },
+    gray: { bg: 'var(--color-gray-100)', accent: 'var(--color-gray-600)' },
+    purple: { bg: 'var(--color-purple-light)', accent: 'var(--color-purple)' },
   };
   const c = colorMap[color] || colorMap.green;
 

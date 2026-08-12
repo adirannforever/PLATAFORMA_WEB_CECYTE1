@@ -305,19 +305,23 @@ export default function HorariosPage() {
       setCargandoUsuario(true);
       setErrorUsuario('');
       try {
-        const params = {};
+        let params = {};
+        
         if (isDocente) {
           params.docente_id = usuario.id;
         } else if (isAlumno) {
-          const grupoId = usuario.grupo_actual_id;
-          if (grupoId) {
-            params.grupo_id = grupoId;
+          // Obtener el grupo actual del alumno desde el backend
+          const res = await catalogosService.getAlumnoByUsuario(usuario.id);
+          const alumnoData = res.data;
+          if (alumnoData && alumnoData.grupo_id) {
+            params.grupo_id = alumnoData.grupo_id;
           } else {
             setErrorUsuario('No tienes un grupo asignado');
             setCargandoUsuario(false);
             return;
           }
         }
+        
         const res = await horariosService.listarHorarios(params);
         if (res.success) {
           setHorariosUsuario(res.data || []);
@@ -332,7 +336,7 @@ export default function HorariosPage() {
       }
     };
     cargarHorariosUsuario();
-  }, [isAdmin, isDocente, isAlumno, usuario]);
+  }, [isAdmin, isDocente, isAlumno, usuario.id]);
 
   // ===== HANDLERS (solo admin) =====
   const abrirModalUpload = () => {

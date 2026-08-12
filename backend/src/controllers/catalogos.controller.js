@@ -262,3 +262,40 @@ export const actualizarEspecialidad = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Error interno' });
   }
 };
+export const getAlumnoByUsuario = async (req, res) => {
+  try {
+    const { usuarioId } = req.params;
+    // Verificar que el usuario autenticado sea el mismo o admin
+    if (req.user.rol !== 'administrador' && req.user.id !== parseInt(usuarioId)) {
+      return res.status(403).json({ success: false, message: 'Acceso denegado' });
+    }
+
+    const result = await query(
+      `SELECT 
+        a.id AS alumno_id,
+        a.matricula,
+        a.semestre_actual,
+        a.estatus,
+        g.id AS grupo_id,
+        g.nombre AS grupo_nombre,
+        g.letra AS grupo_letra,
+        c.nombre AS ciclo_nombre,
+        e.nombre AS especialidad_nombre
+       FROM alumnos a
+       LEFT JOIN grupos g ON g.id = a.grupo_actual_id
+       LEFT JOIN ciclos_escolares c ON c.id = g.ciclo_id
+       LEFT JOIN especialidades e ON e.id = a.especialidad_id
+       WHERE a.usuario_id = $1`,
+      [usuarioId]
+    );
+
+    if (!result.rows[0]) {
+      return res.status(404).json({ success: false, message: 'Alumno no encontrado' });
+    }
+
+    return res.json({ success: true, data: result.rows[0] });
+  } catch (err) {
+    console.error('Error en getAlumnoByUsuario:', err);
+    return res.status(500).json({ success: false, message: 'Error interno del servidor' });
+  }
+};

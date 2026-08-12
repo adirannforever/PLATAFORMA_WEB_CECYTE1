@@ -12,28 +12,22 @@ import {
   solicitarDescarga,
   eliminarHorario,
 } from '../controllers/horarios.controller.js';
-
+ 
 const router = Router();
-
 router.use(verifyToken);
-router.use(requireRole('administrador'));
 
-// Configuración
-router.get('/configuracion', getConfiguracion);
-router.put('/configuracion', actualizarConfiguracion);
-
-// Semestre actual
+// Rutas públicas (autenticado)
+router.get('/listar', listarHorarios);
+router.post('/download/solicitar', solicitarDescarga);
 router.get('/semestre-actual', getSemestreActual);
 
-// Listar y contar
-router.get('/listar', listarHorarios);
-router.get('/contar-faltantes', contarHorariosFaltantes);
-
-// Subida y gestión
-router.post('/upload/solicitar', solicitarUploadHorario);
-router.post('/upload/batch', uploadMultipleHorarios);
-router.put('/:id', actualizarHorario);
-router.post('/download/solicitar', solicitarDescarga);
-router.delete('/:id', eliminarHorario);
+// Rutas de administrador
+router.post('/upload/solicitar', requireRole('administrador'), solicitarUploadHorario);
+router.put('/:id', requireRole('administrador'), actualizarHorario);
+router.delete('/:id', requireRole('administrador'), eliminarHorario);
+router.post('/upload/batch', requireRole('administrador'), uploadMultipleHorarios);
+router.get('/contar-faltantes', requireRole('administrador'), contarHorariosFaltantes);
+router.get('/configuracion', requireRole('administrador'), getConfiguracion);
+router.put('/configuracion', requireRole('administrador'), actualizarConfiguracion);
 
 export default router;

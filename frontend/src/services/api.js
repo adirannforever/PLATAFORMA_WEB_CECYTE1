@@ -290,6 +290,10 @@ export const catalogosService = {
     const response = await api.get('/catalogos/materias-grupo', { params: { grupo_id: grupoId } });
     return response.data;
   },
+  getAlumnoByUsuario: async (usuarioId) => {
+    const response = await api.get(`/catalogos/alumno/${usuarioId}`);
+    return response.data;
+},
 };
 
 

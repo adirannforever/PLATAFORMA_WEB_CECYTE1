@@ -12,29 +12,92 @@ const docenteOwnsMateriaGrupo = async (materia_grupo_id, docente_id) => {
 // Obtener las calificaciones del alumno autenticado
 export const misCalificaciones = async (req, res) => {
   try {
-    const alumno = await query('SELECT id FROM alumnos WHERE usuario_id = $1', [req.user.id]);
-    if (!alumno.rows[0]) {
-      return res.status(404).json({ success: false, message: 'Alumno no encontrado.' });
-    }
-    const alumnoId = alumno.rows[0].id;
+    const userId = req.user.id;
 
-    const result = await query(
-      `SELECT mc.nombre AS materia, ce.nombre AS ciclo_escolar,
-              c.parcial, c.calificacion, c.fecha_registro,
-              mg.id AS materia_grupo_id
-       FROM calificaciones c
-       JOIN materias_grupo mg ON mg.id = c.materia_grupo_id
-       JOIN materias_catalogo mc ON mc.id = mg.materia_catalogo_id
-       JOIN ciclos_escolares ce ON ce.id = mg.ciclo_id
-       WHERE c.alumno_id = $1
-       ORDER BY mc.nombre, c.parcial`,
-      [alumnoId]
+    // Obtener el alumno y su grupo actual
+    const alumnoResult = await query(
+      `SELECT a.id AS alumno_id, a.grupo_actual_id, a.semestre_actual
+       FROM alumnos a
+       WHERE a.usuario_id = $1`,
+      [userId]
     );
 
-    return res.json({ success: true, calificaciones: result.rows });
-  } catch (err) {
-    console.error('Error en misCalificaciones:', err);
-    return res.status(500).json({ success: false, message: 'Error interno.' });
+    if (alumnoResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Alumno no encontrado' });
+    }
+
+    const { alumno_id, grupo_actual_id, semestre_actual } = alumnoResult.rows[0];
+
+    if (!grupo_actual_id) {
+      return res.status(400).json({ success: false, message: 'El alumno no tiene un grupo asignado' });
+    }
+
+    // Obtener todas las materias del grupo
+    const materiasResult = await query(
+      `SELECT 
+         mg.id AS materia_grupo_id,
+         mc.nombre AS materia_nombre,
+         mc.clave,
+         mc.semestre,
+         g.nombre AS grupo_nombre,
+         g.letra AS grupo_letra,
+         c.nombre AS ciclo_nombre
+       FROM materias_grupo mg
+       JOIN materias_catalogo mc ON mc.id = mg.materia_catalogo_id
+       JOIN grupos g ON g.id = mg.grupo_id
+       JOIN ciclos_escolares c ON c.id = mg.ciclo_id
+       WHERE mg.grupo_id = $1 AND mg.activa = true`,
+      [grupo_actual_id]
+    );
+
+    const materias = materiasResult.rows;
+
+    if (materias.length === 0) {
+      return res.json({ success: true, calificaciones: [], materias: [] });
+    }
+
+    // Obtener calificaciones del alumno en esas materias
+    const califResult = await query(
+      `SELECT 
+         c.materia_grupo_id,
+         c.parcial,
+         c.calificacion,
+         c.tipo_evaluacion
+       FROM calificaciones c
+       WHERE c.alumno_id = $1 AND c.tipo_evaluacion = 'ordinaria'`,
+      [alumno_id]
+    );
+
+    // Mapear calificaciones por materia_grupo_id
+    const califMap = {};
+    califResult.rows.forEach(row => {
+      if (!califMap[row.materia_grupo_id]) {
+        califMap[row.materia_grupo_id] = {};
+      }
+      califMap[row.materia_grupo_id][row.parcial] = row.calificacion;
+    });
+
+    // Construir respuesta con todas las materias y sus calificaciones (o null)
+    const resultado = materias.map(m => {
+      const califs = califMap[m.materia_grupo_id] || {};
+      return {
+        materia: m.materia_nombre,
+        clave: m.clave,
+        semestre: m.semestre,
+        grupo: `${m.grupo_nombre} (${m.grupo_letra})`,
+        ciclo: m.ciclo_nombre,
+        parciales: {
+          1: califs[1] || null,
+          2: califs[2] || null,
+          3: califs[3] || null,
+        }
+      };
+    });
+
+    res.json({ success: true, calificaciones: resultado });
+  } catch (error) {
+    console.error('Error en misCalificaciones:', error);
+    res.status(500).json({ success: false, message: 'Error al obtener calificaciones' });
   }
 };
 

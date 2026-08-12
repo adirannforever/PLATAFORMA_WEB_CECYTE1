@@ -402,7 +402,7 @@ export default function GruposPage() {
                             className={styles.btnVerCalif}
                             onClick={(e) => {
                               e.stopPropagation();
-                              navigate(`/calificaciones/${m.id}`);
+                              navigate(`/calificaciones/materia/${m.id}`);
                             }}
                           >
                             Ver calificaciones →

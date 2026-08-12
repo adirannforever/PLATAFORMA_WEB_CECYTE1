@@ -2,8 +2,9 @@ import { query } from '../config/db.js';
 import { generateUploadUrl, generateDownloadUrl } from '../services/s3.service.js';
 
 // ============================================================
-// CONFIGURACIÓN GLOBAL
+// CONFIGURACIÓN (solo admin)
 // ============================================================
+
 export const getConfiguracion = async (req, res) => {
   try {
     const result = await query(
@@ -31,6 +32,10 @@ export const getConfiguracion = async (req, res) => {
 
 export const actualizarConfiguracion = async (req, res) => {
   try {
+    if (req.user.rol !== 'administrador') {
+      return res.status(403).json({ success: false, message: 'Acceso denegado' });
+    }
+
     const {
       duracion_bloque_minutos,
       hora_inicio_turno,
@@ -40,10 +45,6 @@ export const actualizarConfiguracion = async (req, res) => {
       receso_bloqueado,
       dias_semana,
     } = req.body;
-
-    if (req.user.rol !== 'administrador') {
-      return res.status(403).json({ success: false, message: 'Acceso denegado' });
-    }
 
     const result = await query(
       `UPDATE configuracion_horarios
@@ -79,33 +80,86 @@ export const actualizarConfiguracion = async (req, res) => {
 };
 
 // ============================================================
-// SEMESTRE ACTUAL
+// UTILIDADES (públicas)
 // ============================================================
+
 export const getSemestreActual = (req, res) => {
   const hoy = new Date();
   const mes = hoy.getMonth() + 1;
-  if (mes >= 1 && mes <= 6) {
-    return res.json({ success: true, data: { semestres: [2, 4, 6] } });
-  } else {
-    return res.json({ success: true, data: { semestres: [1, 3, 5] } });
-  }
+  const semestres = (mes >= 1 && mes <= 6) ? [2, 4, 6] : [1, 3, 5];
+  return res.json({ success: true, data: { semestres } });
 };
 
 // ============================================================
-// LISTAR HORARIOS CON FILTROS
+// LISTAR HORARIOS (con permisos por rol)
 // ============================================================
+
 export const listarHorarios = async (req, res) => {
   try {
-    const {
+    const userRole = req.user.rol;
+    const userId = req.user.id;
+
+    let {
       ciclo_id,
       semestre,
-      tipo,
+      grupo_letra,
       especialidad_id,
       turno_id,
-      grupo_letra,
       search,
+      tipo,
+      grupo_id,
+      docente_id,
     } = req.query;
 
+    // ---------- VALIDACIÓN DE PERMISOS SEGÚN ROL ----------
+    if (userRole === 'alumno') {
+      // Obtener el grupo actual del alumno
+      const alumnoRes = await query(
+        'SELECT grupo_actual_id FROM alumnos WHERE usuario_id = $1',
+        [userId]
+      );
+      if (alumnoRes.rows.length === 0 || !alumnoRes.rows[0].grupo_actual_id) {
+        return res.status(403).json({
+          success: false,
+          message: 'No tienes un grupo asignado. Contacta a la Coordinación Académica.',
+        });
+      }
+      const grupoAlumno = alumnoRes.rows[0].grupo_actual_id;
+      // Si el alumno envió un grupo_id en la query, debe coincidir con el suyo
+      if (grupo_id && parseInt(grupo_id) !== grupoAlumno) {
+        return res.status(403).json({
+          success: false,
+          message: 'No puedes ver horarios de otro grupo.',
+        });
+      }
+      // Forzar el grupo del alumno
+      grupo_id = grupoAlumno;
+      // Los alumnos no pueden filtrar por docente
+      docente_id = null;
+    }
+
+    if (userRole === 'docente') {
+      // Un docente solo puede ver horarios de los grupos donde imparte clase
+      // Si el docente envía un grupo_id, debe verificar que tenga materia en ese grupo
+      if (grupo_id) {
+        const check = await query(
+          'SELECT 1 FROM materias_grupo WHERE grupo_id = $1 AND docente_id = $2 AND activa = true LIMIT 1',
+          [grupo_id, userId]
+        );
+        if (check.rows.length === 0) {
+          return res.status(403).json({
+            success: false,
+            message: 'No tienes materias en ese grupo.',
+          });
+        }
+      }
+      // Forzar que solo vea sus grupos
+      docente_id = userId;
+    }
+
+    // Si es admin, no se restringe (puede ver todo, pero los filtros que envíe se respetan)
+
+    // ---------- CONSTRUCCIÓN DE LA CONSULTA ----------
     let sql = `
       SELECT 
         ha.id,
@@ -113,83 +167,100 @@ export const listarHorarios = async (req, res) => {
         ha.key,
         ha.fecha,
         ha.semestre,
-        ha.tipo_horario,
+        ha.letra,
         ha.descripcion,
-        ha.grupo_id,
+        ha.tipo_horario,
+        g.id AS grupo_id,
         g.nombre AS grupo_nombre,
         g.letra AS grupo_letra,
-        g.semestre AS grupo_semestre,
         e.nombre AS especialidad_nombre,
-        e.id AS especialidad_id,
         t.nombre AS turno_nombre,
-        t.id AS turno_id,
-        c.nombre AS ciclo_nombre,
-        c.id AS ciclo_id,
-        u.nombre AS usuario_nombre,
-        u.apellidos AS usuario_apellidos
+        c.nombre AS ciclo_nombre
       FROM horario_archivos ha
       LEFT JOIN grupos g ON g.id = ha.grupo_id
       LEFT JOIN especialidades e ON e.id = ha.especialidad_id
       LEFT JOIN turnos t ON t.id = ha.turno_id
       LEFT JOIN ciclos_escolares c ON c.id = ha.ciclo_id
-      LEFT JOIN usuarios u ON u.id = ha.subido_por
       WHERE 1=1
     `;
     const params = [];
-    const conditions = [];
+    let paramIndex = 1;
 
+    // Filtros básicos (comunes a todos)
     if (ciclo_id) {
-      conditions.push(`ha.ciclo_id = $${params.length + 1}`);
+      sql += ` AND ha.ciclo_id = $${paramIndex}`;
       params.push(ciclo_id);
+      paramIndex++;
     }
     if (semestre) {
-      conditions.push(`ha.semestre = $${params.length + 1}`);
+      sql += ` AND ha.semestre = $${paramIndex}`;
       params.push(semestre);
-    }
-    if (tipo) {
-      conditions.push(`ha.tipo_horario = $${params.length + 1}`);
-      params.push(tipo);
-    }
-    if (especialidad_id) {
-      conditions.push(`ha.especialidad_id = $${params.length + 1}`);
-      params.push(especialidad_id);
-    }
-    if (turno_id) {
-      conditions.push(`ha.turno_id = $${params.length + 1}`);
-      params.push(turno_id);
+      paramIndex++;
     }
     if (grupo_letra) {
-      conditions.push(`g.letra = $${params.length + 1}`);
-      params.push(grupo_letra.toUpperCase());
+      sql += ` AND ha.letra = $${paramIndex}`;
+      params.push(grupo_letra);
+      paramIndex++;
+    }
+    if (especialidad_id) {
+      sql += ` AND ha.especialidad_id = $${paramIndex}`;
+      params.push(especialidad_id);
+      paramIndex++;
+    }
+    if (turno_id) {
+      sql += ` AND ha.turno_id = $${paramIndex}`;
+      params.push(turno_id);
+      paramIndex++;
     }
     if (search) {
-      const term = `%${search}%`;
-      conditions.push(`(ha.nombre ILIKE $${params.length + 1} OR g.nombre ILIKE $${params.length + 1})`);
-      params.push(term);
+      sql += ` AND ha.nombre ILIKE $${paramIndex}`;
+      params.push(`%${search}%`);
+      paramIndex++;
+    }
+    if (tipo) {
+      sql += ` AND ha.tipo_horario = $${paramIndex}`;
+      params.push(tipo);
+      paramIndex++;
     }
 
-    if (conditions.length > 0) {
-      sql += ' AND ' + conditions.join(' AND ');
+    // Filtro por grupo (ya validado por rol)
+    if (grupo_id) {
+      sql += ` AND ha.grupo_id = $${paramIndex}`;
+      params.push(grupo_id);
+      paramIndex++;
     }
 
-    sql += ' ORDER BY ha.fecha DESC';
+    // Filtro por docente (para docentes y administradores que quieran filtrar)
+    if (docente_id) {
+      sql += ` AND ha.grupo_id IN (
+        SELECT DISTINCT mg.grupo_id 
+        FROM materias_grupo mg
+        WHERE mg.docente_id = $${paramIndex} AND mg.activa = TRUE
+      )`;
+      params.push(docente_id);
+      paramIndex++;
+    }
+
+    sql += ' ORDER BY ha.fecha DESC, ha.semestre, ha.letra';
 
     const result = await query(sql, params);
-    return res.json({
-      success: true,
-      data: result.rows,
-    });
+    return res.json({ success: true, data: result.rows });
   } catch (err) {
     console.error('Error en listarHorarios:', err);
-    return res.status(500).json({ success: false, message: 'Error interno' });
+    return res.status(500).json({ success: false, message: 'Error interno del servidor' });
   }
 };
 
 // ============================================================
-// CONTAR HORARIOS FALTANTES
+// CONTADOR DE FALTANTES (solo admin)
 // ============================================================
+
 export const contarHorariosFaltantes = async (req, res) => {
   try {
+    if (req.user.rol !== 'administrador') {
+      return res.status(403).json({ success: false, message: 'Acceso denegado' });
+    }
+
     const { ciclo_id, semestre } = req.query;
     if (!ciclo_id || !semestre) {
       return res.status(400).json({ success: false, message: 'ciclo_id y semestre son requeridos' });
@@ -226,8 +297,9 @@ export const contarHorariosFaltantes = async (req, res) => {
 };
 
 // ============================================================
-// SOLICITAR UPLOAD (INDIVIDUAL)
+// SUBIR HORARIO (solo admin)
 // ============================================================
+
 export const solicitarUploadHorario = async (req, res) => {
   try {
     if (req.user.rol !== 'administrador') {
@@ -262,7 +334,6 @@ export const solicitarUploadHorario = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Formato no permitido. Solo PDF o Excel' });
     }
 
-    // Validar tipo_horario
     const tiposHorarioValidos = ['grupo', 'maestro', 'laboratorio'];
     const tipoHorarioFinal = tiposHorarioValidos.includes(tipo_horario) ? tipo_horario : 'grupo';
 
@@ -302,8 +373,9 @@ export const solicitarUploadHorario = async (req, res) => {
 };
 
 // ============================================================
-// ACTUALIZAR HORARIO
+// ACTUALIZAR METADATOS DE HORARIO (solo admin)
 // ============================================================
+
 export const actualizarHorario = async (req, res) => {
   const { id } = req.params;
   const {
@@ -353,8 +425,9 @@ export const actualizarHorario = async (req, res) => {
 };
 
 // ============================================================
-// SUBIDA MASIVA (BATCH)
+// SUBIDA MASIVA (solo admin)
 // ============================================================
+
 export const uploadMultipleHorarios = async (req, res) => {
   try {
     if (req.user.rol !== 'administrador') {
@@ -435,14 +508,20 @@ export const uploadMultipleHorarios = async (req, res) => {
 };
 
 // ============================================================
-// SOLICITAR DESCARGA
+// SOLICITAR DESCARGA (autenticado)
 // ============================================================
+
 export const solicitarDescarga = async (req, res) => {
   try {
     const { key } = req.body;
     if (!key) {
       return res.status(400).json({ success: false, message: 'Key es requerida' });
     }
+
+    // Opcional: verificar que el usuario tenga permiso para descargar este archivo
+    // Para simplificar, cualquier usuario autenticado puede descargar cualquier horario
+    // Si se requiere mayor control, aquí se podría consultar la tabla horario_archivos
+    // y validar que el usuario tenga acceso según su rol.
 
     const url = await generateDownloadUrl(key);
 
@@ -459,9 +538,7 @@ export const solicitarDescarga = async (req, res) => {
   }
 };
 
-// ============================================================
-// ELIMINAR HORARIO
-// ============================================================
+
 export const eliminarHorario = async (req, res) => {
   const { id } = req.params;
   try {
