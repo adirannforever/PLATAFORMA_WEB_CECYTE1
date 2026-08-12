@@ -24,6 +24,7 @@ import IncidenciasPage from './pages/IncidenciasPage';
 import AuditoriaPage from './pages/AuditoriaPage';
 import ReportesPage from './pages/ReportesPage';
 import HorariosPage from './pages/HorariosPage';
+import TutoriasPage from './pages/TutoriasPage';
 
 const RutaProtegida = ({ children, rolesPermitidos }) => {
   const { usuario, cargando } = useAuth();
@@ -82,25 +83,73 @@ export default function App() {
           }
         />
 
-        <Route path="grupos" element={<GruposPage />} />
+        <Route
+          path="grupos"
+          element={
+            <RutaProtegida rolesPermitidos={['administrador', 'docente']}>
+              <GruposPage />
+            </RutaProtegida>
+          }
+        />
+        <Route
+          path="asistencia"
+          element={
+            <RutaProtegida rolesPermitidos={['administrador', 'docente']}>
+              <AsistenciaPage />
+            </RutaProtegida>
+          }
+        />
+        <Route
+          path="tutorias"
+          element={
+            <RutaProtegida rolesPermitidos={['administrador', 'docente']}>
+              <TutoriasPage />
+            </RutaProtegida>
+          }
+        />
 
         <Route
-          path="materias"
+          path="calificaciones"
           element={
-            <RutaProtegida rolesPermitidos={['docente', 'administrador']}>
-              <GruposPage />
+            <RutaProtegida rolesPermitidos={['administrador', 'docente']}>
+              <CalificacionesPage />
             </RutaProtegida>
           }
         />
         <Route
           path="calificaciones/:materia_grupo_id"
           element={
-            <RutaProtegida rolesPermitidos={['docente', 'administrador']}>
+            <RutaProtegida rolesPermitidos={['administrador', 'docente']}>
               <CalificacionesPage />
             </RutaProtegida>
           }
         />
+        <Route
+          path="incidencias"
+          element={
+            <RutaProtegida rolesPermitidos={['administrador', 'docente']}>
+              <IncidenciasPage />
+            </RutaProtegida>
+          }
+        />
+        <Route
+          path="horarios"
+          element={
+            <RutaProtegida rolesPermitidos={['administrador', 'docente', 'alumno']}>
+              <HorariosPage />
+            </RutaProtegida>
+          }
+        />
+        <Route
+          path="reportes"
+          element={
+            <RutaProtegida rolesPermitidos={['administrador', 'docente', 'alumno']}>
+              <ReportesPage />
+            </RutaProtegida>
+          }
+        />
 
+        {/* ===== SOLO ADMIN ===== */}
         <Route
           path="usuarios"
           element={
@@ -117,16 +166,6 @@ export default function App() {
             </RutaProtegida>
           }
         />
-
-        <Route
-          path="asistencia"
-          element={
-            <RutaProtegida rolesPermitidos={['administrador', 'docente']}>
-              <AsistenciaPage />
-            </RutaProtegida>
-          }
-        />
-
         <Route
           path="expediente"
           element={
@@ -143,7 +182,6 @@ export default function App() {
             </RutaProtegida>
           }
         />
-
         <Route
           path="becas"
           element={
@@ -152,7 +190,6 @@ export default function App() {
             </RutaProtegida>
           }
         />
-
         <Route
           path="becas/detalle/:nombre_beca"
           element={
@@ -185,7 +222,6 @@ export default function App() {
             </RutaProtegida>
           }
         />
-
         <Route
           path="configuracion-academica"
           element={
@@ -194,16 +230,6 @@ export default function App() {
             </RutaProtegida>
           }
         />
-
-        <Route
-          path="incidencias"
-          element={
-            <RutaProtegida rolesPermitidos={['administrador']}>
-              <IncidenciasPage />
-            </RutaProtegida>
-          }
-        />
-
         <Route
           path="auditoria"
           element={
@@ -214,23 +240,15 @@ export default function App() {
         />
 
         <Route
-          path="reportes"
+          path="materias"
           element={
-            <RutaProtegida rolesPermitidos={['administrador']}>
-              <ReportesPage />
+            <RutaProtegida rolesPermitidos={['docente', 'administrador']}>
+              <GruposPage />
             </RutaProtegida>
           }
         />
 
-        <Route
-          path="horarios"
-          element={
-            <RutaProtegida rolesPermitidos={['administrador']}>
-              <HorariosPage />
-            </RutaProtegida>
-          }
-        />        
-
+        {/* ===== 404 ===== */}
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

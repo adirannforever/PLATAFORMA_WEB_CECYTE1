@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { usePermissions } from '../hooks/usePermissions';
 import { horariosService, catalogosService, usuariosService } from '../services/api';
 import { 
   Settings, Users, User, FlaskConical, RefreshCw, 
@@ -12,7 +13,7 @@ const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
 
 export default function HorariosPage() {
   const { usuario } = useAuth();
-  const esAdmin = usuario?.rol === 'administrador';
+  const { isAdmin } = usePermissions(); // ← Hook centralizado
 
   // ===== ESTADOS BÁSICOS =====
   const [tabActiva, setTabActiva] = useState('grupos');
@@ -290,6 +291,7 @@ export default function HorariosPage() {
 
   // ===== ABRIR MODAL DE SUBIDA =====
   const abrirModalUpload = () => {
+    if (!isAdmin) return;
     setUploadForm({
       nombre: '',
       semestre: filtros.semestre || '',
@@ -308,6 +310,7 @@ export default function HorariosPage() {
 
   // ===== SUBIR ARCHIVO INDIVIDUAL =====
   const handleUpload = async (e) => {
+    if (!isAdmin) return;
     const file = e.target.files[0];
     if (!file) return;
 
@@ -334,6 +337,7 @@ export default function HorariosPage() {
   };
 
   const handleSubmitUpload = async () => {
+    if (!isAdmin) return;
     if (!archivoSeleccionado) {
       setError('Selecciona un archivo');
       return;
@@ -382,6 +386,7 @@ export default function HorariosPage() {
 
   // ===== ABRIR MODAL DE EDICIÓN =====
   const abrirModalEditar = (horario) => {
+    if (!isAdmin) return;
     const grupo = grupos.find(g => g.id === horario.grupo_id);
     setEditando(horario);
     setEditandoId(horario.id);
@@ -400,6 +405,7 @@ export default function HorariosPage() {
   };
 
   const handleSubmitEditar = async () => {
+    if (!isAdmin) return;
     if (!editForm.semestre || !editForm.letra || !editForm.ciclo_id || !editForm.turno_id) {
       setError('Semestre, letra, ciclo y turno son requeridos');
       return;
@@ -441,6 +447,7 @@ export default function HorariosPage() {
 
   // ===== ELIMINAR =====
   const handleEliminar = (id, nombre) => {
+    if (!isAdmin) return;
     setConfirmModal({
       open: true,
       message: `¿Eliminar el horario "${nombre}"? Esta acción no se puede deshacer.`,
@@ -465,6 +472,7 @@ export default function HorariosPage() {
 
   // ===== SUBIDA MASIVA =====
   const abrirModalBatch = () => {
+    if (!isAdmin) return;
     setBatchItems([]);
     setBatchForm({
       semestre: filtros.semestre || '',
@@ -482,6 +490,7 @@ export default function HorariosPage() {
   };
 
   const handleBatchFileChange = (e) => {
+    if (!isAdmin) return;
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
     const validFiles = files.filter(f => {
@@ -496,6 +505,7 @@ export default function HorariosPage() {
   };
 
   const generarBatchItems = () => {
+    if (!isAdmin) return;
     if (batchForm.archivos.length === 0) {
       setError('Selecciona al menos un archivo');
       return;
@@ -530,6 +540,7 @@ export default function HorariosPage() {
   };
 
   const eliminarItemBatch = (tempId) => {
+    if (!isAdmin) return;
     setConfirmModal({
       open: true,
       message: '¿Eliminar este elemento de la lista?',
@@ -541,6 +552,7 @@ export default function HorariosPage() {
   };
 
   const guardarBatch = async () => {
+    if (!isAdmin) return;
     if (batchItems.length === 0) {
       setError('No hay elementos para guardar');
       return;
@@ -1143,6 +1155,7 @@ export default function HorariosPage() {
               </div>
             </div>
             <div className={styles.archivoActions}>
+              {/* Descargar: todos pueden */}
               <button
                 className={styles.btnDescargar}
                 onClick={() => handleDescargar(archivo.key, archivo.nombre)}
@@ -1150,20 +1163,25 @@ export default function HorariosPage() {
               >
                 <Download size={16} />
               </button>
-              <button
-                className={styles.btnEditarArchivo}
-                onClick={() => abrirModalEditar(archivo)}
-                title="Editar metadatos"
-              >
-                <Edit2 size={16} />
-              </button>
-              <button
-                className={styles.btnEliminarArchivo}
-                onClick={() => handleEliminar(archivo.id, archivo.nombre)}
-                title="Eliminar"
-              >
-                <Trash2 size={16} />
-              </button>
+              {/* Editar y Eliminar: solo admin */}
+              {isAdmin && (
+                <>
+                  <button
+                    className={styles.btnEditarArchivo}
+                    onClick={() => abrirModalEditar(archivo)}
+                    title="Editar metadatos"
+                  >
+                    <Edit2 size={16} />
+                  </button>
+                  <button
+                    className={styles.btnEliminarArchivo}
+                    onClick={() => handleEliminar(archivo.id, archivo.nombre)}
+                    title="Eliminar"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </>
+              )}
             </div>
           </div>
         ))}
@@ -1184,97 +1202,104 @@ export default function HorariosPage() {
   };
 
   // ===== FILTROS =====
-  const renderFiltros = () => (
-    <div className={styles.filtrosContainer}>
-      <div className={styles.filtrosTurno}>
-        <button
-          className={`${styles.btnTurno} ${filtros.turno === 'todos' ? styles.btnTurnoActive : ''}`}
-          onClick={() => setFiltros({ ...filtros, turno: 'todos' })}
-        >
-          Todos
-        </button>
-        <button
-          className={`${styles.btnTurno} ${filtros.turno === 'matutino' ? styles.btnTurnoActive : ''}`}
-          onClick={() => setFiltros({ ...filtros, turno: 'matutino' })}
-        >
-          Matutino
-        </button>
-        <button
-          className={`${styles.btnTurno} ${filtros.turno === 'vespertino' ? styles.btnTurnoActive : ''}`}
-          onClick={() => setFiltros({ ...filtros, turno: 'vespertino' })}
-        >
-          Vespertino
-        </button>
+  const renderFiltros = () => {
+    // Filtros de gestión solo para admin (ciclo, semestre, grupo letra, especialidad)
+    if (!isAdmin) return null;
+
+    return (
+      <div className={styles.filtrosContainer}>
+        <div className={styles.filtrosTurno}>
+          <button
+            className={`${styles.btnTurno} ${filtros.turno === 'todos' ? styles.btnTurnoActive : ''}`}
+            onClick={() => setFiltros({ ...filtros, turno: 'todos' })}
+          >
+            Todos
+          </button>
+          <button
+            className={`${styles.btnTurno} ${filtros.turno === 'matutino' ? styles.btnTurnoActive : ''}`}
+            onClick={() => setFiltros({ ...filtros, turno: 'matutino' })}
+          >
+            Matutino
+          </button>
+          <button
+            className={`${styles.btnTurno} ${filtros.turno === 'vespertino' ? styles.btnTurnoActive : ''}`}
+            onClick={() => setFiltros({ ...filtros, turno: 'vespertino' })}
+          >
+            Vespertino
+          </button>
+        </div>
+
+        <div className={styles.filtrosGrid}>
+          <div className={styles.filtroGroup}>
+            <label className={styles.label}>Ciclo</label>
+            <select
+              className={styles.select}
+              value={filtros.ciclo_id}
+              onChange={e => setFiltros({ ...filtros, ciclo_id: e.target.value })}
+            >
+              <option value="">Todos</option>
+              {ciclos.map(c => (
+                <option key={c.id} value={c.id}>{c.nombre} {c.activo ? '(Activo)' : ''}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className={styles.filtroGroup}>
+            <label className={styles.label}>Semestre</label>
+            <select
+              className={styles.select}
+              value={filtros.semestre}
+              onChange={e => setFiltros({ ...filtros, semestre: e.target.value })}
+            >
+              <option value="">Todos</option>
+              {[1,2,3,4,5,6].map(s => (
+                <option key={s} value={s}>{s}°</option>
+              ))}
+            </select>
+          </div>
+
+          <div className={styles.filtroGroup}>
+            <label className={styles.label}>Grupo (letra)</label>
+            <select
+              className={styles.select}
+              value={filtros.grupo_letra}
+              onChange={e => setFiltros({ ...filtros, grupo_letra: e.target.value })}
+            >
+              <option value="">Todos</option>
+              {['A','B','C','D'].map(l => (
+                <option key={l} value={l}>{l}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className={styles.filtroGroup}>
+            <label className={styles.label}>Especialidad</label>
+            <select
+              className={styles.select}
+              value={filtros.especialidad_id}
+              onChange={e => setFiltros({ ...filtros, especialidad_id: e.target.value })}
+            >
+              <option value="">Todas</option>
+              {especialidades.map(e => (
+                <option key={e.id} value={e.id}>{e.nombre}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className={styles.filtrosActions}>
+          <button className={styles.btnLimpiarFiltros} onClick={limpiarFiltros}>
+            <Filter size={14} /> Limpiar filtros
+          </button>
+        </div>
       </div>
-
-      <div className={styles.filtrosGrid}>
-        <div className={styles.filtroGroup}>
-          <label className={styles.label}>Ciclo</label>
-          <select
-            className={styles.select}
-            value={filtros.ciclo_id}
-            onChange={e => setFiltros({ ...filtros, ciclo_id: e.target.value })}
-          >
-            <option value="">Todos</option>
-            {ciclos.map(c => (
-              <option key={c.id} value={c.id}>{c.nombre} {c.activo ? '(Activo)' : ''}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className={styles.filtroGroup}>
-          <label className={styles.label}>Semestre</label>
-          <select
-            className={styles.select}
-            value={filtros.semestre}
-            onChange={e => setFiltros({ ...filtros, semestre: e.target.value })}
-          >
-            <option value="">Todos</option>
-            {[1,2,3,4,5,6].map(s => (
-              <option key={s} value={s}>{s}°</option>
-            ))}
-          </select>
-        </div>
-
-        <div className={styles.filtroGroup}>
-          <label className={styles.label}>Grupo (letra)</label>
-          <select
-            className={styles.select}
-            value={filtros.grupo_letra}
-            onChange={e => setFiltros({ ...filtros, grupo_letra: e.target.value })}
-          >
-            <option value="">Todos</option>
-            {['A','B','C','D'].map(l => (
-              <option key={l} value={l}>{l}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className={styles.filtroGroup}>
-          <label className={styles.label}>Especialidad</label>
-          <select
-            className={styles.select}
-            value={filtros.especialidad_id}
-            onChange={e => setFiltros({ ...filtros, especialidad_id: e.target.value })}
-          >
-            <option value="">Todas</option>
-            {especialidades.map(e => (
-              <option key={e.id} value={e.id}>{e.nombre}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div className={styles.filtrosActions}>
-        <button className={styles.btnLimpiarFiltros} onClick={limpiarFiltros}>
-          <Filter size={14} /> Limpiar filtros
-        </button>
-      </div>
-    </div>
-  );
+    );
+  };
 
   // ===== CONTADOR DE HORARIOS FALTANTES =====
   const renderContador = () => {
+    // Solo admin ve el contador
+    if (!isAdmin) return null;
     if (!filtros.ciclo_id || !filtros.semestre) return null;
     const { total, subidos, faltantes, porcentaje } = contadorFaltantes;
     return (
@@ -1308,12 +1333,17 @@ export default function HorariosPage() {
           <p className={styles.subtitle}>Gestión de horarios para grupos, maestros y laboratorios</p>
         </div>
         <div className={styles.headerActions}>
-          <button className={styles.btnPrimary} onClick={abrirModalUpload}>
-            <Upload size={16} /> Subir horario
-          </button>
-          <button className={styles.btnSecondary} onClick={abrirModalBatch}>
-            <Plus size={16} /> Subida masiva
-          </button>
+          {/* Solo admin puede subir/editar/eliminar */}
+          {isAdmin && (
+            <>
+              <button className={styles.btnPrimary} onClick={abrirModalUpload}>
+                <Upload size={16} /> Subir horario
+              </button>
+              <button className={styles.btnSecondary} onClick={abrirModalBatch}>
+                <Plus size={16} /> Subida masiva
+              </button>
+            </>
+          )}
           <button className={styles.btnSecondary} onClick={() => { cargarHorarios(); cargarContadorFaltantes(); }}>
             <RefreshCw size={16} /> Actualizar
           </button>
@@ -1349,9 +1379,9 @@ export default function HorariosPage() {
         {renderArchivos()}
       </div>
 
-      {renderUploadModal()}
-      {renderEditModal()}
-      {renderBatchModal()}
+      {isAdmin && renderUploadModal()}
+      {isAdmin && renderEditModal()}
+      {isAdmin && renderBatchModal()}
       {renderConfirmModal()}
     </div>
   );

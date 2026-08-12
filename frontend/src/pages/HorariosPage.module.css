@@ -760,3 +760,37 @@
     justify-content: center;
   }
 }
+/* ===== VISTA PARA DOCENTES/ALUMNOS ===== */
+.horarioInfoCard {
+  background: #ffffff;
+  border: 2px solid #d1d9e6;
+  border-radius: 2px;
+  padding: 2.5rem 2rem;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  text-align: center;
+}
+.horarioInfoIcon {
+  color: #1A6B35;
+  flex-shrink: 0;
+}
+.horarioInfoContent h2 {
+  font-family: 'Merriweather', serif;
+  font-size: 1.4rem;
+  color: #1e293b;
+  margin: 0 0 0.5rem 0;
+}
+.horarioInfoContent p {
+  color: #64748b;
+  font-size: 1rem;
+  margin: 0 0 1rem 0;
+  max-width: 500px;
+}
+.horarioInfoActions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
