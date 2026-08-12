@@ -108,7 +108,15 @@ export default function App() {
           }
         />
         <Route
-          path="calificaciones/:materia_grupo_id"
+          path="calificaciones/grupo/:grupo_id"
+          element={
+            <RutaProtegida rolesPermitidos={['administrador', 'docente']}>
+              <CalificacionesPage />
+            </RutaProtegida>
+          }
+        />
+        <Route
+          path="calificaciones/materia/:materia_grupo_id"
           element={
             <RutaProtegida rolesPermitidos={['administrador', 'docente']}>
               <CalificacionesPage />

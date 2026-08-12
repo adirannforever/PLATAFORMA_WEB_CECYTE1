@@ -190,7 +190,7 @@
   font-weight: 800;
 }
 
-/* ========== VISTA DOCENTE ========== */
+/* ========== VISTA DOCENTE/ADMIN ========== */
 .inputRow {
   display: flex;
   align-items: center;
@@ -422,6 +422,61 @@
   background: #fee2e2;
 }
 
+/* ========== NUEVO: SELECTOR DE MATERIAS ========== */
+.selectorContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem 0;
+}
+.selectorCard {
+  background: #ffffff;
+  border: 2px solid #d1d9e6;
+  border-radius: 2px;
+  padding: 2rem 2.5rem;
+  max-width: 550px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+.selectorCard h3 {
+  font-family: 'Merriweather', serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #1A6B35;
+  margin: 0 0 1.5rem 0;
+}
+.select {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  border: 2px solid #d1d9e6;
+  border-radius: 2px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 0.95rem;
+  background: #ffffff;
+  color: #1e293b;
+  outline: none;
+  transition: border-color 0.15s;
+  margin-bottom: 1.2rem;
+  cursor: pointer;
+}
+.select:focus {
+  border-color: #1A6B35;
+}
+.select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.selectorCard .btnPrimary {
+  width: 100%;
+  justify-content: center;
+}
+.loading {
+  color: #64748b;
+  font-size: 0.95rem;
+  padding: 1rem 0;
+}
+
 /* ========== RESPONSIVE ========== */
 @media (max-width: 640px) {
   .page {
@@ -463,4 +518,199 @@
     position: static;
     white-space: normal;
   }
+  .selectorCard {
+    padding: 1.5rem 1rem;
+  }
+}
+/* ===== FILTROS EN SELECTOR DE MATERIAS ===== */
+.filtrosGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+}
+.filtroGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.filtroGroup label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #64748b;
+  letter-spacing: 0.3px;
+}
+.inputSearch {
+  padding: 0.5rem 0.6rem;
+  border: 2px solid #d1d9e6;
+  border-radius: 2px;
+  font-size: 0.9rem;
+  font-family: 'Roboto', sans-serif;
+  outline: none;
+  transition: border-color 0.15s;
+  background: #ffffff;
+}
+.inputSearch:focus {
+  border-color: #1A6B35;
+}
+.filtrosActions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1.2rem;
+}
+.btnLimpiarFiltros {
+  padding: 0.3rem 1rem;
+  background: #e9edf2;
+  border: 2px solid #d1d9e6;
+  border-radius: 2px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #1e293b;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btnLimpiarFiltros:hover {
+  background: #d1d9e6;
+}
+
+/* ===== LISTA DE MATERIAS ===== */
+.listaMaterias {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 400px;
+  overflow-y: auto;
+  margin-top: 0.5rem;
+}
+.materiaItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.8rem;
+  background: #f8fafc;
+  border: 2px solid #e9edf2;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.materiaItem:hover {
+  background: #e6f0ea;
+  border-color: #1A6B35;
+}
+.materiaInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.materiaNombre {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 0.95rem;
+}
+.materiaDetalle {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+.materiaCiclo {
+  font-size: 0.7rem;
+  color: #1A6B35;
+  font-weight: 500;
+}
+.materiaArrow {
+  color: #94a3b8;
+  font-size: 1.2rem;
+  font-weight: 300;
+}
+
+/* ===== BÚSQUEDA EN TABLA ===== */
+.busquedaAlumnoContainer {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  padding: 0.5rem 0.8rem;
+  background: #ffffff;
+  border: 2px solid #d1d9e6;
+  border-radius: 2px;
+}
+.inputSearchAlumno {
+  flex: 1;
+  padding: 0.5rem 0.6rem;
+  border: 2px solid #d1d9e6;
+  border-radius: 2px;
+  font-size: 0.9rem;
+  font-family: 'Roboto', sans-serif;
+  outline: none;
+  transition: border-color 0.15s;
+  min-width: 200px;
+}
+.inputSearchAlumno:focus {
+  border-color: #1A6B35;
+}
+.resultadosCount {
+  font-size: 0.75rem;
+  color: #64748b;
+  white-space: nowrap;
+}
+.matricula {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  margin-left: 0.5rem;
+  font-weight: 400;
+}
+
+/* ===== RESPONSIVE AJUSTES ===== */
+@media (max-width: 640px) {
+  .filtrosGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .busquedaAlumnoContainer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .resultadosCount {
+    text-align: center;
+  }
+}
+/* ===== LISTA DE MATERIAS DEL GRUPO ===== */
+.materiasLista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+.materiaCard {
+  background: #ffffff;
+  border: 2px solid #d1d9e6;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.materiaCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.8rem 1.2rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.materiaCardHeader:hover {
+  background: #f8fafc;
+}
+.materiaCardNombre {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 0.95rem;
+}
+.materiaCardMeta {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+.materiaCardArrow {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+.materiaCardAcciones {
+  padding: 0.8rem 1.2rem;
+  background: #f8fafc;
+  border-top: 2px solid #d1d9e6;
 }

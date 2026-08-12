@@ -1,11 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { calificacionesService } from '../services/api';
+import { 
+  calificacionesService, 
+  gruposService, 
+  catalogosService 
+} from '../services/api';
 import Skeleton from '../components/Skeleton';
 import styles from './CalificacionesPage.module.css';
 
-// Iconos SVG (lápiz y guardar)
+// Iconos SVG
 const IconPencil = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M12 20h9" />
@@ -43,11 +47,13 @@ const validarCalificacion = (valor) => {
 
 export default function CalificacionesPage() {
   const { usuario } = useAuth();
-  const { materia_grupo_id } = useParams();
+  const { materia_grupo_id, grupo_id } = useParams();
   const navigate = useNavigate();
   const esAlumno = usuario.rol === 'alumno';
   const esAdmin = usuario.rol === 'administrador';
+  const esDocente = usuario.rol === 'docente';
 
+  // ===== ESTADOS GENERALES =====
   const [datos, setDatos] = useState([]);
   const [periodos, setPeriodos] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -55,40 +61,120 @@ export default function CalificacionesPage() {
   const [exito, setExito] = useState('');
   const [toast, setToast] = useState('');
 
-  // Edición individual
+  // ===== SELECTOR DE GRUPOS =====
+  const [grupos, setGrupos] = useState([]);
+  const [cargandoGrupos, setCargandoGrupos] = useState(false);
+  const [filtros, setFiltros] = useState({
+    ciclo_id: '',
+    semestre: '',
+    turno_id: '',
+  });
+  const [ciclos, setCiclos] = useState([]);
+
+  // ===== DETALLE DE GRUPO (MATERIAS) =====
+  const [materiasGrupo, setMateriasGrupo] = useState([]);
+  const [cargandoMaterias, setCargandoMaterias] = useState(false);
+  const [materiaExpandida, setMateriaExpandida] = useState(null);
+
+  // ===== BÚSQUEDA EN TABLA DE CALIFICACIONES =====
+  const [busquedaAlumno, setBusquedaAlumno] = useState('');
+
+  // ===== EDICIÓN DE CALIFICACIONES =====
   const [editando, setEditando] = useState(null);
   const [registrando, setRegistrando] = useState(null);
   const [valorNuevo, setValorNuevo] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [inputError, setInputError] = useState('');
-
-  // Edición por columna
   const [modoColumna, setModoColumna] = useState(false);
   const [parcialSeleccionado, setParcialSeleccionado] = useState(null);
   const [calificacionesTemp, setCalificacionesTemp] = useState({});
   const [guardandoColumna, setGuardandoColumna] = useState(false);
   const [camposVacios, setCamposVacios] = useState({});
 
-  const cargar = async () => {
-    setCargando(true);
-    try {
-      if (esAlumno) {
-        const res = await calificacionesService.misCalificaciones();
-        setDatos(res.calificaciones || []);
-      } else {
-        const res = await calificacionesService.porMateria(materia_grupo_id);
-        setDatos(res.calificaciones || []);
+  // ===== EFECTOS =====
+  // Cargar ciclos (solo si estamos en lista de grupos)
+  useEffect(() => {
+    if (esAlumno || materia_grupo_id || grupo_id) return;
+    const cargarCiclos = async () => {
+      try {
+        const res = await catalogosService.getCiclos();
+        setCiclos(res.data || []);
+        const activo = res.data?.find(c => c.activo);
+        if (activo) {
+          setFiltros(prev => ({ ...prev, ciclo_id: String(activo.id) }));
+        }
+      } catch (e) {
+        console.error('Error cargando ciclos:', e);
+        setError('No se pudieron cargar los ciclos.');
       }
+    };
+    cargarCiclos();
+  }, [esAlumno, materia_grupo_id, grupo_id]);
+
+  // Cargar grupos con filtros (solo si estamos en lista)
+  const cargarGrupos = useCallback(async () => {
+    if (esAlumno || materia_grupo_id || grupo_id) return;
+    setCargandoGrupos(true);
+    setError('');
+    try {
+      const params = {};
+      if (filtros.ciclo_id) params.ciclo_id = filtros.ciclo_id;
+      if (filtros.semestre) params.semestre = filtros.semestre;
+      if (filtros.turno_id) params.turno_id = filtros.turno_id;
+
+      const res = await gruposService.getAll(params);
+      setGrupos(res.grupos || []);
+    } catch (e) {
+      console.error('Error cargando grupos:', e);
+      setError('Error al cargar los grupos.');
+    } finally {
+      setCargandoGrupos(false);
+    }
+  }, [filtros, esAlumno, materia_grupo_id, grupo_id]);
+
+  useEffect(() => {
+    if (esAlumno || materia_grupo_id || grupo_id) return;
+    cargarGrupos();
+  }, [cargarGrupos, esAlumno, materia_grupo_id, grupo_id]);
+
+  // Cargar materias del grupo cuando hay grupo_id
+  useEffect(() => {
+    if (!grupo_id) return;
+    const cargarMaterias = async () => {
+      setCargandoMaterias(true);
+      setError('');
+      try {
+        const res = await gruposService.getMaterias(grupo_id);
+        setMateriasGrupo(res.materias || []);
+      } catch (e) {
+        console.error('Error cargando materias del grupo:', e);
+        setError('No se pudieron cargar las materias del grupo.');
+        setMateriasGrupo([]);
+      } finally {
+        setCargandoMaterias(false);
+      }
+    };
+    cargarMaterias();
+  }, [grupo_id]);
+
+  // Cargar calificaciones cuando hay materia_grupo_id
+  const cargarCalificaciones = async () => {
+    setCargando(true);
+    setError('');
+    try {
+      const res = await calificacionesService.porMateria(materia_grupo_id);
+      setDatos(res.calificaciones || []);
     } catch (e) {
       console.error('Error cargando calificaciones:', e);
       setDatos([]);
+      setError(e.response?.data?.message || 'Error al cargar calificaciones.');
     } finally {
       setCargando(false);
     }
   };
 
   const cargarPeriodos = async () => {
-    if (esAlumno || !materia_grupo_id) return;
+    if (!materia_grupo_id) return;
     try {
       const res = await calificacionesService.getPeriodosEvaluacion(materia_grupo_id);
       setPeriodos(res.periodos || []);
@@ -99,14 +185,61 @@ export default function CalificacionesPage() {
   };
 
   useEffect(() => {
-    if (!esAlumno && !materia_grupo_id) {
-      navigate(-1);
+    if (esAlumno) {
+      const cargarMisCalificaciones = async () => {
+        setCargando(true);
+        try {
+          const res = await calificacionesService.misCalificaciones();
+          setDatos(res.calificaciones || []);
+        } catch (e) {
+          console.error('Error cargando mis calificaciones:', e);
+          setDatos([]);
+          setError('No se pudieron cargar tus calificaciones.');
+        } finally {
+          setCargando(false);
+        }
+      };
+      cargarMisCalificaciones();
       return;
     }
-    cargar();
-    cargarPeriodos();
-  }, [materia_grupo_id]);
+    if (materia_grupo_id) {
+      cargarCalificaciones();
+      cargarPeriodos();
+    }
+  }, [materia_grupo_id, esAlumno]);
 
+  // ===== HANDLERS =====
+  const handleFiltroChange = (e) => {
+    const { name, value } = e.target;
+    setFiltros(prev => ({ ...prev, [name]: value }));
+  };
+
+  const limpiarFiltros = () => {
+    const cicloActivo = ciclos.find(c => c.activo);
+    setFiltros({
+      ciclo_id: cicloActivo ? String(cicloActivo.id) : '',
+      semestre: '',
+      turno_id: '',
+    });
+  };
+
+  const seleccionarGrupo = (id) => {
+    navigate(`/calificaciones/grupo/${id}`);
+  };
+
+  const volverALista = () => {
+    navigate('/calificaciones');
+  };
+
+  const verCalificacionesMateria = (materia_grupo_id) => {
+    navigate(`/calificaciones/materia/${materia_grupo_id}`);
+  };
+
+  const toggleExpandirMateria = (id) => {
+    setMateriaExpandida(materiaExpandida === id ? null : id);
+  };
+
+  // ===== LÓGICA DE EDICIÓN DE CALIFICACIONES =====
   const isParcialEditable = (parcial) => {
     if (esAlumno) return false;
     if (esAdmin) return true;
@@ -121,104 +254,6 @@ export default function CalificacionesPage() {
     return hoy >= inicio && hoy <= fin;
   };
 
-  const handleVolver = () => navigate(-1);
-
-  // ── Vista alumno (sin cambios) ──
-  if (esAlumno) {
-    const porMateria = datos.reduce((acc, c) => {
-      const key = c.materia;
-      if (!acc[key]) acc[key] = { materia: c.materia, ciclo: c.ciclo_escolar, parciales: {} };
-      acc[key].parciales[c.parcial] = c.calificacion;
-      return acc;
-    }, {});
-
-    return (
-      <div className={styles.page}>
-        <div className={styles.pageHeader}>
-          <button className={styles.btnVolver} onClick={handleVolver}>← Volver</button>
-          <div>
-            <h1 className={styles.title}>Mis Calificaciones</h1>
-            <p className={styles.subtitle}>Ciclo escolar actual</p>
-          </div>
-        </div>
-        {cargando ? (
-          <div className={styles.skeletonContainer}>
-            {[1, 2].map(n => (
-              <div key={n} className={styles.card}>
-                <div className={styles.cardHead}>
-                  <Skeleton width="200px" height="22px" variant="text" />
-                  <Skeleton width="100px" height="16px" variant="text" />
-                </div>
-                <div className={styles.parcialesRow}>
-                  {[1, 2, 3, 4].map(p => (
-                    <div key={p} className={styles.parcialBox}>
-                      <Skeleton width="50px" height="12px" variant="text" />
-                      <Skeleton width="30px" height="22px" variant="text" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : Object.keys(porMateria).length === 0 ? (
-          <div className={styles.empty}>Aún no tienes calificaciones registradas.</div>
-        ) : (
-          Object.values(porMateria).map(m => (
-            <div key={m.materia} className={styles.card}>
-              <div className={styles.cardHead}>
-                <h2 className={styles.cardTitle}>{m.materia}</h2>
-                <span className={styles.ciclo}>{m.ciclo}</span>
-              </div>
-              <div className={styles.parcialesRow}>
-                {PARCIALES.map(p => {
-                  const cal = m.parciales[p];
-                  return (
-                    <div key={p} className={styles.parcialBox}>
-                      <span className={styles.parcialLabel}>Parcial {p}</span>
-                      <span className={styles.parcialValor} style={{ color: cal != null ? COLOR_CALIF(cal) : '#94a3b8' }}>
-                        {cal != null ? cal : '—'}
-                      </span>
-                    </div>
-                  );
-                })}
-                <div className={styles.parcialBox}>
-                  <span className={styles.parcialLabel}>Promedio</span>
-                  <span className={styles.parcialValor} style={{ color: '#1A6B35' }}>
-                    {Object.values(m.parciales).length > 0
-                      ? (Object.values(m.parciales).reduce((a, b) => a + parseFloat(b), 0) / Object.values(m.parciales).length).toFixed(1)
-                      : '—'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    );
-  }
-
-  // ── Vista docente/admin ──
-  const porAlumno = {};
-  datos.forEach(row => {
-    const key = row.alumno_id;
-    if (!porAlumno[key]) {
-      porAlumno[key] = {
-        alumno_id: row.alumno_id,
-        usuario_id: row.usuario_id,
-        nombre: `${row.apellidos}, ${row.nombre}`,
-        calificaciones: {},
-      };
-    }
-    if (row.parcial) {
-      porAlumno[key].calificaciones[row.parcial] = {
-        id: row.calificacion_id,
-        valor: row.calificacion,
-      };
-    }
-  });
-  const alumnosList = Object.values(porAlumno).sort((a, b) => a.nombre.localeCompare(b.nombre));
-
-  // ── Edición individual ──
   const handleInputChange = (e) => {
     const value = e.target.value;
     setValorNuevo(value);
@@ -249,7 +284,6 @@ export default function CalificacionesPage() {
       if (editando) {
         await calificacionesService.actualizar(editando.id, result.valor);
       } else if (registrando) {
-        //  Enviar alumno_id (el que viene del objeto registrando)
         const payload = {
           alumno_id: registrando.alumno_id,
           materia_grupo_id: parseInt(materia_grupo_id),
@@ -263,7 +297,7 @@ export default function CalificacionesPage() {
       setValorNuevo('');
       setExito(' Calificación guardada correctamente.');
       setTimeout(() => setExito(''), 3000);
-      await cargar();
+      await cargarCalificaciones();
     } catch (err) {
       setError(err.response?.data?.message || 'Error al guardar.');
     } finally {
@@ -295,7 +329,6 @@ export default function CalificacionesPage() {
       setRegistrando(null);
       setValorNuevo(cal.valor);
     } else {
-      //  Asegurar que alumnoId es el ID de la tabla alumnos (debe ser un número)
       setRegistrando({ alumno_id: alumnoId, parcial });
       setEditando(null);
       setValorNuevo('');
@@ -304,7 +337,6 @@ export default function CalificacionesPage() {
 
   const isEditingIndividual = editando !== null || registrando !== null;
 
-  // ── Edición por columna ──
   const activarModoColumna = (parcial) => {
     if (!esAdmin && !isParcialEditable(parcial)) {
       setError(`El Parcial ${parcial} no está en período de edición.`);
@@ -370,14 +402,12 @@ export default function CalificacionesPage() {
         if (calExistente) {
           await calificacionesService.actualizar(calExistente.id, valor);
         } else {
-          //  Enviar alumno_id
           const payload = {
             alumno_id: alumno.alumno_id,
             materia_grupo_id: parseInt(materia_grupo_id),
             parcial: parcialSeleccionado,
             calificacion: valor,
           };
-          console.log(' Enviando (columna):', payload);
           await calificacionesService.registrar(payload);
         }
       });
@@ -388,7 +418,7 @@ export default function CalificacionesPage() {
       setParcialSeleccionado(null);
       setCalificacionesTemp({});
       setCamposVacios({});
-      await cargar();
+      await cargarCalificaciones();
     } catch (err) {
       setError(err.response?.data?.message || 'Error al guardar las calificaciones.');
     } finally {
@@ -404,183 +434,471 @@ export default function CalificacionesPage() {
     setError('');
   };
 
-  const parcialesEditables = PARCIALES.filter(p => esAdmin || isParcialEditable(p));
+  // ===== RENDERIZADO CONDICIONAL (SIEMPRE DESPUÉS DE TODOS LOS HOOKS) =====
 
+  // 1. Vista de alumno
+  if (esAlumno) {
+    const porMateria = datos.reduce((acc, c) => {
+      const key = c.materia;
+      if (!acc[key]) acc[key] = { materia: c.materia, ciclo: c.ciclo_escolar, parciales: {} };
+      acc[key].parciales[c.parcial] = c.calificacion;
+      return acc;
+    }, {});
+
+    return (
+      <div className={styles.page}>
+        <div className={styles.pageHeader}>
+          <button className={styles.btnVolver} onClick={() => navigate(-1)}>← Volver</button>
+          <div>
+            <h1 className={styles.title}>Mis Calificaciones</h1>
+            <p className={styles.subtitle}>Ciclo escolar actual</p>
+          </div>
+        </div>
+        {cargando ? (
+          <div className={styles.skeletonContainer}>
+            {[1, 2].map(n => (
+              <div key={n} className={styles.card}>
+                <div className={styles.cardHead}>
+                  <Skeleton width="200px" height="22px" variant="text" />
+                  <Skeleton width="100px" height="16px" variant="text" />
+                </div>
+                <div className={styles.parcialesRow}>
+                  {[1, 2, 3, 4].map(p => (
+                    <div key={p} className={styles.parcialBox}>
+                      <Skeleton width="50px" height="12px" variant="text" />
+                      <Skeleton width="30px" height="22px" variant="text" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : Object.keys(porMateria).length === 0 ? (
+          <div className={styles.empty}>Aún no tienes calificaciones registradas.</div>
+        ) : (
+          Object.values(porMateria).map(m => (
+            <div key={m.materia} className={styles.card}>
+              <div className={styles.cardHead}>
+                <h2 className={styles.cardTitle}>{m.materia}</h2>
+                <span className={styles.ciclo}>{m.ciclo}</span>
+              </div>
+              <div className={styles.parcialesRow}>
+                {PARCIALES.map(p => {
+                  const cal = m.parciales[p];
+                  return (
+                    <div key={p} className={styles.parcialBox}>
+                      <span className={styles.parcialLabel}>Parcial {p}</span>
+                      <span className={styles.parcialValor} style={{ color: cal != null ? COLOR_CALIF(cal) : '#94a3b8' }}>
+                        {cal != null ? cal : '—'}
+                      </span>
+                    </div>
+                  );
+                })}
+                <div className={styles.parcialBox}>
+                  <span className={styles.parcialLabel}>Promedio</span>
+                  <span className={styles.parcialValor} style={{ color: '#1A6B35' }}>
+                    {Object.values(m.parciales).length > 0
+                      ? (Object.values(m.parciales).reduce((a, b) => a + parseFloat(b), 0) / Object.values(m.parciales).length).toFixed(1)
+                      : '—'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    );
+  }
+
+  // 2. Vista de detalle de grupo (materias)
+  if (grupo_id) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.pageHeader}>
+          <button className={styles.btnVolver} onClick={volverALista}>← Volver a grupos</button>
+          <div>
+            <h1 className={styles.title}>Materias del Grupo</h1>
+            <p className={styles.subtitle}>
+              {cargandoMaterias ? 'Cargando materias...' : `${materiasGrupo.length} materias encontradas`}
+            </p>
+          </div>
+        </div>
+
+        {error && <div className={styles.errorMsg}>{error}</div>}
+
+        {cargandoMaterias ? (
+          <div className={styles.skeletonContainer}>
+            {[1,2,3].map(n => (
+              <div key={n} className={styles.card} style={{ padding: '1rem' }}>
+                <Skeleton width="200px" height="20px" variant="text" />
+              </div>
+            ))}
+          </div>
+        ) : materiasGrupo.length === 0 ? (
+          <div className={styles.empty}>Este grupo no tiene materias asignadas.</div>
+        ) : (
+          <div className={styles.materiasLista}>
+            {materiasGrupo.map((materia) => {
+              const expandida = materiaExpandida === materia.id;
+              return (
+                <div key={materia.id} className={styles.materiaCard}>
+                  <div className={styles.materiaCardHeader} onClick={() => toggleExpandirMateria(materia.id)}>
+                    <span className={styles.materiaCardNombre}>{materia.materia_nombre}</span>
+                    <span className={styles.materiaCardMeta}>
+                      {materia.docente_nombre} {materia.docente_apellidos || ''} • {materia.horas_semana || '—'} hrs
+                    </span>
+                    <span className={styles.materiaCardArrow}>{expandida ? '▲' : '▼'}</span>
+                  </div>
+                  {expandida && (
+                    <div className={styles.materiaCardAcciones}>
+                      <button
+                        className={styles.btnPrimary}
+                        onClick={() => verCalificacionesMateria(materia.id)}
+                      >
+                        Ver calificaciones
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // 3. Vista de detalle de calificaciones de una materia
+  if (materia_grupo_id) {
+    // Construir lista de alumnos
+    const porAlumno = {};
+    datos.forEach(row => {
+      const key = row.alumno_id;
+      if (!porAlumno[key]) {
+        porAlumno[key] = {
+          alumno_id: row.alumno_id,
+          usuario_id: row.usuario_id,
+          nombre: `${row.apellidos}, ${row.nombre}`,
+          matricula: row.matricula || '',
+          calificaciones: {},
+        };
+      }
+      if (row.parcial) {
+        porAlumno[key].calificaciones[row.parcial] = {
+          id: row.calificacion_id,
+          valor: row.calificacion,
+        };
+      }
+    });
+
+    // Filtro de alumnos por búsqueda
+    const alumnosList = useMemo(() => {
+      const lista = Object.values(porAlumno);
+      if (!busquedaAlumno.trim()) return lista.sort((a, b) => a.nombre.localeCompare(b.nombre));
+      const term = busquedaAlumno.toLowerCase().trim();
+      return lista
+        .filter(alumno =>
+          alumno.nombre.toLowerCase().includes(term) ||
+          (alumno.matricula && alumno.matricula.toLowerCase().includes(term))
+        )
+        .sort((a, b) => a.nombre.localeCompare(b.nombre));
+    }, [porAlumno, busquedaAlumno]);
+
+    const parcialesEditables = PARCIALES.filter(p => esAdmin || isParcialEditable(p));
+
+    return (
+      <div className={styles.page}>
+        {toast && <div className={styles.toast}>{toast}</div>}
+
+        <div className={styles.pageHeader}>
+          <button className={styles.btnVolver} onClick={() => navigate(-1)}>← Volver</button>
+          <div>
+            <h1 className={styles.title}>Calificaciones</h1>
+            <p className={styles.subtitle}>
+              {modoColumna 
+                ? `️ Editando Parcial ${parcialSeleccionado} (todos los alumnos)` 
+                : 'Haz clic en una celda o en el ️ del encabezado para edición masiva'}
+            </p>
+          </div>
+        </div>
+
+        {/* Búsqueda de alumnos */}
+        <div className={styles.busquedaAlumnoContainer}>
+          <input
+            type="text"
+            className={styles.inputSearchAlumno}
+            placeholder="Buscar alumno por nombre, apellido o matrícula..."
+            value={busquedaAlumno}
+            onChange={(e) => setBusquedaAlumno(e.target.value)}
+          />
+          {busquedaAlumno && (
+            <span className={styles.resultadosCount}>
+              {alumnosList.length} alumno(s) encontrado(s)
+            </span>
+          )}
+        </div>
+
+        {error && <div className={styles.errorMsg}>{error}</div>}
+        {inputError && <div className={styles.errorMsg}>{inputError}</div>}
+        {exito && <div className={styles.successMsg}>{exito}</div>}
+
+        {isEditingIndividual && (
+          <div className={styles.inputRow}>
+            <span className={styles.inputLabel}>
+              {editando ? `Editando Parcial ${editando.parcial}` : `Registrando Parcial ${registrando?.parcial}`}
+            </span>
+            <div className={styles.inputWrapper}>
+              <input
+                className={`${styles.calInput} ${inputError ? styles.calInputError : ''}`}
+                type="text"
+                inputMode="decimal"
+                value={valorNuevo}
+                onChange={handleInputChange}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') { e.preventDefault(); handleGuardarIndividual(); }
+                  if (e.key === 'Escape') handleCancelarIndividual();
+                }}
+                autoFocus
+                placeholder="0-10"
+              />
+              {inputError && <span className={styles.inputErrorText}>{inputError}</span>}
+            </div>
+            <button className={styles.btnPrimary} onClick={handleGuardarIndividual} disabled={guardando || !!inputError}>
+              {guardando ? 'Guardando...' : 'Guardar'}
+            </button>
+            <button className={styles.btnSecondary} onClick={handleCancelarIndividual}>Cancelar</button>
+          </div>
+        )}
+
+        {modoColumna && (
+          <div className={styles.columnaActions}>
+            <span className={styles.columnaLabel}>️ Editando Parcial {parcialSeleccionado} – {alumnosList.length} alumnos</span>
+            <button className={styles.btnPrimary} onClick={guardarColumna} disabled={guardandoColumna}>
+              <IconSave /> {guardandoColumna ? 'Guardando...' : 'Guardar todos'}
+            </button>
+            <button className={styles.btnSecondary} onClick={cancelarColumna}>Cancelar</button>
+          </div>
+        )}
+
+        {cargando ? (
+          <div className={styles.tableWrapper}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th className={styles.th}>Alumno</th>
+                  {PARCIALES.map(p => (
+                    <th key={p} className={styles.th}>
+                      Parcial {p}
+                      {!modoColumna && parcialesEditables.includes(p) && (
+                        <button 
+                          className={styles.btnEditarColumna}
+                          onClick={() => activarModoColumna(p)}
+                          title={`Editar Parcial ${p} para todos los alumnos`}
+                        >
+                          <IconPencil />
+                        </button>
+                      )}
+                    </th>
+                  ))}
+                  <th className={styles.th}>Promedio</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[1,2,3,4].map(row => (
+                  <tr key={row} className={styles.tr}>
+                    <td className={styles.tdNombre}><Skeleton width="180px" height="18px" variant="text" /></td>
+                    {PARCIALES.map(p => (
+                      <td key={p} className={styles.tdCal}><Skeleton width="28px" height="20px" variant="text" style={{ margin: '0 auto' }} /></td>
+                    ))}
+                    <td className={styles.tdCal}><Skeleton width="28px" height="20px" variant="text" style={{ margin: '0 auto' }} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : alumnosList.length === 0 ? (
+          <div className={styles.empty}>
+            {busquedaAlumno ? 'No hay alumnos que coincidan con la búsqueda.' : 'No hay alumnos inscritos en esta materia.'}
+          </div>
+        ) : (
+          <div className={styles.tableWrapper}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th className={styles.th}>Alumno</th>
+                  {PARCIALES.map(p => (
+                    <th key={p} className={styles.th}>
+                      Parcial {p}
+                      {!modoColumna && parcialesEditables.includes(p) && (
+                        <button 
+                          className={styles.btnEditarColumna}
+                          onClick={() => activarModoColumna(p)}
+                          title={`Editar Parcial ${p} para todos los alumnos`}
+                        >
+                          <IconPencil />
+                        </button>
+                      )}
+                    </th>
+                  ))}
+                  <th className={styles.th}>Promedio</th>
+                </tr>
+              </thead>
+              <tbody>
+                {alumnosList.map(alumno => {
+                  const vals = Object.values(alumno.calificaciones).map(c => parseFloat(c.valor));
+                  const prom = vals.length > 0 ? vals.reduce((x,y) => x+y,0)/vals.length : null;
+                  return (
+                    <tr key={alumno.alumno_id} className={styles.tr}>
+                      <td className={styles.tdNombre}>
+                        {alumno.nombre}
+                        {alumno.matricula && <span className={styles.matricula}>({alumno.matricula})</span>}
+                      </td>
+                      {PARCIALES.map(p => {
+                        const cal = alumno.calificaciones[p];
+                        if (modoColumna && p === parcialSeleccionado) {
+                          const valor = calificacionesTemp[alumno.alumno_id] || '';
+                          const isEmpty = valor.trim() === '';
+                          const isError = camposVacios[alumno.alumno_id];
+                          return (
+                            <td key={p} className={styles.tdCal}>
+                              <input
+                                className={`${styles.calInputColumna} ${isEmpty ? styles.calInputColumnaVacio : ''} ${isError ? styles.calInputColumnaError : ''}`}
+                                type="text"
+                                inputMode="decimal"
+                                value={valor}
+                                onChange={(e) => handleTempChange(alumno.alumno_id, e.target.value)}
+                                placeholder="0-10"
+                              />
+                            </td>
+                          );
+                        }
+                        const clickeable = !modoColumna && !isEditingIndividual && parcialesEditables.includes(p);
+                        return (
+                          <td
+                            key={p}
+                            className={`${styles.tdCal} ${clickeable ? styles.tdCalClickable : ''}`}
+                            onClick={() => {
+                              if (clickeable) {
+                                handleClicCelda(alumno.alumno_id, p, cal);
+                              }
+                            }}
+                            style={{ 
+                              cursor: clickeable ? 'pointer' : 'default',
+                              opacity: clickeable ? 1 : 0.6
+                            }}
+                          >
+                            <span className={styles.calCell} style={{ color: cal ? COLOR_CALIF(cal.valor) : '#94a3b8' }}>
+                              {cal ? cal.valor : '+'}
+                            </span>
+                          </td>
+                        );
+                      })}
+                      <td className={styles.tdCal}>
+                        <span style={{ fontWeight: 700, color: prom ? COLOR_CALIF(prom) : '#94a3b8' }}>
+                          {prom !== null ? prom.toFixed(1) : '—'}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // 4. Vista principal: selector de grupos
   return (
     <div className={styles.page}>
-      {toast && <div className={styles.toast}>{toast}</div>}
-
       <div className={styles.pageHeader}>
-        <button className={styles.btnVolver} onClick={handleVolver}>← Volver</button>
         <div>
           <h1 className={styles.title}>Calificaciones</h1>
-          <p className={styles.subtitle}>
-            {modoColumna 
-              ? `️ Editando Parcial ${parcialSeleccionado} (todos los alumnos)` 
-              : 'Haz clic en una celda o en el ️ del encabezado para edición masiva'}
-          </p>
+          <p className={styles.subtitle}>Filtra y selecciona un grupo para ver sus materias y calificaciones</p>
         </div>
       </div>
 
-      {(error || inputError) && <div className={styles.errorMsg}>{error || inputError}</div>}
-      {exito && <div className={styles.successMsg}>{exito}</div>}
+      {error && <div className={styles.errorMsg}>{error}</div>}
 
-      {isEditingIndividual && (
-        <div className={styles.inputRow}>
-          <span className={styles.inputLabel}>
-            {editando ? `Editando Parcial ${editando.parcial}` : `Registrando Parcial ${registrando?.parcial}`}
-          </span>
-          <div className={styles.inputWrapper}>
-            <input
-              className={`${styles.calInput} ${inputError ? styles.calInputError : ''}`}
-              type="text"
-              inputMode="decimal"
-              value={valorNuevo}
-              onChange={handleInputChange}
-              onKeyDown={e => {
-                if (e.key === 'Enter') { e.preventDefault(); handleGuardarIndividual(); }
-                if (e.key === 'Escape') handleCancelarIndividual();
-              }}
-              autoFocus
-              placeholder="0-10"
-            />
-            {inputError && <span className={styles.inputErrorText}>{inputError}</span>}
-          </div>
-          <button className={styles.btnPrimary} onClick={handleGuardarIndividual} disabled={guardando || !!inputError}>
-            {guardando ? 'Guardando...' : 'Guardar'}
-          </button>
-          <button className={styles.btnSecondary} onClick={handleCancelarIndividual}>Cancelar</button>
-        </div>
-      )}
-
-      {modoColumna && (
-        <div className={styles.columnaActions}>
-          <span className={styles.columnaLabel}>️ Editando Parcial {parcialSeleccionado} – {alumnosList.length} alumnos</span>
-          <button className={styles.btnPrimary} onClick={guardarColumna} disabled={guardandoColumna}>
-            <IconSave /> {guardandoColumna ? 'Guardando...' : 'Guardar todos'}
-          </button>
-          <button className={styles.btnSecondary} onClick={cancelarColumna}>Cancelar</button>
-        </div>
-      )}
-
-      {cargando ? (
-        <div className={styles.tableWrapper}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th className={styles.th}>Alumno</th>
-                {PARCIALES.map(p => (
-                  <th key={p} className={styles.th}>
-                    Parcial {p}
-                    {!modoColumna && parcialesEditables.includes(p) && (
-                      <button 
-                        className={styles.btnEditarColumna}
-                        onClick={() => activarModoColumna(p)}
-                        title={`Editar Parcial ${p} para todos los alumnos`}
-                      >
-                        <IconPencil />
-                      </button>
-                    )}
-                  </th>
-                ))}
-                <th className={styles.th}>Promedio</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[1,2,3,4].map(row => (
-                <tr key={row} className={styles.tr}>
-                  <td className={styles.tdNombre}><Skeleton width="180px" height="18px" variant="text" /></td>
-                  {PARCIALES.map(p => (
-                    <td key={p} className={styles.tdCal}><Skeleton width="28px" height="20px" variant="text" style={{ margin: '0 auto' }} /></td>
-                  ))}
-                  <td className={styles.tdCal}><Skeleton width="28px" height="20px" variant="text" style={{ margin: '0 auto' }} /></td>
-                </tr>
+      <div className={styles.filtrosContainer}>
+        <div className={styles.filtrosGrid}>
+          <div className={styles.filtroGroup}>
+            <label className={styles.label}>Ciclo</label>
+            <select
+              className={styles.select}
+              name="ciclo_id"
+              value={filtros.ciclo_id}
+              onChange={handleFiltroChange}
+            >
+              <option value="">Todos</option>
+              {ciclos.map(c => (
+                <option key={c.id} value={c.id}>
+                  {c.nombre} {c.activo ? '(Activo)' : ''}
+                </option>
               ))}
-            </tbody>
-          </table>
+            </select>
+          </div>
+
+          <div className={styles.filtroGroup}>
+            <label className={styles.label}>Semestre</label>
+            <select
+              className={styles.select}
+              name="semestre"
+              value={filtros.semestre}
+              onChange={handleFiltroChange}
+            >
+              <option value="">Todos</option>
+              {[1,2,3,4,5,6].map(s => (
+                <option key={s} value={s}>{s}°</option>
+              ))}
+            </select>
+          </div>
+
+          <div className={styles.filtroGroup}>
+            <label className={styles.label}>Turno</label>
+            <select
+              className={styles.select}
+              name="turno_id"
+              value={filtros.turno_id}
+              onChange={handleFiltroChange}
+            >
+              <option value="">Todos</option>
+              <option value="1">Matutino</option>
+              <option value="2">Vespertino</option>
+            </select>
+          </div>
+
+          <div className={styles.filtrosActions}>
+            <button className={styles.btnLimpiarFiltros} onClick={limpiarFiltros}>
+              Limpiar filtros
+            </button>
+          </div>
         </div>
-      ) : alumnosList.length === 0 ? (
-        <div className={styles.empty}>No hay alumnos inscritos en esta materia.</div>
+      </div>
+
+      {cargandoGrupos ? (
+        <div className={styles.loading}>Cargando grupos...</div>
+      ) : grupos.length === 0 ? (
+        <div className={styles.empty}>No se encontraron grupos con esos filtros.</div>
       ) : (
-        <div className={styles.tableWrapper}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th className={styles.th}>Alumno</th>
-                {PARCIALES.map(p => (
-                  <th key={p} className={styles.th}>
-                    Parcial {p}
-                    {!modoColumna && parcialesEditables.includes(p) && (
-                      <button 
-                        className={styles.btnEditarColumna}
-                        onClick={() => activarModoColumna(p)}
-                        title={`Editar Parcial ${p} para todos los alumnos`}
-                      >
-                        <IconPencil />
-                      </button>
-                    )}
-                  </th>
-                ))}
-                <th className={styles.th}>Promedio</th>
-              </tr>
-            </thead>
-            <tbody>
-              {alumnosList.map(alumno => {
-                const vals = Object.values(alumno.calificaciones).map(c => parseFloat(c.valor));
-                const prom = vals.length > 0 ? vals.reduce((x,y) => x+y,0)/vals.length : null;
-                return (
-                  <tr key={alumno.alumno_id} className={styles.tr}>
-                    <td className={styles.tdNombre}>{alumno.nombre}</td>
-                    {PARCIALES.map(p => {
-                      const cal = alumno.calificaciones[p];
-                      if (modoColumna && p === parcialSeleccionado) {
-                        const valor = calificacionesTemp[alumno.alumno_id] || '';
-                        const isEmpty = valor.trim() === '';
-                        const isError = camposVacios[alumno.alumno_id];
-                        return (
-                          <td key={p} className={styles.tdCal}>
-                            <input
-                              className={`${styles.calInputColumna} ${isEmpty ? styles.calInputColumnaVacio : ''} ${isError ? styles.calInputColumnaError : ''}`}
-                              type="text"
-                              inputMode="decimal"
-                              value={valor}
-                              onChange={(e) => handleTempChange(alumno.alumno_id, e.target.value)}
-                              placeholder="0-10"
-                            />
-                          </td>
-                        );
-                      }
-                      const clickeable = !modoColumna && !isEditingIndividual && parcialesEditables.includes(p);
-                      return (
-                        <td
-                          key={p}
-                          className={`${styles.tdCal} ${clickeable ? styles.tdCalClickable : ''}`}
-                          onClick={() => {
-                            if (clickeable) {
-                              handleClicCelda(alumno.alumno_id, p, cal);
-                            }
-                          }}
-                          style={{ 
-                            cursor: clickeable ? 'pointer' : 'default',
-                            opacity: clickeable ? 1 : 0.6
-                          }}
-                        >
-                          <span className={styles.calCell} style={{ color: cal ? COLOR_CALIF(cal.valor) : '#94a3b8' }}>
-                            {cal ? cal.valor : '+'}
-                          </span>
-                        </td>
-                      );
-                    })}
-                    <td className={styles.tdCal}>
-                      <span style={{ fontWeight: 700, color: prom ? COLOR_CALIF(prom) : '#94a3b8' }}>
-                        {prom !== null ? prom.toFixed(1) : '—'}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className={styles.listaMaterias}>
+          {grupos.map(g => (
+            <div
+              key={g.id}
+              className={styles.materiaItem}
+              onClick={() => seleccionarGrupo(g.id)}
+            >
+              <div className={styles.materiaInfo}>
+                <span className={styles.materiaNombre}>{g.nombre}</span>
+                <span className={styles.materiaDetalle}>
+                  {g.especialidad_nombre || '—'} • {g.semestre}° • {g.turno_nombre || '—'}
+                </span>
+                <span className={styles.materiaCiclo}>{g.ciclo_nombre}</span>
+              </div>
+              <span className={styles.materiaArrow}>→</span>
+            </div>
+          ))}
         </div>
       )}
     </div>

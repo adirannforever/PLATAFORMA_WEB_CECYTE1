@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { usePermissions } from '../hooks/usePermissions';
 import { incidenciasService, usuariosService, catalogosService } from '../services/api';
-import { Plus, Edit, Trash2, X, Search, Filter, CheckCircle, User } from 'lucide-react';
+import { Plus, Edit, Trash2, X, Search, Filter, CheckCircle, AlertCircle, User } from 'lucide-react';
 import Skeleton from '../components/Skeleton';
 import styles from './IncidenciasPage.module.css';
 
@@ -63,7 +64,9 @@ const ITEMS_PER_PAGE = 10;
 
 export default function IncidenciasPage() {
   const { usuario } = useAuth();
-  const esAdmin = usuario?.rol === 'administrador';
+  const { isAdmin, isDocente } = usePermissions();
+  const esAdmin = isAdmin;
+  const esDocente = isDocente;
 
   const [incidencias, setIncidencias] = useState([]);
   const [alumnos, setAlumnos] = useState([]);
@@ -166,7 +169,7 @@ export default function IncidenciasPage() {
       if (filtroFechaDesde) params.fecha_desde = filtroFechaDesde;
       if (filtroFechaHasta) params.fecha_hasta = filtroFechaHasta;
       if (busqueda) params.search = busqueda;
-      if (filtroGrupo) params.grupo_letra = filtroGrupo; 
+      if (filtroGrupo) params.grupo_letra = filtroGrupo;
 
       const res = await incidenciasService.getAll(params);
       setIncidencias(res.data || []);
@@ -372,283 +375,290 @@ export default function IncidenciasPage() {
           <h1 className={styles.title}>Incidencias</h1>
           <p className={styles.subtitle}>{totalRegistros} registro(s)</p>
         </div>
-        {esAdmin && (
+        {(esAdmin || esDocente) && (
           <button className={styles.btnPrimary} onClick={handleAbrirCrear}>
             <Plus size={18} /> Nueva incidencia
           </button>
         )}
       </div>
 
-      <div className={styles.filtrosContainer}>
-        <div className={styles.filtrosGrid}>
-          <div className={styles.filtroGroup}>
-            <label className={styles.label}>Buscar</label>
-            <div className={styles.searchWrapper}>
-              <Search size={16} className={styles.searchIcon} />
+      {/* Filtros - solo para admin y docente */}
+      {(esAdmin || esDocente) && (
+        <div className={styles.filtrosContainer}>
+          <div className={styles.filtrosGrid}>
+            <div className={styles.filtroGroup}>
+              <label className={styles.label}>Buscar</label>
+              <div className={styles.searchWrapper}>
+                <Search size={16} className={styles.searchIcon} />
+                <input
+                  type="text"
+                  className={styles.inputSearch}
+                  placeholder="Buscar por alumno o descripción..."
+                  value={busqueda}
+                  onChange={(e) => setBusqueda(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className={styles.filtroGroup}>
+              <label className={styles.label}>Alumno</label>
+              <select
+                className={styles.select}
+                value={filtroAlumno}
+                onChange={(e) => setFiltroAlumno(e.target.value)}
+              >
+                <option value="">Todos</option>
+                {alumnos.map((a) => (
+                  <option key={a.id} value={a.alumno_id || a.id}>
+                    {a.apellidos}, {a.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className={styles.filtroGroup}>
+              <label className={styles.label}>Grupo</label>
+              <select
+                className={styles.select}
+                value={filtroGrupo}
+                onChange={(e) => setFiltroGrupo(e.target.value)}
+              >
+                <option value="">Todos los grupos</option>
+                {letrasUnicas.map((letra) => (
+                  <option key={letra} value={letra}>
+                    Grupo {letra}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className={styles.filtroGroup}>
+              <label className={styles.label}>Tipo</label>
+              <select
+                className={styles.select}
+                value={filtroTipo}
+                onChange={(e) => setFiltroTipo(e.target.value)}
+              >
+                <option value="">Todos</option>
+                {Object.entries(TIPO_INCIDENCIA).map(([key, label]) => (
+                  <option key={key} value={key}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className={styles.filtroGroup}>
+              <label className={styles.label}>Subtipo</label>
+              <select
+                className={styles.select}
+                value={filtroSubtipo}
+                onChange={(e) => setFiltroSubtipo(e.target.value)}
+              >
+                <option value="">Todos</option>
+                {filtroTipo ? (
+                  getSubtitulos(filtroTipo).map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))
+                ) : (
+                  <option value="">Selecciona un tipo primero</option>
+                )}
+              </select>
+            </div>
+
+            <div className={styles.filtroGroup}>
+              <label className={styles.label}>Estado</label>
+              <select
+                className={styles.select}
+                value={filtroResuelta}
+                onChange={(e) => setFiltroResuelta(e.target.value)}
+              >
+                <option value="">Todos</option>
+                <option value="false">Pendiente</option>
+                <option value="true">Resuelta</option>
+              </select>
+            </div>
+
+            <div className={styles.filtroGroup}>
+              <label className={styles.label}>Fecha desde</label>
               <input
-                type="text"
-                className={styles.inputSearch}
-                placeholder="Buscar por alumno o descripción..."
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
+                type="date"
+                className={styles.input}
+                value={filtroFechaDesde}
+                onChange={(e) => setFiltroFechaDesde(e.target.value)}
               />
             </div>
-          </div>
 
-          <div className={styles.filtroGroup}>
-            <label className={styles.label}>Alumno</label>
-            <select
-              className={styles.select}
-              value={filtroAlumno}
-              onChange={(e) => setFiltroAlumno(e.target.value)}
-            >
-              <option value="">Todos</option>
-              {alumnos.map((a) => (
-                <option key={a.id} value={a.alumno_id || a.id}>
-                  {a.apellidos}, {a.nombre}
-                </option>
-              ))}
-            </select>
-          </div>
+            <div className={styles.filtroGroup}>
+              <label className={styles.label}>Fecha hasta</label>
+              <input
+                type="date"
+                className={styles.input}
+                value={filtroFechaHasta}
+                onChange={(e) => setFiltroFechaHasta(e.target.value)}
+              />
+            </div>
 
-          <div className={styles.filtroGroup}>
-            <label className={styles.label}>Grupo</label>
-            <select
-              className={styles.select}
-              value={filtroGrupo}
-              onChange={(e) => setFiltroGrupo(e.target.value)}
-            >
-              <option value="">Todos los grupos</option>
-              {letrasUnicas.map((letra) => (
-                <option key={letra} value={letra}>
-                  Grupo {letra}
-                </option>
-              ))}
-            </select>
+            <button className={styles.btnLimpiar} onClick={limpiarFiltros}>
+              <Filter size={14} /> Limpiar
+            </button>
           </div>
-
-          <div className={styles.filtroGroup}>
-            <label className={styles.label}>Tipo</label>
-            <select
-              className={styles.select}
-              value={filtroTipo}
-              onChange={(e) => setFiltroTipo(e.target.value)}
-            >
-              <option value="">Todos</option>
-              {Object.entries(TIPO_INCIDENCIA).map(([key, label]) => (
-                <option key={key} value={key}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className={styles.filtroGroup}>
-            <label className={styles.label}>Subtipo</label>
-            <select
-              className={styles.select}
-              value={filtroSubtipo}
-              onChange={(e) => setFiltroSubtipo(e.target.value)}
-            >
-              <option value="">Todos</option>
-              {filtroTipo ? (
-                getSubtitulos(filtroTipo).map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))
-              ) : (
-                <option value="">Selecciona un tipo primero</option>
-              )}
-            </select>
-          </div>
-
-          <div className={styles.filtroGroup}>
-            <label className={styles.label}>Estado</label>
-            <select
-              className={styles.select}
-              value={filtroResuelta}
-              onChange={(e) => setFiltroResuelta(e.target.value)}
-            >
-              <option value="">Todos</option>
-              <option value="false">Pendiente</option>
-              <option value="true">Resuelta</option>
-            </select>
-          </div>
-
-          <div className={styles.filtroGroup}>
-            <label className={styles.label}>Fecha desde</label>
-            <input
-              type="date"
-              className={styles.input}
-              value={filtroFechaDesde}
-              onChange={(e) => setFiltroFechaDesde(e.target.value)}
-            />
-          </div>
-
-          <div className={styles.filtroGroup}>
-            <label className={styles.label}>Fecha hasta</label>
-            <input
-              type="date"
-              className={styles.input}
-              value={filtroFechaHasta}
-              onChange={(e) => setFiltroFechaHasta(e.target.value)}
-            />
-          </div>
-
-          <button className={styles.btnLimpiar} onClick={limpiarFiltros}>
-            <Filter size={14} /> Limpiar
-          </button>
         </div>
-      </div>
+      )}
 
-      {cargando ? (
-        <div className={styles.tableWrapper}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Alumno</th>
-                <th>Matrícula</th>
-                <th>Semestre</th>
-                <th>Grupo</th>
-                <th>Tipo</th>
-                <th>Subtipo</th>
-                <th>Descripción</th>
-                <th>Fecha</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[1, 2, 3, 4, 5].map((n) => (
-                <tr key={n}>
-                  <td><Skeleton width="150px" height="16px" variant="text" /></td>
-                  <td><Skeleton width="100px" height="16px" variant="text" /></td>
-                  <td><Skeleton width="50px" height="16px" variant="text" /></td>
-                  <td><Skeleton width="60px" height="16px" variant="text" /></td>
-                  <td><Skeleton width="100px" height="16px" variant="text" /></td>
-                  <td><Skeleton width="100px" height="16px" variant="text" /></td>
-                  <td><Skeleton width="200px" height="16px" variant="text" /></td>
-                  <td><Skeleton width="100px" height="16px" variant="text" /></td>
-                  <td><Skeleton width="80px" height="16px" variant="text" /></td>
-                  <td><Skeleton width="120px" height="24px" variant="text" /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : incidencias.length === 0 ? (
-        <div className={styles.empty}>No hay incidencias registradas.</div>
-      ) : (
-        <div className={styles.tableWrapper}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Alumno</th>
-                <th>Matrícula</th>
-                <th>Semestre</th>
-                <th>Grupo</th>
-                <th>Tipo</th>
-                <th>Subtipo</th>
-                <th>Descripción</th>
-                <th>Fecha</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {incidencias.map((i) => (
-                <tr key={i.id}>
-                  <td>
-                    {i.alumno_apellidos}, {i.alumno_nombre}
-                  </td>
-                  <td>{i.matricula || '—'}</td>
-                  <td>{i.semestre ? `${i.semestre}°` : '—'}</td>
-                  <td>{i.grupo_letra || '—'}</td>
-                  <td>
-                    <span
-                      className={styles.tipoBadge}
-                      style={{ backgroundColor: getColorTipo(i.tipo), color: '#fff' }}
-                    >
-                      {TIPO_INCIDENCIA[i.tipo] || i.tipo}
-                    </span>
-                  </td>
-                  <td>{i.subtipo || '—'}</td>
-                  <td className={styles.descripcionCell}>
-                    <div className={styles.descripcionText}>{i.descripcion}</div>
-                    {i.resuelta && i.resolucion && (
-                      <div className={styles.resolucionText}>
-                        <strong>Resolución:</strong> {i.resolucion}
-                      </div>
-                    )}
-                  </td>
-                  <td>{formatDate(i.fecha)}</td>
-                  <td>
-                    <span className={i.resuelta ? styles.estadoResuelto : styles.estadoPendiente}>
-                      {i.resuelta ? 'Resuelta' : 'Pendiente'}
-                    </span>
-                  </td>
-                  <td>
-                    <div className={styles.acciones}>
-                      {esAdmin && !i.resuelta && (
-                        <button
-                          className={styles.btnResolver}
-                          onClick={() => handleAbrirResolver(i.id)}
-                          title="Resolver"
+      {/* Tabla - visible para admin y docente */}
+      {(esAdmin || esDocente) && (
+        <>
+          {cargando ? (
+            <div className={styles.tableWrapper}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Alumno</th>
+                    <th>Matrícula</th>
+                    <th>Semestre</th>
+                    <th>Grupo</th>
+                    <th>Tipo</th>
+                    <th>Subtipo</th>
+                    <th>Descripción</th>
+                    <th>Fecha</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <tr key={n}>
+                      <td><Skeleton width="150px" height="16px" variant="text" /></td>
+                      <td><Skeleton width="100px" height="16px" variant="text" /></td>
+                      <td><Skeleton width="50px" height="16px" variant="text" /></td>
+                      <td><Skeleton width="60px" height="16px" variant="text" /></td>
+                      <td><Skeleton width="100px" height="16px" variant="text" /></td>
+                      <td><Skeleton width="100px" height="16px" variant="text" /></td>
+                      <td><Skeleton width="200px" height="16px" variant="text" /></td>
+                      <td><Skeleton width="100px" height="16px" variant="text" /></td>
+                      <td><Skeleton width="80px" height="16px" variant="text" /></td>
+                      <td><Skeleton width="120px" height="24px" variant="text" /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : incidencias.length === 0 ? (
+            <div className={styles.empty}>No hay incidencias registradas.</div>
+          ) : (
+            <div className={styles.tableWrapper}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Alumno</th>
+                    <th>Matrícula</th>
+                    <th>Semestre</th>
+                    <th>Grupo</th>
+                    <th>Tipo</th>
+                    <th>Subtipo</th>
+                    <th>Descripción</th>
+                    <th>Fecha</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {incidencias.map((i) => (
+                    <tr key={i.id}>
+                      <td>{i.alumno_apellidos}, {i.alumno_nombre}</td>
+                      <td>{i.matricula || '—'}</td>
+                      <td>{i.semestre ? `${i.semestre}°` : '—'}</td>
+                      <td>{i.grupo_letra || '—'}</td>
+                      <td>
+                        <span
+                          className={styles.tipoBadge}
+                          style={{ backgroundColor: getColorTipo(i.tipo), color: '#fff' }}
                         >
-                          <CheckCircle size={16} />
-                        </button>
-                      )}
-                      {esAdmin && (
-                        <>
-                          <button
-                            className={styles.btnEditar}
-                            onClick={() => handleAbrirEditar(i)}
-                            title="Editar"
-                          >
-                            <Edit size={16} />
-                          </button>
-                          <button
-                            className={styles.btnEliminar}
-                            onClick={() => handleEliminar(i.id)}
-                            title="Eliminar"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                          {TIPO_INCIDENCIA[i.tipo] || i.tipo}
+                        </span>
+                      </td>
+                      <td>{i.subtipo || '—'}</td>
+                      <td className={styles.descripcionCell}>
+                        <div className={styles.descripcionText}>{i.descripcion}</div>
+                        {i.resuelta && i.resolucion && (
+                          <div className={styles.resolucionText}>
+                            <strong>Resolución:</strong> {i.resolucion}
+                          </div>
+                        )}
+                      </td>
+                      <td>{formatDate(i.fecha)}</td>
+                      <td>
+                        <span className={i.resuelta ? styles.estadoResuelto : styles.estadoPendiente}>
+                          {i.resuelta ? ' Resuelta' : ' Pendiente'}
+                        </span>
+                      </td>
+                      <td>
+                        <div className={styles.acciones}>
+                          {!i.resuelta && (esAdmin || esDocente) && (
+                            <button
+                              className={styles.btnResolver}
+                              onClick={() => handleAbrirResolver(i.id)}
+                              title="Resolver"
+                            >
+                              <CheckCircle size={16} />
+                            </button>
+                          )}
+                          {(esAdmin || esDocente) && (
+                            <>
+                              <button
+                                className={styles.btnEditar}
+                                onClick={() => handleAbrirEditar(i)}
+                                title="Editar"
+                              >
+                                <Edit size={16} />
+                              </button>
+                              <button
+                                className={styles.btnEliminar}
+                                onClick={() => handleEliminar(i.id)}
+                                title="Eliminar"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {totalPaginas > 1 && (
+            <div className={styles.pagination}>
+              <button
+                className={styles.paginationBtn}
+                onClick={() => cambiarPagina(pagina - 1)}
+                disabled={pagina <= 1}
+              >
+                Anterior
+              </button>
+              <span className={styles.paginationInfo}>
+                Página {pagina} de {totalPaginas}
+              </span>
+              <button
+                className={styles.paginationBtn}
+                onClick={() => cambiarPagina(pagina + 1)}
+                disabled={pagina >= totalPaginas}
+              >
+                Siguiente
+              </button>
+            </div>
+          )}
+        </>
       )}
 
-      {totalPaginas > 1 && (
-        <div className={styles.pagination}>
-          <button
-            className={styles.paginationBtn}
-            onClick={() => cambiarPagina(pagina - 1)}
-            disabled={pagina <= 1}
-          >
-            Anterior
-          </button>
-          <span className={styles.paginationInfo}>
-            Página {pagina} de {totalPaginas}
-          </span>
-          <button
-            className={styles.paginationBtn}
-            onClick={() => cambiarPagina(pagina + 1)}
-            disabled={pagina >= totalPaginas}
-          >
-            Siguiente
-          </button>
-        </div>
-      )}
-
-      {modalAbierto && (
+      {/* Modal de creación/edición */}
+      {modalAbierto && (esAdmin || esDocente) && (
         <div className={styles.modalOverlay} onClick={() => setModalAbierto(false)}>
           <div className={styles.modalLarge} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
@@ -740,7 +750,7 @@ export default function IncidenciasPage() {
                           </span>
                           <span className={styles.resultadoDetalle}>
                             {a.matricula || 'sin matrícula'} •{' '}
-                            {a.semestre ? `Grado ${a.semestre}°` : '—'} •{' '}
+                            {a.semestre ? `${a.semestre}°` : '—'} •{' '}
                             {a.grupo_letra ? `Grupo ${a.grupo_letra}` : 'sin grupo'} •{' '}
                             {a.especialidad_nombre || 'sin especialidad'}
                           </span>
@@ -867,7 +877,8 @@ export default function IncidenciasPage() {
         </div>
       )}
 
-      {resolverModal.open && (
+      {/* Modal de resolución */}
+      {resolverModal.open && (esAdmin || esDocente) && (
         <div className={styles.modalOverlay} onClick={() => setResolverModal({ open: false, id: null })}>
           <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
@@ -909,6 +920,7 @@ export default function IncidenciasPage() {
         </div>
       )}
 
+      {/* Modal de confirmación */}
       {confirmModal.open && (
         <div className={styles.modalOverlay} onClick={cerrarConfirmacion}>
           <div className={styles.confirmModal} onClick={(e) => e.stopPropagation()}>

@@ -510,3 +510,11 @@
     font-size: 0.9rem;
   }
 }
+.alumnoFijo {
+  padding: 0.5rem 0.8rem;
+  background: #f8fafc;
+  border: 2px solid #d1d9e6;
+  border-radius: 2px;
+  font-size: 0.9rem;
+  color: #1e293b;
+}

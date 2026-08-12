@@ -1,8 +1,9 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
 import { asistenciaService, catalogosService, materiasService } from '../services/api';
 import Skeleton from '../components/Skeleton';
+import { Clock, FileText } from 'lucide-react'; // ← AGREGADO
 import styles from './AsistenciaPage.module.css';
 
 const ESTADOS = [
@@ -14,92 +15,78 @@ const ESTADOS = [
 export default function AsistenciaPage() {
   const { usuario } = useAuth();
   const { isAdmin, isDocente, isAlumno } = usePermissions();
+
   const [materias, setMaterias] = useState([]);
   const [materiaSeleccionada, setMateriaSeleccionada] = useState('');
   const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0]);
   const [alumnos, setAlumnos] = useState([]);
-  const [asistencias, setAsistencias] = useState({}); // { alumno_id: { estado, justificacion } }
+  const [asistencias, setAsistencias] = useState({});
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
   const [exito, setExito] = useState('');
 
   // ===== Cargar materias según rol =====
-  const cargarMaterias = useCallback(async () => {
-    setCargando(true);
-    setError('');
-    try {
-      let res;
-      if (isAdmin) {
-        // Admin ve todas las materias_grupo
-        res = await materiasService.getAll();
-      } else if (isDocente) {
-        // Docente ve solo sus materias (backend filtra por docente_id automáticamente)
-        res = await materiasService.getAll();
-      } else {
-        // Alumno no necesita materias para registrar, solo verá su historial
-        setMaterias([]);
+  useEffect(() => {
+    const cargarMaterias = async () => {
+      setCargando(true);
+      try {
+        let res;
+        if (isAdmin || isDocente) {
+          res = await materiasService.getAll();
+          setMaterias(res.materias || []);
+        } else {
+          setMaterias([]);
+        }
+      } catch (e) {
+        console.error('Error cargando materias:', e);
+        setError('No se pudieron cargar las materias.');
+      } finally {
         setCargando(false);
-        return;
       }
-      setMaterias(res.materias || []);
-      // Si hay materias y no hay selección, seleccionar la primera automáticamente
-      if (res.materias?.length > 0 && !materiaSeleccionada) {
-        setMateriaSeleccionada(String(res.materias[0].id));
-      }
-    } catch (e) {
-      console.error('Error cargando materias:', e);
-      setError('No se pudieron cargar las materias.');
-    } finally {
-      setCargando(false);
-    }
-  }, [isAdmin, isDocente, isAlumno]);
+    };
+    if (isAdmin || isDocente) cargarMaterias();
+    else setCargando(false);
+  }, [isAdmin, isDocente]);
 
-  // ===== Cargar asistencias al cambiar materia o fecha (solo admin/docente) =====
-  const cargarAsistencias = useCallback(async () => {
-    if (!materiaSeleccionada || isAlumno) return;
-    setCargando(true);
-    setError('');
-    try {
-      const res = await asistenciaService.getAsistenciaClase({
-        materia_grupo_id: parseInt(materiaSeleccionada),
-        fecha: fecha,
-      });
-      const alumnosData = res.data || [];
-      setAlumnos(alumnosData);
-      const initAsistencias = {};
-      alumnosData.forEach((alumno) => {
-        initAsistencias[alumno.alumno_id] = {
-          estado: alumno.estado || 'ausente',
-          justificacion: alumno.justificacion || '',
-        };
-      });
-      setAsistencias(initAsistencias);
-    } catch (e) {
-      console.error('Error cargando asistencias:', e);
-      if (e.response?.status === 404) {
-        setError('No hay alumnos asignados a esta materia en el ciclo actual.');
-      } else {
-        setError('Error al cargar asistencias.');
-      }
-      setAlumnos([]);
-      setAsistencias({});
-    } finally {
-      setCargando(false);
-    }
-  }, [materiaSeleccionada, fecha, isAlumno]);
-
+  // ===== Cargar asistencias al cambiar materia o fecha =====
   useEffect(() => {
-    cargarMaterias();
-  }, [cargarMaterias]);
+    if (!materiaSeleccionada || !(isAdmin || isDocente)) return;
+    const cargarAsistencias = async () => {
+      setCargando(true);
+      setError('');
+      try {
+        const res = await asistenciaService.getAsistenciaClase({
+          materia_grupo_id: materiaSeleccionada,
+          fecha: fecha,
+        });
+        const alumnosData = res.data || [];
+        setAlumnos(alumnosData);
+        const initAsistencias = {};
+        alumnosData.forEach((alumno) => {
+          initAsistencias[alumno.alumno_id] = {
+            estado: alumno.estado || 'ausente',
+            justificacion: alumno.justificacion || '',
+          };
+        });
+        setAsistencias(initAsistencias);
+      } catch (e) {
+        console.error('Error cargando asistencias:', e);
+        if (e.response?.status === 404) {
+          setError('No hay alumnos asignados a esta materia en el ciclo actual.');
+        } else {
+          setError('Error al cargar asistencias.');
+        }
+        setAlumnos([]);
+        setAsistencias({});
+      } finally {
+        setCargando(false);
+      }
+    };
+    cargarAsistencias();
+  }, [materiaSeleccionada, fecha, isAdmin, isDocente]);
 
-  useEffect(() => {
-    if (isAdmin || isDocente) {
-      cargarAsistencias();
-    }
-  }, [cargarAsistencias, isAdmin, isDocente]);
-
-  // ===== Handlers para cambios (solo admin/docente) =====
+  // ===== Handlers =====
   const handleEstadoChange = (alumnoId, value) => {
     setAsistencias((prev) => ({
       ...prev,
@@ -121,7 +108,6 @@ export default function AsistenciaPage() {
   };
 
   const handleGuardar = async () => {
-    if (!isAdmin && !isDocente) return;
     const asistenciasArray = alumnos.map((alumno) => {
       const data = asistencias[alumno.alumno_id] || { estado: 'ausente', justificacion: '' };
       return {
@@ -141,9 +127,22 @@ export default function AsistenciaPage() {
         fecha: fecha,
         asistencias: asistenciasArray,
       });
-      setExito('✅ Asistencias guardadas correctamente.');
-      // Recargar datos para reflejar cambios
-      await cargarAsistencias();
+      setExito(' Asistencias guardadas correctamente.');
+      // Recargar datos
+      const res = await asistenciaService.getAsistenciaClase({
+        materia_grupo_id: materiaSeleccionada,
+        fecha: fecha,
+      });
+      const alumnosData = res.data || [];
+      setAlumnos(alumnosData);
+      const initAsistencias = {};
+      alumnosData.forEach((alumno) => {
+        initAsistencias[alumno.alumno_id] = {
+          estado: alumno.estado || 'ausente',
+          justificacion: alumno.justificacion || '',
+        };
+      });
+      setAsistencias(initAsistencias);
       setTimeout(() => setExito(''), 4000);
     } catch (e) {
       console.error('Error guardando asistencias:', e);
@@ -153,32 +152,23 @@ export default function AsistenciaPage() {
     }
   };
 
-  // ===== VISTA PARA ALUMNO =====
-  if (isAlumno) {
+  // ===== VISTA PARA ALUMNOS (solo consulta) =====
+  if (isAlumno && !isAdmin && !isDocente) {
     return (
       <div className={styles.page}>
         <div className={styles.pageHeader}>
           <div>
-            <h1 className={styles.title}>Mi Asistencia</h1>
+            <h1 className={styles.title}>Mis Asistencias</h1>
             <p className={styles.subtitle}>Consulta tu historial de asistencias</p>
           </div>
         </div>
-
         <div className={styles.horarioInfoCard}>
           <div className={styles.horarioInfoIcon}>
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#1A6B35" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-              <line x1="16" y1="2" x2="16" y2="6" />
-              <line x1="8" y1="2" x2="8" y2="6" />
-              <line x1="3" y1="10" x2="21" y2="10" />
-              <polyline points="9 15 11 17 15 13" />
-            </svg>
+            <Clock size={48} />
           </div>
           <div className={styles.horarioInfoContent}>
-            <h2>Tu historial de asistencias</h2>
-            <p>
-              Puedes consultar tu historial completo de asistencias desde el módulo de Reportes.
-            </p>
+            <h2>Tu historial de asistencias está disponible</h2>
+            <p>Puedes consultar tu historial de asistencias desde el módulo de Reportes o desde tu perfil.</p>
             <div className={styles.horarioInfoActions}>
               <button 
                 className={styles.btnPrimary}
@@ -200,7 +190,9 @@ export default function AsistenciaPage() {
         <div>
           <h1 className={styles.title}>Asistencia por Clase</h1>
           <p className={styles.subtitle}>
-            Selecciona una materia y fecha para registrar asistencia
+            {isAdmin 
+              ? 'Administra la asistencia de todas las materias' 
+              : 'Registra la asistencia de tus clases'}
           </p>
         </div>
       </div>

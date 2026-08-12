@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { usePermissions } from '../hooks/usePermissions';
 import { gruposService, catalogosService, materiasCatalogoService } from '../services/api';
 import Skeleton from '../components/Skeleton';
 import styles from './GruposPage.module.css';
@@ -15,6 +16,8 @@ const TIPO_MATERIA_ETIQUETA = {
 export default function GruposPage() {
   const navigate = useNavigate();
   const { usuario } = useAuth();
+  const { isAdmin, isDocente } = usePermissions();
+
   const [grupos, setGrupos] = useState([]);
   const [ciclos, setCiclos] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -69,6 +72,7 @@ export default function GruposPage() {
     turno_id: ''  
   });
 
+  // ===== Cargar ciclos y grupos =====
   useEffect(() => {
     const cargarInicial = async () => {
       try {
@@ -106,6 +110,7 @@ export default function GruposPage() {
     cargarGrupos();
   }, [filtros]);
 
+  // ===== Cargar materias disponibles para asignación =====
   const cargarMateriasDisponibles = async () => {
     if (!grupoParaAsignar) return;
     setCargandoMateriasDisponibles(true);
@@ -113,7 +118,7 @@ export default function GruposPage() {
     setExitoAsignacion('');
     try {
       const params = {};
-      if (grupoParaAsignar.semestre) params.semestre = grupoParaAsignar.semestre;
+      if (filtroSemestre) params.semestre = parseInt(filtroSemestre);
       if (filtroTipo) params.tipo = filtroTipo;
       if (filtroTipo === 'troncal_especialidad' && grupoParaAsignar?.especialidad_id) {
         params.especialidad_id = grupoParaAsignar.especialidad_id;
@@ -139,20 +144,23 @@ export default function GruposPage() {
     }
   };
 
-  useEffect(() => {
-    if (modalAsignarMaterias && grupoParaAsignar) {
-      cargarMateriasDisponibles();
-    }
-  }, [ filtroTipo, modalAsignarMaterias, grupoParaAsignar]);
-
+  // ===== Abrir modal de asignación de materias =====
   const abrirModalAsignarMaterias = (grupo) => {
     setGrupoParaAsignar(grupo);
     setModalAsignarMaterias(true);
     setFiltroSemestre(grupo.semestre?.toString() || '');
     setFiltroTipo('');
     setMateriasSeleccionadas([]);
+    cargarMateriasDisponibles();
   };
 
+  useEffect(() => {
+    if (modalAsignarMaterias && grupoParaAsignar) {
+      cargarMateriasDisponibles();
+    }
+  }, [filtroSemestre, filtroTipo, modalAsignarMaterias, grupoParaAsignar]);
+
+  // ===== Handlers para asignación masiva =====
   const handleSeleccionarTodas = () => {
     setMateriasSeleccionadas(materiasDisponibles.map(m => m.id));
   };
@@ -189,7 +197,7 @@ export default function GruposPage() {
     }
   };
 
-  // ... (resto de funciones CRUD de grupos sin cambios)
+  // ===== CRUD de grupos =====
   const handleAbrirModalCrear = async () => {
     setErrorGrupo('');
     setFormGrupo({
@@ -323,6 +331,7 @@ export default function GruposPage() {
     setFiltros(prev => ({ ...prev, [name]: value }));
   };
 
+  // ===== Renderizado de cada grupo =====
   const renderGrupo = (grupo) => {
     const isExpanded = expandedId === grupo.id;
     const materias = materiasDelGrupo[grupo.id] || [];
@@ -330,7 +339,7 @@ export default function GruposPage() {
 
     return (
       <div key={grupo.id} className={styles.grupoCard}>
-        {usuario.rol === 'administrador' && (
+        {isAdmin && (
           <button 
             className={styles.btnEditar}
             onClick={(e) => {
@@ -367,7 +376,7 @@ export default function GruposPage() {
                 <div className={styles.detalleSeccion}>
                   <div className={styles.detalleHeader}>
                     <h4 className={styles.detalleTitulo}> Materias</h4>
-                    {usuario.rol === 'administrador' && (
+                    {isAdmin && (
                       <button
                         className={styles.btnAgregarMateria}
                         onClick={(e) => {
@@ -405,7 +414,7 @@ export default function GruposPage() {
                 </div>
 
                 <div className={styles.detalleSeccion}>
-                  <h4 className={styles.detalleTitulo}>‍ Alumnos</h4>
+                  <h4 className={styles.detalleTitulo}> Alumnos</h4>
                   {alumnos.length === 0 ? (
                     <p className={styles.detalleVacio}>No hay alumnos en este grupo.</p>
                   ) : (
@@ -452,13 +461,14 @@ export default function GruposPage() {
             {grupos.length} grupo(s) encontrado(s)
           </p>
         </div>
-        {usuario.rol === 'administrador' && (
+        {isAdmin && (
           <button className={styles.btnPrimary} onClick={handleAbrirModalCrear}>
             + Crear grupo
           </button>
         )}
       </div>
 
+      {/* Filtros */}
       <div className={styles.filtros}>
         <div className={styles.filtroGroup}>
           <label className={styles.label}>Ciclo</label>
@@ -507,6 +517,7 @@ export default function GruposPage() {
         </div>
       </div>
 
+      {/* Lista de grupos */}
       {cargando ? (
         <div className={styles.skeletonContainer}>
           {[1,2,3].map((n) => (
@@ -527,8 +538,8 @@ export default function GruposPage() {
         </div>
       )}
 
-      {/* Modal crear grupo */}
-      {modalAbierto && (
+      {/* Modal Crear grupo */}
+      {modalAbierto && isAdmin && (
         <div className={styles.modalOverlay} onClick={() => setModalAbierto(false)}>
           <div className={styles.modal} onClick={e => e.stopPropagation()}>
             <h3 className={styles.modalTitle}>Crear nuevo grupo</h3>
@@ -630,8 +641,8 @@ export default function GruposPage() {
         </div>
       )}
 
-      {/* Modal editar grupo */}
-      {modalEdicionAbierto && (
+      {/* Modal Editar grupo */}
+      {modalEdicionAbierto && isAdmin && (
         <div className={styles.modalOverlay} onClick={() => setModalEdicionAbierto(false)}>
           <div className={styles.modal} onClick={e => e.stopPropagation()}>
             <h3 className={styles.modalTitle}>Editar grupo</h3>
@@ -744,8 +755,8 @@ export default function GruposPage() {
         </div>
       )}
 
-      {/* Modal de asignación de materias */}
-      {modalAsignarMaterias && grupoParaAsignar && (
+      {/* Modal Asignar materias */}
+      {modalAsignarMaterias && grupoParaAsignar && isAdmin && (
         <div className={styles.modalOverlay} onClick={() => {
           if (!enviandoAsignacion) setModalAsignarMaterias(false);
         }}>
@@ -766,14 +777,23 @@ export default function GruposPage() {
             {errorAsignacion && <div className={styles.errorMsg}>{errorAsignacion}</div>}
             {exitoAsignacion && <div className={styles.successMsg}>{exitoAsignacion}</div>}
 
-            {/* FILTROS CORREGIDOS */}
+            {/* Filtros */}
             <div className={styles.filtrosContainer}>
               <div className={styles.filtrosGrid}>
                 <div className={styles.filtroGroup}>
                   <label className={styles.label}>Semestre</label>
-                  <div className={styles.semestreInfo}>
-                    Editando para <strong>{grupoParaAsignar?.semestre}° Semestre</strong>
-                  </div>
+                  <select
+                    className={styles.select}
+                    value={filtroSemestre}
+                    onChange={(e) => {
+                      setFiltroSemestre(e.target.value);
+                    }}
+                  >
+                    <option value="">Todos</option>
+                    {[1,2,3,4,5,6].map(s => (
+                      <option key={s} value={s}>{s}°</option>
+                    ))}
+                  </select>
                 </div>
                 <div className={styles.filtroGroup}>
                   <label className={styles.label}>Tipo</label>
@@ -789,16 +809,23 @@ export default function GruposPage() {
                     <option value="troncal_especialidad">Troncal especialidad</option>
                   </select>
                 </div>
+                <button
+                  className={styles.btnSecondary}
+                  onClick={() => cargarMateriasDisponibles()}
+                  disabled={cargandoMateriasDisponibles}
+                >
+                  <Search size={16} /> Buscar
+                </button>
               </div>
             </div>
 
+            {/* Lista de materias disponibles */}
             <div className={styles.tableWrapper}>
               <table className={styles.table}>
                 <thead>
                   <tr>
                     <th>
                       <input
-                        class="checkbox"
                         type="checkbox"
                         checked={materiasSeleccionadas.length === materiasDisponibles.length && materiasDisponibles.length > 0}
                         onChange={(e) => {
@@ -824,7 +851,6 @@ export default function GruposPage() {
                       <tr key={m.id}>
                         <td>
                           <input
-                            class="checkbox"
                             type="checkbox"
                             checked={materiasSeleccionadas.includes(m.id)}
                             onChange={() => handleToggleMateria(m.id)}
@@ -842,6 +868,7 @@ export default function GruposPage() {
               </table>
             </div>
 
+            {/* Acciones */}
             <div className={styles.modalActions}>
               <div className={styles.batchActions}>
                 <button className={styles.btnSecondary} onClick={handleSeleccionarTodas} disabled={cargandoMateriasDisponibles || materiasDisponibles.length === 0}>

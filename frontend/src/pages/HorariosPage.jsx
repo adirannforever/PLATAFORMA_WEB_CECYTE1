@@ -91,6 +91,11 @@ export default function HorariosPage() {
 
   const [confirmModal, setConfirmModal] = useState({ open: false, message: '', onConfirm: null });
 
+  // ===== ESTADOS PARA VISTA DE DOCENTE/ALUMNO =====
+  const [horariosUsuario, setHorariosUsuario] = useState([]);
+  const [cargandoUsuario, setCargandoUsuario] = useState(false);
+  const [errorUsuario, setErrorUsuario] = useState('');
+
   // ===== SOLO ADMIN: cargar datos =====
   useEffect(() => {
     if (!isAdmin) return;
@@ -292,6 +297,43 @@ export default function HorariosPage() {
     }
   }, [cargarHorarios, cargarContadorFaltantes, isAdmin]);
 
+  // ===== CARGAR HORARIOS PARA DOCENTE/ALUMNO =====
+  useEffect(() => {
+    if (isAdmin) return;
+
+    const cargarHorariosUsuario = async () => {
+      setCargandoUsuario(true);
+      setErrorUsuario('');
+      try {
+        const params = {};
+        if (isDocente) {
+          params.docente_id = usuario.id;
+        } else if (isAlumno) {
+          const grupoId = usuario.grupo_actual_id;
+          if (grupoId) {
+            params.grupo_id = grupoId;
+          } else {
+            setErrorUsuario('No tienes un grupo asignado');
+            setCargandoUsuario(false);
+            return;
+          }
+        }
+        const res = await horariosService.listarHorarios(params);
+        if (res.success) {
+          setHorariosUsuario(res.data || []);
+        } else {
+          setErrorUsuario('No se pudieron cargar los horarios');
+        }
+      } catch (e) {
+        console.error('Error cargando horarios del usuario:', e);
+        setErrorUsuario('Error al cargar horarios');
+      } finally {
+        setCargandoUsuario(false);
+      }
+    };
+    cargarHorariosUsuario();
+  }, [isAdmin, isDocente, isAlumno, usuario]);
+
   // ===== HANDLERS (solo admin) =====
   const abrirModalUpload = () => {
     if (!isAdmin) return;
@@ -446,24 +488,38 @@ export default function HorariosPage() {
     }
   };
 
+  // ===== HANDLE ELIMINAR (mejorado) =====
   const handleEliminar = (id, nombre) => {
     if (!isAdmin) return;
+    const idNumerico = Number(id);
+    if (isNaN(idNumerico) || idNumerico <= 0) {
+      setError('ID de horario inválido');
+      return;
+    }
     setConfirmModal({
       open: true,
       message: `¿Eliminar el horario "${nombre}"? Esta acción no se puede deshacer.`,
       onConfirm: async () => {
         try {
-          const res = await horariosService.eliminarHorario(id);
+          const res = await horariosService.eliminar(idNumerico);
           if (res.success) {
             setExito('Horario eliminado correctamente');
             cargarHorarios();
             cargarContadorFaltantes();
             setTimeout(() => setExito(''), 5000);
           } else {
-            setError(res.message || 'Error al eliminar');
+            const msg = res.message || 'Error al eliminar (respuesta sin éxito)';
+            setError(msg);
+            console.error('Error al eliminar horario (res.success=false):', res);
           }
         } catch (err) {
-          setError(err.response?.data?.message || 'Error al eliminar');
+          // Captura el error completo y muestra el mensaje más específico
+          const errorMsg = err.response?.data?.message || err.message || 'Error al eliminar';
+          setError(`❌ ${errorMsg}`);
+          console.error('Error al eliminar horario:', err);
+          if (err.response) {
+            console.error('Detalles del error (response):', err.response.data);
+          }
         }
         setConfirmModal({ open: false, message: '', onConfirm: null });
       },
@@ -762,7 +818,7 @@ export default function HorariosPage() {
             {uploadForm.semestre && uploadForm.letra && uploadForm.turno_id && uploadForm.ciclo_id && (
               <div className={styles.grupoStatus}>
                 {grupoEncontrado ? (
-                  <span className={styles.grupoOk}> Grupo encontrado: {grupoEncontrado.nombre}</span>
+                  <span className={styles.grupoOk}> Asignando horario al grupo: {grupoEncontrado.nombre}</span>
                 ) : (
                   <span className={styles.grupoError}> No existe un grupo con esa combinación</span>
                 )}
@@ -1126,72 +1182,7 @@ export default function HorariosPage() {
     );
   };
 
-  // ===== RENDER LISTA DE HORARIOS =====
-  const renderArchivos = () => {
-    if (cargando) {
-      return <div className={styles.loading}>Cargando horarios...</div>;
-    }
-
-    if (archivosSubidos.length === 0) {
-      return (
-        <div className={styles.empty}>
-          <FileText size={32} />
-          <p>No hay horarios subidos</p>
-          <p className={styles.emptySub}>Haz clic en "Subir horario" para agregar un archivo</p>
-        </div>
-      );
-    }
-
-    return (
-      <div className={styles.archivosGrid}>
-        {archivosSubidos.map((archivo) => (
-          <div key={archivo.id} className={styles.archivoCard}>
-            <div className={styles.archivoInfo}>
-              <FileText size={20} />
-              <div className={styles.archivoDetails}>
-                <span className={styles.archivoNombre}>{archivo.nombre}</span>
-                <span className={styles.archivoMeta}>
-                  {archivo.grupo_nombre || 'Sin grupo'} • {archivo.semestre}° • {archivo.especialidad_nombre || '—'} • {archivo.turno_nombre || '—'}
-                </span>
-                <span className={styles.archivoFecha}>
-                  {new Date(archivo.fecha).toLocaleDateString('es-MX', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric',
-                  })}
-                </span>
-              </div>
-            </div>
-            <div className={styles.archivoActions}>
-              <button
-                className={styles.btnDescargar}
-                onClick={() => handleDescargar(archivo.key, archivo.nombre)}
-                title="Descargar"
-              >
-                <Download size={16} />
-              </button>
-              <button
-                className={styles.btnEditarArchivo}
-                onClick={() => abrirModalEditar(archivo)}
-                title="Editar metadatos"
-              >
-                <Edit2 size={16} />
-              </button>
-              <button
-                className={styles.btnEliminarArchivo}
-                onClick={() => handleEliminar(archivo.id, archivo.nombre)}
-                title="Eliminar"
-              >
-                <Trash2 size={16} />
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  // ===== FILTROS =====
+  // ===== RENDER FILTROS (solo admin) =====
   const renderFiltros = () => {
     if (!isAdmin) return null;
     return (
@@ -1322,27 +1313,53 @@ export default function HorariosPage() {
           </div>
         </div>
 
-        <div className={styles.horarioInfoCard}>
-          <div className={styles.horarioInfoIcon}>
-            <Clock size={48} />
-          </div>
-          <div className={styles.horarioInfoContent}>
-            <h2>Tu horario está disponible</h2>
-            <p>
-              {isDocente 
-                ? 'Puedes consultar y descargar tu horario de clases desde el módulo de Reportes.' 
-                : 'Puedes consultar el horario de tu grupo desde el módulo de Reportes.'}
+        {errorUsuario && <div className={styles.errorMsg}>{errorUsuario}</div>}
+
+        {cargandoUsuario ? (
+          <div className={styles.loading}>Cargando tu horario...</div>
+        ) : horariosUsuario.length === 0 ? (
+          <div className={styles.empty}>
+            <FileText size={32} />
+            <p>No hay horario disponible para ti</p>
+            <p className={styles.emptySub}>
+              {isDocente
+                ? 'Aún no se ha subido el horario de tus grupos.'
+                : 'Aún no se ha subido el horario de tu grupo.'}
             </p>
-            <div className={styles.horarioInfoActions}>
-              <button 
-                className={styles.btnPrimary}
-                onClick={() => window.location.href = '/reportes'}
-              >
-                <FileText size={16} /> Ir a Reportes
-              </button>
-            </div>
           </div>
-        </div>
+        ) : (
+          <div className={styles.archivosGrid}>
+            {horariosUsuario.map((archivo) => (
+              <div key={archivo.id} className={styles.archivoCard}>
+                <div className={styles.archivoInfo}>
+                  <FileText size={20} />
+                  <div className={styles.archivoDetails}>
+                    <span className={styles.archivoNombre}>{archivo.nombre}</span>
+                    <span className={styles.archivoMeta}>
+                      {archivo.grupo_nombre || 'Sin grupo'} • {archivo.semestre}° • {archivo.especialidad_nombre || '—'} • {archivo.turno_nombre || '—'}
+                    </span>
+                    <span className={styles.archivoFecha}>
+                      {new Date(archivo.fecha).toLocaleDateString('es-MX', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                      })}
+                    </span>
+                  </div>
+                </div>
+                <div className={styles.archivoActions}>
+                  <button
+                    className={styles.btnDescargar}
+                    onClick={() => handleDescargar(archivo.key, archivo.nombre)}
+                    title="Descargar"
+                  >
+                    <Download size={16} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   }

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { verifyToken, requireRole } from '../middlewares/auth.js';
+import { verifyToken } from '../middlewares/auth.js';
 import {
   generarBoleta,
   generarConstancia,
@@ -10,8 +10,8 @@ import {
 const router = Router();
 
 router.use(verifyToken);
-router.use(requireRole('administrador'));
 
+// Las rutas ahora tienen la lógica de permisos en el controlador
 router.get('/boleta', generarBoleta);
 router.get('/constancia', generarConstancia);
 router.get('/listado-alumnos', generarListadoAlumnos);
