@@ -1,30 +1,39 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
-import { asistenciaService, catalogosService, materiasService } from '../services/api';
+import { asistenciaService, materiasService, catalogosService } from '../services/api';
 import Skeleton from '../components/Skeleton';
-import { Clock, FileText } from 'lucide-react'; // ← AGREGADO
+import { Clock, FileText, Calendar, User, BookOpen, CheckCircle } from 'lucide-react';
 import styles from './AsistenciaPage.module.css';
 
 const ESTADOS = [
   { value: 'presente', label: 'Presente' },
   { value: 'ausente', label: 'Ausente' },
   { value: 'justificado', label: 'Justificado' },
+  { value: 'tardanza', label: 'Tardanza' },
 ];
 
 export default function AsistenciaPage() {
   const { usuario } = useAuth();
   const { isAdmin, isDocente, isAlumno } = usePermissions();
 
+  // Estados generales
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState('');
+  const [exito, setExito] = useState('');
+  const [guardando, setGuardando] = useState(false);
+
+  // Estados para admin/docente (registro)
   const [materias, setMaterias] = useState([]);
   const [materiaSeleccionada, setMateriaSeleccionada] = useState('');
   const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0]);
   const [alumnos, setAlumnos] = useState([]);
   const [asistencias, setAsistencias] = useState({});
-  const [cargando, setCargando] = useState(true);
-  const [guardando, setGuardando] = useState(false);
-  const [error, setError] = useState('');
-  const [exito, setExito] = useState('');
+  const [cargandoAlumnos, setCargandoAlumnos] = useState(false);
+
+  // Estados para alumno (historial)
+  const [historialAsistencias, setHistorialAsistencias] = useState([]);
+  const [cargandoHistorial, setCargandoHistorial] = useState(false);
 
   // ===== Cargar materias según rol =====
   useEffect(() => {
@@ -32,11 +41,22 @@ export default function AsistenciaPage() {
       setCargando(true);
       try {
         let res;
-        if (isAdmin || isDocente) {
+        if (isAdmin) {
+          // Admin: todas las materias_grupo
           res = await materiasService.getAll();
-          setMaterias(res.materias || []);
+        } else if (isDocente) {
+          // Docente: solo sus materias asignadas
+          res = await materiasService.getAll({ docente_id: usuario.id });
         } else {
+          // Alumno: no necesita materias para registrar
           setMaterias([]);
+          setCargando(false);
+          return;
+        }
+        setMaterias(res.materias || []);
+        // Si solo hay una materia, seleccionarla automáticamente
+        if (res.materias?.length === 1) {
+          setMateriaSeleccionada(String(res.materias[0].id));
         }
       } catch (e) {
         console.error('Error cargando materias:', e);
@@ -45,15 +65,18 @@ export default function AsistenciaPage() {
         setCargando(false);
       }
     };
-    if (isAdmin || isDocente) cargarMaterias();
-    else setCargando(false);
-  }, [isAdmin, isDocente]);
+    if (isAdmin || isDocente) {
+      cargarMaterias();
+    } else {
+      setCargando(false);
+    }
+  }, [isAdmin, isDocente, usuario.id]);
 
-  // ===== Cargar asistencias al cambiar materia o fecha =====
+  // ===== Cargar asistencias al cambiar materia o fecha (admin/docente) =====
   useEffect(() => {
     if (!materiaSeleccionada || !(isAdmin || isDocente)) return;
     const cargarAsistencias = async () => {
-      setCargando(true);
+      setCargandoAlumnos(true);
       setError('');
       try {
         const res = await asistenciaService.getAsistenciaClase({
@@ -80,13 +103,33 @@ export default function AsistenciaPage() {
         setAlumnos([]);
         setAsistencias({});
       } finally {
-        setCargando(false);
+        setCargandoAlumnos(false);
       }
     };
     cargarAsistencias();
   }, [materiaSeleccionada, fecha, isAdmin, isDocente]);
 
-  // ===== Handlers =====
+  // ===== Cargar historial de asistencias para alumno =====
+  useEffect(() => {
+    if (!isAlumno) return;
+    const cargarHistorial = async () => {
+      setCargandoHistorial(true);
+      setError('');
+      try {
+        const res = await asistenciaService.getHistorialAlumno();
+        setHistorialAsistencias(res.data || []);
+      } catch (e) {
+        console.error('Error cargando historial:', e);
+        setError('No se pudo cargar tu historial de asistencias.');
+        setHistorialAsistencias([]);
+      } finally {
+        setCargandoHistorial(false);
+      }
+    };
+    cargarHistorial();
+  }, [isAlumno]);
+
+  // ===== Handlers para admin/docente =====
   const handleEstadoChange = (alumnoId, value) => {
     setAsistencias((prev) => ({
       ...prev,
@@ -152,38 +195,105 @@ export default function AsistenciaPage() {
     }
   };
 
-  // ===== VISTA PARA ALUMNOS (solo consulta) =====
+  // ===== ESTADÍSTICAS PARA ALUMNO =====
+  const estadisticasAlumno = useMemo(() => {
+    const total = historialAsistencias.length;
+    const presentes = historialAsistencias.filter(a => a.estado === 'presente').length;
+    const ausentes = historialAsistencias.filter(a => a.estado === 'ausente').length;
+    const justificados = historialAsistencias.filter(a => a.estado === 'justificado').length;
+    const tardanzas = historialAsistencias.filter(a => a.estado === 'tardanza').length;
+    const porcentaje = total > 0 ? Math.round((presentes / total) * 100) : 0;
+    return { total, presentes, ausentes, justificados, tardanzas, porcentaje };
+  }, [historialAsistencias]);
+
+  // ===== VISTA PARA ALUMNOS (historial) =====
   if (isAlumno && !isAdmin && !isDocente) {
     return (
       <div className={styles.page}>
         <div className={styles.pageHeader}>
           <div>
-            <h1 className={styles.title}>Mis Asistencias</h1>
+            <h1 className={styles.title}>Mi Historial de Asistencias</h1>
             <p className={styles.subtitle}>Consulta tu historial de asistencias</p>
           </div>
         </div>
-        <div className={styles.horarioInfoCard}>
-          <div className={styles.horarioInfoIcon}>
-            <Clock size={48} />
+
+        {error && <div className={styles.errorMsg}>{error}</div>}
+
+        {/* Estadísticas rápidas */}
+        <div className={styles.estadisticasContainer}>
+          <div className={styles.estadisticaCard}>
+            <span className={styles.estadisticaValor}>{estadisticasAlumno.total}</span>
+            <span className={styles.estadisticaLabel}>Total clases</span>
           </div>
-          <div className={styles.horarioInfoContent}>
-            <h2>Tu historial de asistencias está disponible</h2>
-            <p>Puedes consultar tu historial de asistencias desde el módulo de Reportes o desde tu perfil.</p>
-            <div className={styles.horarioInfoActions}>
-              <button 
-                className={styles.btnPrimary}
-                onClick={() => window.location.href = '/reportes'}
-              >
-                <FileText size={16} /> Ir a Reportes
-              </button>
-            </div>
+          <div className={styles.estadisticaCard} style={{ borderColor: '#1A6B35' }}>
+            <span className={styles.estadisticaValor} style={{ color: '#1A6B35' }}>{estadisticasAlumno.presentes}</span>
+            <span className={styles.estadisticaLabel}>Presentes</span>
+          </div>
+          <div className={styles.estadisticaCard} style={{ borderColor: '#F37238' }}>
+            <span className={styles.estadisticaValor} style={{ color: '#F37238' }}>{estadisticasAlumno.ausentes}</span>
+            <span className={styles.estadisticaLabel}>Ausentes</span>
+          </div>
+          <div className={styles.estadisticaCard} style={{ borderColor: '#2563eb' }}>
+            <span className={styles.estadisticaValor} style={{ color: '#2563eb' }}>{estadisticasAlumno.justificados}</span>
+            <span className={styles.estadisticaLabel}>Justificados</span>
+          </div>
+          <div className={styles.estadisticaCard} style={{ borderColor: '#8b5cf6' }}>
+            <span className={styles.estadisticaValor} style={{ color: '#8b5cf6' }}>{estadisticasAlumno.tardanzas}</span>
+            <span className={styles.estadisticaLabel}>Tardanzas</span>
+          </div>
+          <div className={styles.estadisticaCard} style={{ borderColor: '#1A6B35' }}>
+            <span className={styles.estadisticaValor} style={{ color: '#1A6B35' }}>{estadisticasAlumno.porcentaje}%</span>
+            <span className={styles.estadisticaLabel}>Asistencia</span>
           </div>
         </div>
+
+        {/* Tabla de historial */}
+        {cargandoHistorial ? (
+          <div className={styles.skeletonContainer}>
+            <Skeleton width="100%" height="40px" variant="text" />
+            {[1,2,3,4,5].map(n => (
+              <Skeleton key={n} width="100%" height="30px" variant="text" />
+            ))}
+          </div>
+        ) : historialAsistencias.length === 0 ? (
+          <div className={styles.empty}>
+            <Calendar size={48} />
+            <p>No tienes asistencias registradas.</p>
+            <p className={styles.emptySub}>Aún no se ha tomado asistencia en tus clases.</p>
+          </div>
+        ) : (
+          <div className={styles.tableWrapper}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th className={styles.th}>Fecha</th>
+                  <th className={styles.th}>Materia</th>
+                  <th className={styles.th}>Estado</th>
+                  <th className={styles.th}>Justificación</th>
+                </tr>
+              </thead>
+              <tbody>
+                {historialAsistencias.map((a) => (
+                  <tr key={a.id} className={styles.tr}>
+                    <td className={styles.td}>{new Date(a.fecha).toLocaleDateString('es-MX')}</td>
+                    <td className={styles.td}>{a.materia_nombre}</td>
+                    <td className={styles.td}>
+                      <span className={`${styles.estadoBadge} ${styles['estado' + a.estado]}`}>
+                        {ESTADOS.find(e => e.value === a.estado)?.label || a.estado}
+                      </span>
+                    </td>
+                    <td className={styles.td}>{a.justificacion || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     );
   }
 
-  // ===== VISTA PARA ADMIN Y DOCENTE =====
+  // ===== VISTA PARA ADMIN Y DOCENTE (registro) =====
   return (
     <div className={styles.page}>
       <div className={styles.pageHeader}>
@@ -245,7 +355,7 @@ export default function AsistenciaPage() {
       )}
 
       {/* Tabla de alumnos */}
-      {cargando ? (
+      {cargandoAlumnos ? (
         <div className={styles.tableWrapper}>
           <table className={styles.table}>
             <thead>
@@ -268,11 +378,15 @@ export default function AsistenciaPage() {
             </tbody>
           </table>
         </div>
+      ) : !materiaSeleccionada ? (
+        <div className={styles.empty}>
+          <BookOpen size={48} />
+          <p>Selecciona una materia para comenzar</p>
+        </div>
       ) : alumnos.length === 0 ? (
         <div className={styles.empty}>
-          {materiaSeleccionada
-            ? 'No hay alumnos en esta materia para la fecha seleccionada.'
-            : 'Selecciona una materia para comenzar.'}
+          <User size={48} />
+          <p>No hay alumnos en esta materia para la fecha seleccionada.</p>
         </div>
       ) : (
         <div className={styles.tableWrapper}>
@@ -314,7 +428,7 @@ export default function AsistenciaPage() {
                         value={asist.justificacion}
                         onChange={(e) => handleJustificacionChange(alumno.alumno_id, e.target.value)}
                         placeholder="Motivo (opcional)"
-                        disabled={asist.estado !== 'justificado'}
+                        disabled={asist.estado !== 'justificado' && asist.estado !== 'tardanza'}
                       />
                     </td>
                   </tr>

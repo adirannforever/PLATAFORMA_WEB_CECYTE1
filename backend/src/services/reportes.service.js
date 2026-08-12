@@ -2,11 +2,11 @@ import { query } from '../config/db.js';
 import PDFDocument from 'pdfkit';
 import ExcelJS from 'exceljs';
 
-// ============================================================
-// SERVICIO: Boleta de calificaciones (PDF)
-// ============================================================
+
+
+
 export async function generarBoletaPDF(alumnoId, cicloId) {
-  // Obtener datos del alumno
+  
   const alumno = await query(
     `SELECT a.id, a.matricula, a.semestre_actual, a.estatus,
             u.nombre, u.apellidos,
@@ -28,7 +28,7 @@ export async function generarBoletaPDF(alumnoId, cicloId) {
 
   const alumnoData = alumno.rows[0];
 
-  // Obtener calificaciones del alumno en este ciclo (solo ordinarias)
+  
   const calificaciones = await query(
     `SELECT 
       mc.nombre AS materia_nombre,
@@ -42,7 +42,7 @@ export async function generarBoletaPDF(alumnoId, cicloId) {
     [alumnoId, cicloId]
   );
 
-  // Agrupar por materia
+  
   const materiasMap = {};
   calificaciones.rows.forEach(row => {
     if (!materiasMap[row.materia_nombre]) {
@@ -51,7 +51,7 @@ export async function generarBoletaPDF(alumnoId, cicloId) {
         parciales: {},
       };
     }
-    // Guardar solo si la calificación es un número válido
+    
     const calif = parseFloat(row.calificacion);
     if (!isNaN(calif)) {
       materiasMap[row.materia_nombre].parciales[row.parcial] = calif;
@@ -60,29 +60,29 @@ export async function generarBoletaPDF(alumnoId, cicloId) {
 
   const materias = Object.values(materiasMap);
 
-  // Calcular promedios por materia (solo con valores numéricos)
+  
   materias.forEach(m => {
     const valores = Object.values(m.parciales).filter(v => !isNaN(v) && v !== null && v !== undefined);
     if (valores.length > 0) {
       const suma = valores.reduce((a, b) => a + b, 0);
       m.promedio = Math.round((suma / valores.length) * 10) / 10;
     } else {
-      m.promedio = null; // sin calificaciones
+      m.promedio = null; 
     }
   });
 
-  // Promedio general (solo materias que tengan al menos un parcial)
+  
   const materiasConPromedio = materias.filter(m => m.promedio !== null && !isNaN(m.promedio));
   const promedioGeneral = materiasConPromedio.length > 0
     ? Math.round((materiasConPromedio.reduce((a, b) => a + b.promedio, 0) / materiasConPromedio.length) * 10) / 10
     : null;
 
-  // Generar PDF
+  
   const doc = new PDFDocument({ margin: 50 });
   const buffers = [];
   doc.on('data', buffers.push.bind(buffers));
 
-  // Header
+  
   doc.fontSize(16).text('BOLETA DE CALIFICACIONES', { align: 'center' });
   doc.moveDown();
   doc.fontSize(10);
@@ -106,7 +106,7 @@ export async function generarBoletaPDF(alumnoId, cicloId) {
     });
   }
 
-  // Tabla de materias
+  
   const tableTop = doc.y;
   let y = tableTop;
 
@@ -147,9 +147,9 @@ export async function generarBoletaPDF(alumnoId, cicloId) {
   });
 }
 
-// ============================================================
-// SERVICIO: Constancia de estudios (PDF)
-// ============================================================
+
+
+
 export async function generarConstanciaPDF(alumnoId) {
   const alumno = await query(
     `SELECT a.id, a.matricula, a.semestre_actual,
@@ -199,9 +199,9 @@ export async function generarConstanciaPDF(alumnoId) {
   });
 }
 
-// ============================================================
-// SERVICIO: Listado de alumnos (Excel)
-// ============================================================
+
+
+
 export async function generarListadoAlumnosExcel(filtros = {}) {
   const { grupo_id, especialidad_id, semestre, estatus, grupo_ids } = filtros;
 
@@ -240,7 +240,7 @@ export async function generarListadoAlumnosExcel(filtros = {}) {
     params.push(estatus);
   }
   if (grupo_ids && Array.isArray(grupo_ids) && grupo_ids.length > 0) {
-    // grupo_ids viene del controlador cuando es docente
+    
     sql += ` AND a.grupo_actual_id = ANY($${params.length + 1}::int[])`;
     params.push(grupo_ids);
   }
@@ -271,9 +271,9 @@ export async function generarListadoAlumnosExcel(filtros = {}) {
   return buffer;
 }
 
-// ============================================================
-// SERVICIO: Estadísticas de rendimiento (Excel)
-// ============================================================
+
+
+
 export async function generarEstadisticasExcel(cicloId, grupoId = null) {
   let sql = `
     SELECT 
@@ -326,6 +326,168 @@ export async function generarEstadisticasExcel(cicloId, grupoId = null) {
       porcentaje_aprobacion: `${porcentaje}%`,
     });
   });
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  return buffer;
+}
+
+export async function generarExcelCalificacionesMateria(materia_grupo_id, ciclo_id = null) {
+  
+  const materiaInfo = await query(
+    `SELECT 
+      mg.id AS materia_grupo_id,
+      mc.nombre AS materia_nombre,
+      g.nombre AS grupo_nombre,
+      g.letra AS grupo_letra,
+      c.nombre AS ciclo_nombre
+     FROM materias_grupo mg
+     JOIN materias_catalogo mc ON mc.id = mg.materia_catalogo_id
+     JOIN grupos g ON g.id = mg.grupo_id
+     JOIN ciclos_escolares c ON c.id = mg.ciclo_id
+     WHERE mg.id = $1`,
+    [materia_grupo_id]
+  );
+
+  if (materiaInfo.rows.length === 0) {
+    throw new Error('Materia no encontrada');
+  }
+
+  const info = materiaInfo.rows[0];
+
+  
+  let sql = `
+    SELECT 
+      a.id AS alumno_id,
+      u.nombre,
+      u.apellidos,
+      a.matricula,
+      c.parcial,
+      c.calificacion,
+      c.tipo_evaluacion
+    FROM calificaciones c
+    JOIN alumnos a ON a.id = c.alumno_id
+    JOIN usuarios u ON u.id = a.usuario_id
+    WHERE c.materia_grupo_id = $1
+  `;
+  const params = [materia_grupo_id];
+
+  if (ciclo_id) {
+    sql += ` AND c.ciclo_id = $2`;
+    params.push(ciclo_id);
+  }
+
+  sql += ` ORDER BY u.apellidos, u.nombre, c.parcial`;
+
+  const result = await query(sql, params);
+  const rows = result.rows;
+
+  
+  const alumnosMap = {};
+  rows.forEach(row => {
+    if (!alumnosMap[row.alumno_id]) {
+      alumnosMap[row.alumno_id] = {
+        alumno_id: row.alumno_id,
+        nombre: `${row.apellidos}, ${row.nombre}`,
+        matricula: row.matricula || 'N/A',
+        parciales: {},
+        extraordinario: null,
+        recuperacion: null,
+      };
+    }
+    if (row.tipo_evaluacion === 'ordinaria' && row.parcial) {
+      alumnosMap[row.alumno_id].parciales[row.parcial] = row.calificacion;
+    } else if (row.tipo_evaluacion === 'extraordinario') {
+      alumnosMap[row.alumno_id].extraordinario = row.calificacion;
+    } else if (row.tipo_evaluacion === 'recuperacion') {
+      alumnosMap[row.alumno_id].recuperacion = row.calificacion;
+    }
+  });
+
+  const alumnosList = Object.values(alumnosMap);
+
+  
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Calificaciones');
+
+  
+  worksheet.mergeCells('A1:H1');
+  worksheet.getCell('A1').value = `Calificaciones - ${info.materia_nombre}`;
+  worksheet.getCell('A1').font = { size: 14, bold: true };
+  worksheet.getCell('A1').alignment = { horizontal: 'center' };
+
+  worksheet.mergeCells('A2:H2');
+  worksheet.getCell('A2').value = `Grupo: ${info.grupo_nombre} (${info.grupo_letra}) - Ciclo: ${info.ciclo_nombre}`;
+  worksheet.getCell('A2').alignment = { horizontal: 'center' };
+
+  worksheet.mergeCells('A3:H3');
+  const hoy = new Date();
+  worksheet.getCell('A3').value = `Fecha de exportación: ${hoy.toLocaleDateString('es-MX')}`;
+  worksheet.getCell('A3').alignment = { horizontal: 'center' };
+
+  
+  worksheet.addRow([]); 
+  const headerRow = worksheet.addRow(['Alumno', 'Matrícula', 'Parcial 1', 'Parcial 2', 'Parcial 3', 'Promedio', 'Extraordinario', 'Recuperación']);
+  headerRow.eachCell((cell) => {
+    cell.font = { bold: true };
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    cell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF1A6B35' },
+    };
+    cell.font.color = { argb: 'FFFFFFFF' };
+    cell.border = {
+      top: { style: 'thin' },
+      left: { style: 'thin' },
+      bottom: { style: 'thin' },
+      right: { style: 'thin' },
+    };
+  });
+
+  alumnosList.forEach(alumno => {
+    const p1 = alumno.parciales[1] ?? null;
+    const p2 = alumno.parciales[2] ?? null;
+    const p3 = alumno.parciales[3] ?? null;
+    const valores = [p1, p2, p3].filter(v => v !== null && !isNaN(v));
+    const promedio = valores.length > 0 
+      ? Math.round((valores.reduce((a, b) => a + b, 0) / valores.length) * 10) / 10
+      : null;
+
+    const row = worksheet.addRow([
+      alumno.nombre,
+      alumno.matricula,
+      p1 !== null ? p1 : '-',
+      p2 !== null ? p2 : '-',
+      p3 !== null ? p3 : '-',
+      promedio !== null ? promedio : '-',
+      alumno.extraordinario !== null ? alumno.extraordinario : '-',
+      alumno.recuperacion !== null ? alumno.recuperacion : '-',
+    ]);
+
+    
+    row.eachCell((cell, colNumber) => {
+      if (colNumber >= 3 && colNumber <= 8 && typeof cell.value === 'number') {
+        cell.numFmt = '0.0';
+      }
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' },
+      };
+    });
+  });
+
+  
+  worksheet.getColumn(1).width = 30;
+  worksheet.getColumn(2).width = 15;
+  worksheet.getColumn(3).width = 12;
+  worksheet.getColumn(4).width = 12;
+  worksheet.getColumn(5).width = 12;
+  worksheet.getColumn(6).width = 12;
+  worksheet.getColumn(7).width = 15;
+  worksheet.getColumn(8).width = 15;
 
   const buffer = await workbook.xlsx.writeBuffer();
   return buffer;

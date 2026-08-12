@@ -276,3 +276,56 @@
   gap: 0.5rem;
   justify-content: center;
 }
+/* ===== ESTADÍSTICAS ALUMNO ===== */
+.estadisticasContainer {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.estadisticaCard {
+  background: #ffffff;
+  border: 2px solid #d1d9e6;
+  border-radius: 2px;
+  padding: 0.8rem;
+  text-align: center;
+}
+.estadisticaValor {
+  display: block;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+.estadisticaLabel {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #64748b;
+  letter-spacing: 0.3px;
+}
+
+/* ===== BADGES DE ESTADO ===== */
+.estadoBadge {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border-radius: 2px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.estadopresente {
+  background: #e6f0ea;
+  color: #1A6B35;
+}
+.estadoausente {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+.estadojustificado {
+  background: #dbeafe;
+  color: #1e40af;
+}
+.estadotardanza {
+  background: #fef3c7;
+  color: #92400e;
+}
