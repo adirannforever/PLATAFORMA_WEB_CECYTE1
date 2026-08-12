@@ -90,7 +90,6 @@ export default function LandingPage() {
   const [especialidadSeleccionada, setEspecialidadSeleccionada] = useState(null);
   const urlMap = "https://maps.app.goo.gl/u54L7i59feWDZPcEA";
 
-  // Automatización del carrusel de imágenes (cambia cada 5 segundos)
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % slidesData.length);
@@ -108,8 +107,9 @@ export default function LandingPage() {
 
   return (
     <div className={styles.pageWrapper}>
-      <button 
-        className={styles.fixedHamburger} 
+      {/* Hamburguesa fija */}
+      <button
+        className={styles.fixedHamburger}
         onClick={() => setMenuAbierto(true)}
         aria-label="Abrir menú de navegación"
       >
@@ -120,7 +120,7 @@ export default function LandingPage() {
         </svg>
       </button>
 
-      {/* Drawer / Menú Lateral Desplegable */}
+      {/* Drawer */}
       {menuAbierto && (
         <div className={styles.drawerOverlay} onClick={() => setMenuAbierto(false)}>
           <nav className={styles.drawerMenu} onClick={(e) => e.stopPropagation()}>
@@ -132,9 +132,9 @@ export default function LandingPage() {
             <a href="#oferta" onClick={() => setMenuAbierto(false)}>Oferta Educativa</a>
             <a href="#generalidades" onClick={() => setMenuAbierto(false)}>Acerca del Plantel</a>
             <a href="#contacto" onClick={() => setMenuAbierto(false)}>Contacto</a>
-            <Link 
-              to={usuario ? "/dashboard" : "/login"} 
-              className={styles.drawerLoginBtn} 
+            <Link
+              to={usuario ? "/dashboard" : "/login"}
+              className={styles.drawerLoginBtn}
               onClick={() => setMenuAbierto(false)}
             >
               {usuario ? "Entrar al Sistema →" : "Iniciar Sesión en el Portal"}
@@ -143,7 +143,7 @@ export default function LandingPage() {
         </div>
       )}
 
-      {/* Header General */}
+      {/* Header */}
       <header className={styles.topHeader}>
         <div className={styles.headerContent}>
           <div className={styles.headerBrandInfo}>
@@ -154,8 +154,8 @@ export default function LandingPage() {
             </div>
           </div>
           <div className={styles.headerAction}>
-            <Link 
-              to={usuario ? "/dashboard" : "/login"} 
+            <Link
+              to={usuario ? "/dashboard" : "/login"}
               className={styles.headerLoginBtn}
             >
               {usuario ? "Entrar al Sistema →" : "Iniciar Sesión"}
@@ -164,12 +164,12 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* Sección Hero / Carrusel */}
+      {/* Carrusel */}
       <section id="carrusel" className={styles.carouselSection}>
         <div className={styles.carouselContainer}>
           {slidesData.map((slide, index) => (
-            <div 
-              key={slide.id} 
+            <div
+              key={slide.id}
               className={`${styles.slideItem} ${index === currentSlide ? styles.slideActive : ''}`}
               style={{ backgroundImage: `linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.65)), url(${slide.img})` }}
             >
@@ -199,8 +199,8 @@ export default function LandingPage() {
 
         <div className={styles.specialtiesGrid}>
           {especialidadesData.map((esp) => (
-            <div 
-              key={esp.id} 
+            <div
+              key={esp.id}
               className={`${styles.specialtyCard} ${especialidadSeleccionada?.id === esp.id ? styles.cardActive : ''}`}
               onClick={() => setEspecialidadSeleccionada(esp)}
             >
@@ -213,12 +213,12 @@ export default function LandingPage() {
           ))}
         </div>
 
-        {/* Modal de Especialidad */}
+        {/* Modal */}
         {especialidadSeleccionada && (
           <div className={styles.modalOverlay} onClick={() => setEspecialidadSeleccionada(null)}>
             <div className={styles.expandedCardModal} onClick={(e) => e.stopPropagation()}>
               <button className={styles.modalCloseBtn} onClick={() => setEspecialidadSeleccionada(null)}>&times;</button>
-              
+
               <div className={styles.modalHeader}>
                 <span className={styles.espBadgeModal}>{especialidadSeleccionada.badge}</span>
                 <h2>{especialidadSeleccionada.titulo}</h2>
@@ -262,7 +262,7 @@ export default function LandingPage() {
             <p>Al concluir tus estudios obtienes tu certificado de bachillerato tecnológico y tu título de carrera técnica profesional registrado ante la SEP.</p>
           </div>
           <div className={styles.genCard}>
-            <div className={styles.genIcon}></div>
+            <div className={styles.genIcon}>️</div>
             <h3>Infraestructura Moderna</h3>
             <p>Laboratorios de cómputo avanzados, talleres especializados y conectividad para potenciar el aprendizaje práctico.</p>
           </div>
@@ -274,17 +274,17 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Sección de Contacto */}
+      {/* Contacto */}
       <section id="contacto" className={styles.contactSection}>
         <div className={styles.contactContainer}>
           <h2>Contáctanos</h2>
           <p>¿Tienes dudas sobre fichas de admisión o inscripciones? Comunícate con nosotros a través de nuestros canales oficiales:</p>
-          
+
           <div className={styles.socialIconsCentered}>
-            <a 
-              href="https://www.facebook.com/people/Cecyte-Tabasco-Plantel-1-Aquiles-Serd%C3%A1n-Macuspana/100064800004242/" 
-              target="_blank" 
-              rel="noopener noreferrer" 
+            <a
+              href="https://www.facebook.com/people/Cecyte-Tabasco-Plantel-1-Aquiles-Serd%C3%A1n-Macuspana/100064800004242/"
+              target="_blank"
+              rel="noopener noreferrer"
               className={styles.socialBtn}
               aria-label="Facebook Oficial"
             >
@@ -294,10 +294,10 @@ export default function LandingPage() {
               <span>Facebook Oficial</span>
             </a>
 
-            <a 
-              href="https://mail.google.com/mail/?view=cm&fs=1&to=contacto.dirpla01@cecytab.edu.mx&su=Consulta+sobre+Inscripciones+y+Fichas" 
-              target="_blank" 
-              rel="noopener noreferrer" 
+            <a
+              href="https://mail.google.com/mail/?view=cm&fs=1&to=contacto.dirpla01@cecytab.edu.mx&su=Consulta+sobre+Inscripciones+y+Fichas"
+              target="_blank"
+              rel="noopener noreferrer"
               className={styles.socialBtn}
               aria-label="Correo Electrónico Gmail"
             >
@@ -317,11 +317,7 @@ export default function LandingPage() {
             title="Abrir ubicación en Google Maps"
           >
             <span className={styles.locationSubtext}>
-              <Map
-                size={20}
-                color="#007bff"
-                style={{ verticalAlign: "middle", marginRight: "6px" }}
-              /> 
+              <Map size={20} style={{ verticalAlign: "middle", marginRight: "6px" }} />
               Ubicación: Carretera Benito Juárez - Tepetitan - 20 de Noviembre 85 Macuspana, Tabasco
             </span>
           </a>

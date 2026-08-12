@@ -1,14 +1,15 @@
+@import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Roboto:wght@400;500;700&display=swap');
+
 :root {
-  --primary-green: #096f30;
-  --primary-green-dark: #094d23;
-  --primary-green-light: #15d25a;
-  --accent-orange: #df855b;
-  --accent-orange-hover: #d34b10;
-  --bg-color: #f8fafc;
-  --text-main: #0c1119;
-  --text-muted: #4a5462;
+  --primary-green: #1A6B35;
+  --primary-green-dark: #135228;
+  --accent-orange: #F37238;
+  --accent-orange-hover: #d95c2a;
+  --bg-color: #f4f6f9;
+  --text-main: #1e293b;
+  --text-muted: #64748b;
   --card-bg: #ffffff;
-  --border-subtle: #e2e8f0;
+  --border-subtle: #d1d9e6;
 }
 
 .pageWrapper {
@@ -17,11 +18,11 @@
   min-height: 100vh;
   background-color: var(--bg-color);
   color: var(--text-main);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
   overflow-x: hidden;
 }
 
-
+/* ===== HAMBURGUESA FIJA ===== */
 .fixedHamburger {
   position: fixed;
   top: 18px;
@@ -29,24 +30,23 @@
   z-index: 1000;
   background-color: var(--primary-green);
   color: #ffffff;
-  border: none;
-  border-radius: 10px;
+  border: 2px solid var(--primary-green-dark);
+  border-radius: 2px;
   width: 44px;
   height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-
-  transition: background-color 0.2s, transform 0.15s;
+  transition: background-color 0.2s;
+  font-family: 'Roboto', sans-serif;
 }
 
 .fixedHamburger:hover {
   background-color: var(--primary-green-dark);
-  transform: scale(1.01);
 }
 
-/* --- FONDO OSCURO DETRÁS DEL MENÚ --- */
+/* ===== DRAWER ===== */
 .drawerOverlay {
   position: fixed;
   top: 0;
@@ -61,30 +61,30 @@
 
 .drawerMenu {
   background-color: #ffffff;
-  width: 240px; 
+  width: 260px;
   height: 100%;
-  padding: 1.25rem 1rem;
+  padding: 1.5rem 1.25rem;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem; 
-  box-shadow: 4px 0 15px rgba(0, 0, 0, 0.15);
+  gap: 0.5rem;
+  border-right: 2px solid var(--border-subtle);
   animation: slideIn 0.25s ease-out;
 }
 
-/* --- ENCABEZADO DEL MENÚ --- */
 .drawerHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-bottom: 0.65rem;
-  margin-bottom: 0.5rem;
-  border-bottom: 1px solid #eaeaea;
+  padding-bottom: 0.75rem;
+  margin-bottom: 0.75rem;
+  border-bottom: 2px solid var(--border-subtle);
 }
 
 .drawerTitle {
-  font-size: 0.95rem;
+  font-family: 'Merriweather', Georgia, serif;
+  font-size: 1rem;
   font-weight: 700;
-  color: #055316;
+  color: var(--primary-green);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -92,65 +92,58 @@
 .closeDrawerBtn {
   background: none;
   border: none;
-  font-size: 1.5rem;
+  font-size: 1.8rem;
   line-height: 1;
-  color: #718096;
+  color: var(--text-muted);
   cursor: pointer;
   padding: 0 0.25rem;
+  font-family: 'Roboto', sans-serif;
 }
 
 .closeDrawerBtn:hover {
-  color: #1a202c;
+  color: var(--text-main);
 }
 
-/* --- ENLACES GENERALES DEL MENÚ --- */
 .drawerMenu a {
   text-decoration: none;
-  color: #145c24;
-  font-size: 0.9rem; /* Letra un poco más fina y proporcionada */
+  color: var(--text-main);
+  font-size: 0.95rem;
   font-weight: 500;
-  padding: 0.55rem 0.75rem; /* Padding compacto */
-  border-radius: 6px;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  padding: 0.6rem 0.75rem;
+  border: 2px solid transparent;
+  border-radius: 2px;
+  transition: background-color 0.15s, border-color 0.15s;
 }
 
 .drawerMenu a:hover {
-  background-color: #f7fafc;
-  color: #145c24;
+  background-color: #f8fcf9;
+  border-color: var(--border-subtle);
 }
 
-/* --- BOTÓN DE INICIAR SESIÓN / SISTEMA --- */
 .drawerLoginBtn {
   margin-top: 0.75rem;
   padding: 0.6rem 0.75rem !important;
-  background-color: #145c24;
+  background-color: var(--primary-green);
   color: #ffffff !important;
   font-weight: 600;
   text-align: center;
-  border-radius: 6px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 2px solid var(--primary-green-dark) !important;
 }
 
-.drawerMenu .drawerLoginBtn:hover {
-  background-color: #145c24;
-  color: #ffffff;
+.drawerLoginBtn:hover {
+  background-color: var(--primary-green-dark) !important;
 }
 
-/* --- ANIMACIÓN DE ENTRADA SUAVE --- */
 @keyframes slideIn {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(0);
-  }
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
 }
 
+/* ===== HEADER ===== */
 .topHeader {
   width: 100%;
   background: #ffffff;
   border-bottom: 3px solid var(--accent-orange);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
   padding: 12px 16px;
   box-sizing: border-box;
 }
@@ -167,37 +160,38 @@
 .headerBrandInfo {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding-left: 40px; /* Espacio reservado para el botón de hamburguesa flotante */
-  min-width: 0; /* CRUCIAL: Permite que Flexbox comprima el contenido en lugar de romperlo */
+  gap: 12px;
+  padding-left: 46px;
   flex: 1;
+  min-width: 0;
 }
 
 .headerLogoImg {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   object-fit: contain;
-  flex-shrink: 0; /* Evita que el logo se deforme */
+  flex-shrink: 0;
 }
 
 .headerTitles {
   display: flex;
   flex-direction: column;
-  min-width: 0; /* Permite que el texto use ellipsis si es muy largo */
+  min-width: 0;
 }
 
 .headerTitles h1 {
-  font-size: 1.05rem;
-  font-weight: 800;
+  font-family: 'Merriweather', Georgia, serif;
+  font-size: 1.1rem;
+  font-weight: 700;
   color: var(--primary-green);
   margin: 0;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis; /* Corta con puntos suspensivos si no cabe en celular */
+  text-overflow: ellipsis;
 }
 
 .headerTitles span {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   color: var(--text-muted);
   font-weight: 500;
   white-space: nowrap;
@@ -208,21 +202,23 @@
 .headerLoginBtn {
   background-color: var(--primary-green);
   color: #ffffff;
-  padding: 7px 12px;
-  border-radius: 6px;
+  padding: 8px 16px;
+  border: 2px solid var(--primary-green-dark);
+  border-radius: 2px;
   font-weight: 600;
   font-size: 0.8rem;
   text-decoration: none;
   white-space: nowrap;
-  flex-shrink: 0; /* Evita que el botón se comprima */
+  flex-shrink: 0;
   transition: background 0.15s;
+  font-family: 'Roboto', sans-serif;
 }
 
 .headerLoginBtn:hover {
   background-color: var(--primary-green-dark);
 }
 
-/* 3. Sección Carrusel de Imágenes */
+/* ===== CARRUSEL ===== */
 .carouselSection {
   width: 100%;
   height: 420px;
@@ -263,24 +259,26 @@
   color: #ffffff;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   align-items: center;
 }
 
 .slideBadge {
   background-color: var(--accent-orange);
   color: #ffffff;
-  padding: 4px 14px;
-  border-radius: 20px;
-  font-size: 0.8rem;
+  padding: 4px 16px;
+  border: 2px solid #d95c2a;
+  border-radius: 2px;
+  font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .slideCaption h2 {
+  font-family: 'Merriweather', Georgia, serif;
   font-size: 2.2rem;
-  font-weight: 800;
+  font-weight: 700;
   margin: 0;
   text-shadow: 0 2px 6px rgba(0,0,0,0.5);
 }
@@ -298,31 +296,31 @@
   transform: translateY(-50%);
   background-color: rgba(0, 0, 0, 0.4);
   color: #ffffff;
-  border: none;
+  border: 2px solid rgba(255,255,255,0.2);
   width: 48px;
   height: 48px;
-  border-radius: 50%;
+  border-radius: 2px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.2rem;
-  transition: background-color 0.2s, transform 0.15s;
+  transition: background-color 0.2s, border-color 0.2s;
   z-index: 10;
 }
 
 .carouselArrow:hover {
   background-color: var(--accent-orange);
-  transform: translateY(-50%) scale(1.1);
+  border-color: var(--accent-orange);
 }
 
 .arrowLeft { left: 20px; }
 .arrowRight { right: 20px; }
 
-/* 4. Oferta Educativa Interactiva */
+/* ===== OFERTA EDUCATIVA ===== */
 .sectionContainer {
   max-width: 1100px;
-  margin: 40px auto;
+  margin: 48px auto;
   padding: 0 20px;
   width: 100%;
   box-sizing: border-box;
@@ -330,14 +328,15 @@
 
 .sectionHeader {
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 32px;
 }
 
 .sectionHeader h2 {
+  font-family: 'Merriweather', Georgia, serif;
   font-size: 2rem;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--primary-green);
-  margin-bottom: 8px;
+  margin: 0 0 8px 0;
 }
 
 .sectionHeader p {
@@ -353,17 +352,16 @@
 
 .specialtyCard {
   background: var(--card-bg);
-  border-radius: 14px;
+  border: 2px solid var(--border-subtle);
+  border-radius: 2px;
   padding: 24px;
-  border: 1px solid var(--border-subtle);
-  box-shadow: 0 4px 6px rgba(0,0,0,0.02);
   cursor: pointer;
   position: relative;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
 }
 
 .cardHeaderIndicator {
@@ -376,24 +374,31 @@
 }
 
 .specialtyCard:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.08);
-  border-color: var(--accent-orange);
+  border-color: var(--primary-green);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+
+.cardActive {
+  border-color: var(--primary-green);
 }
 
 .espBadge {
-  background-color: #ecfdf5;
+  background-color: #e6f0ea;
   color: var(--primary-green);
-  border: 1px solid #d1fae5;
+  border: 1px solid #c8dcd0;
   padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 0.75rem;
+  border-radius: 2px;
+  font-size: 0.7rem;
   font-weight: 700;
   align-self: flex-start;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
 .specialtyCard h3 {
-  font-size: 1.2rem;
+  font-family: 'Merriweather', Georgia, serif;
+  font-size: 1.1rem;
   font-weight: 700;
   color: var(--text-main);
   margin: 0;
@@ -402,25 +407,25 @@
 .specialtyCard p {
   font-size: 0.9rem;
   color: var(--text-muted);
-  line-height: 1.5;
+  line-height: 1.6;
   margin: 0;
 }
 
 .clickPrompt {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--accent-orange);
   font-weight: 700;
   margin-top: auto;
 }
 
-/* Modal Detalle de Especialidad */
+/* ===== MODAL ===== */
 .modalOverlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(0, 0, 0, 0.65);
+  background: rgba(0, 0, 0, 0.6);
   z-index: 1200;
   display: flex;
   justify-content: center;
@@ -434,8 +439,8 @@
   width: 100%;
   max-width: 850px;
   max-height: 85vh;
-  border-radius: 16px;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+  border: 2px solid var(--border-subtle);
+  border-radius: 2px;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -457,7 +462,7 @@
 
 .modalHeader {
   padding: 24px 24px 16px 24px;
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 2px solid var(--border-subtle);
   background-color: #f8fafc;
 }
 
@@ -465,12 +470,15 @@
   background-color: var(--accent-orange);
   color: #ffffff;
   padding: 4px 12px;
-  border-radius: 6px;
-  font-size: 0.75rem;
+  border: 1px solid #d95c2a;
+  border-radius: 2px;
+  font-size: 0.7rem;
   font-weight: 700;
+  text-transform: uppercase;
 }
 
 .modalHeader h2 {
+  font-family: 'Merriweather', Georgia, serif;
   font-size: 1.6rem;
   color: var(--primary-green);
   margin: 8px 0 0 0;
@@ -478,7 +486,7 @@
 
 .modalBodyScroll {
   padding: 24px;
-  overflow-y: auto; /* Scroll interno si aplica */
+  overflow-y: auto;
   flex: 1;
 }
 
@@ -491,10 +499,10 @@
 
 .modalImg {
   width: 100%;
-  height: 240px;
+  height: 220px;
   object-fit: cover;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  border: 2px solid var(--border-subtle);
+  border-radius: 2px;
 }
 
 .modalTexts {
@@ -504,7 +512,8 @@
 }
 
 .infoBlock h4 {
-  font-size: 0.95rem;
+  font-family: 'Merriweather', Georgia, serif;
+  font-size: 0.9rem;
   font-weight: 700;
   color: var(--primary-green);
   margin: 0 0 4px 0;
@@ -519,10 +528,10 @@
   margin: 0;
 }
 
-/* 5. Generalidades e Información Extendida */
+/* ===== GENERALIDADES ===== */
 .generalitiesSection {
   max-width: 1100px;
-  margin: 40px auto;
+  margin: 48px auto;
   padding: 0 20px;
   width: 100%;
   box-sizing: border-box;
@@ -530,27 +539,27 @@
 
 .genGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 24px;
 }
 
 .genCard {
   background: var(--card-bg);
-  padding: 28px;
-  border-radius: 14px;
-  border: 1px solid var(--border-subtle);
-  box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+  padding: 28px 24px;
+  border: 2px solid var(--border-subtle);
+  border-radius: 2px;
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
 .genIcon {
-  font-size: 2.2rem;
+  font-size: 2.4rem;
 }
 
 .genCard h3 {
-  font-size: 1.15rem;
+  font-family: 'Merriweather', Georgia, serif;
+  font-size: 1.1rem;
   font-weight: 700;
   color: var(--primary-green);
   margin: 0;
@@ -563,14 +572,15 @@
   margin: 0;
 }
 
-/* 6. Sección de Contacto (Iconos Facebook y Gmail centrados) */
+/* ===== CONTACTO ===== */
 .contactSection {
   width: 100%;
-  background: linear-gradient(135deg, var(--primary-green-dark) 0%, var(--primary-green) 100%);
+  background: var(--primary-green);
   color: #ffffff;
   padding: 60px 20px;
-  margin-top: 40px;
+  margin-top: 48px;
   box-sizing: border-box;
+  border-top: 3px solid var(--accent-orange);
 }
 
 .contactContainer {
@@ -584,8 +594,9 @@
 }
 
 .contactContainer h2 {
+  font-family: 'Merriweather', Georgia, serif;
   font-size: 2rem;
-  font-weight: 800;
+  font-weight: 700;
   margin: 0;
 }
 
@@ -600,7 +611,7 @@
   display: flex;
   gap: 20px;
   justify-content: center;
-  margin: 20px 0;
+  margin: 16px 0;
   flex-wrap: wrap;
 }
 
@@ -608,64 +619,92 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  background-color: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background-color: rgba(255, 255, 255, 0.12);
+  border: 2px solid rgba(255, 255, 255, 0.25);
   color: #ffffff;
   padding: 12px 24px;
-  border-radius: 50px;
+  border-radius: 2px;
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   text-decoration: none;
-  transition: background-color 0.2s, transform 0.15s;
+  transition: background-color 0.2s, border-color 0.2s, transform 0.15s;
+  font-family: 'Roboto', sans-serif;
 }
 
 .socialBtn:hover {
   background-color: var(--accent-orange);
   border-color: var(--accent-orange);
-  transform: translateY(-3px);
+  transform: translateY(-2px);
 }
 
 .locationSubtext {
   font-size: 0.85rem;
-  opacity: 0.8;
-  margin-top: 10px;
+  opacity: 0.85;
+  margin-top: 8px;
 }
 
-/* 7. Footer */
+.mapIconLink {
+  color: #ffffff;
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+
+.mapIconLink:hover {
+  opacity: 0.8;
+}
+
+/* ===== FOOTER ===== */
 .mainFooter {
   background-color: #0f172a;
   color: #94a3b8;
   text-align: center;
   padding: 24px;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
+  border-top: 3px solid var(--primary-green);
 }
 
-/* Animaciones */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
+/* ===== ANIMACIONES ===== */
 @keyframes scaleUp {
-  from { transform: scale(0.92); opacity: 0; }
+  from { transform: scale(0.95); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
 }
 
-/* Responsive Móvil Estricto */
+/* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
   .headerBrandInfo {
-    padding-left: 42px;
+    padding-left: 48px;
   }
+
   .headerTitles h1 {
-    font-size: 1.05rem;
+    font-size: 0.95rem;
   }
+
   .slideCaption h2 {
     font-size: 1.6rem;
   }
+
+  .carouselSection {
+    height: 300px;
+  }
+
   .modalContentGrid {
     grid-template-columns: 1fr;
   }
+
   .modalImg {
-    height: 180px;
+    height: 160px;
+  }
+
+  .specialtiesGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .genGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .socialBtn {
+    width: 100%;
+    justify-content: center;
   }
 }
