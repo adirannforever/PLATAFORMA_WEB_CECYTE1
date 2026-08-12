@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { getMenuItems } from '../../config/menuItems';
+import { usePermissions } from '../../hooks/usePermissions';
 import styles from './DashboardLayout.module.css';
-import { getMenuItems } from '../config/menuItems';
-import { usePermissions } from '../hooks/usePermissions';
 import logoCecyte from '../../assets/logo_cecyte.png';
 import {
   Users,
@@ -120,6 +120,7 @@ const ETIQUETA_ROL = {
 export default function DashboardLayout() {
   const { usuario, logout } = useAuth();
   const navigate = useNavigate();
+  const { hasPermission } = usePermissions(); // Hook para permisos
 
   const [sidebarAbierto, setSidebarAbierto] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -133,36 +134,8 @@ export default function DashboardLayout() {
     }
   };
 
-  const navItems = [
-    // comunes
-    { to: '/dashboard', label: 'Inicio', icon: <IconDashboard />, roles: ['administrador', 'docente', 'alumno'] },
-    { to: '/comunicados', label: 'Comunicados', icon: <IconComunicados />, roles: ['administrador', 'docente', 'alumno'] },
-
-    // alumno especifico
-    { to: '/mis-calificaciones', label: 'Mis Calificaciones', icon: <IconCalif />, roles: ['alumno'] },
-
-    // admin + docente
-    { to: '/grupos', label: 'Grupos', icon: <IconGrupos />, roles: ['administrador', 'docente'] },
-    { to: '/asistencia', label: 'Asistencias', icon: <IconAsistencia />, roles: ['administrador', 'docente'] },
-
-    // admin + docente + alumno con especificaciones
-    { to: '/calificaciones', label: 'Calificaciones', icon: <BookOpen size={18} />, roles: ['administrador', 'docente'] },
-    { to: '/tutorias', label: 'Tutorías', icon: <UserCheck size={18} />, roles: ['administrador', 'docente'] },
-    { to: '/incidencias', label: 'Incidencias', icon: <AlertCircle size={18} />, roles: ['administrador', 'docente'] },
-    { to: '/horarios', label: 'Horarios', icon: <Calendar size={18} />, roles: ['administrador', 'docente', 'alumno'] },
-    { to: '/reportes', label: 'Reportes', icon: <FileText size={18} />, roles: ['administrador', 'docente', 'alumno'] },
-
-    // solo admin
-    { to: '/usuarios', label: 'Usuarios', icon: <IconUsuarios />, roles: ['administrador'] },
-    { to: '/becas', label: 'Becas', icon: <Gift size={18} />, roles: ['administrador'] },
-    { to: '/expediente', label: 'Expediente', icon: <FileText size={18} />, roles: ['administrador'] },
-    { to: '/inscripciones', label: 'Inscripciones', icon: <IconInscripciones />, roles: ['administrador'] },
-    { to: '/pagos', label: 'Pagos', icon: <CreditCard size={18} />, roles: ['administrador'] },
-    { to: '/servicio-social', label: 'Servicio Social', icon: <Briefcase size={18} />, roles: ['administrador'] },
-    { to: '/titulacion', label: 'Titulación', icon: <GraduationCap size={18} />, roles: ['administrador'] },
-    { to: '/configuracion-academica', label: 'Configuración Académica', icon: <Settings size={18} />, roles: ['administrador'] },
-    { to: '/auditoria', label: 'Auditoría', icon: <Activity size={18} />, roles: ['administrador'] },
-  ].filter((item) => item.roles.includes(usuario?.rol));
+  // Obtener items del menú según el rol del usuario
+  const navItems = getMenuItems(usuario?.rol);
 
   return (
     <div className={styles.shell}>
@@ -220,7 +193,11 @@ export default function DashboardLayout() {
 
       <div className={styles.main}>
         <header className={styles.header}>
-          <button className={styles.menuBtn} onClick={() => setSidebarAbierto(!sidebarAbierto)} aria-label="Abrir menú">
+          <button
+            className={styles.menuBtn}
+            onClick={() => setSidebarAbierto(!sidebarAbierto)}
+            aria-label="Abrir menú"
+          >
             <IconMenu />
           </button>
           <div className={styles.headerBrand}>
