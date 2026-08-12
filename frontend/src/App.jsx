@@ -24,7 +24,6 @@ import IncidenciasPage from './pages/IncidenciasPage';
 import AuditoriaPage from './pages/AuditoriaPage';
 import ReportesPage from './pages/ReportesPage';
 import HorariosPage from './pages/HorariosPage';
-import TutoriasPage from './pages/TutoriasPage';
 
 const RutaProtegida = ({ children, rolesPermitidos }) => {
   const { usuario, cargando } = useAuth();
@@ -96,14 +95,6 @@ export default function App() {
           element={
             <RutaProtegida rolesPermitidos={['administrador', 'docente']}>
               <AsistenciaPage />
-            </RutaProtegida>
-          }
-        />
-        <Route
-          path="tutorias"
-          element={
-            <RutaProtegida rolesPermitidos={['administrador', 'docente']}>
-              <TutoriasPage />
             </RutaProtegida>
           }
         />

@@ -5,7 +5,8 @@ import { horariosService, catalogosService, usuariosService } from '../services/
 import { 
   Settings, Users, User, FlaskConical, RefreshCw, 
   Download, FileText, Upload, Edit2, Trash2, X, 
-  Plus, Filter, CheckCircle, AlertCircle, Save
+  Plus, Filter, CheckCircle, AlertCircle, Save,
+  Clock
 } from 'lucide-react';
 import styles from './HorariosPage.module.css';
 
@@ -13,15 +14,15 @@ const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
 
 export default function HorariosPage() {
   const { usuario } = useAuth();
-  const { isAdmin } = usePermissions(); // ← Hook centralizado
+  const { isAdmin, isDocente, isAlumno } = usePermissions();
 
   // ===== ESTADOS BÁSICOS =====
-  const [tabActiva, setTabActiva] = useState('grupos');
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
   const [exito, setExito] = useState('');
 
-  // ===== CATÁLOGOS =====
+  // ===== ADMIN: estados completos =====
+  const [tabActiva, setTabActiva] = useState('grupos');
   const [ciclos, setCiclos] = useState([]);
   const [especialidades, setEspecialidades] = useState([]);
   const [turnos, setTurnos] = useState([]);
@@ -31,7 +32,6 @@ export default function HorariosPage() {
   const [semestreActual, setSemestreActual] = useState({ semestres: [2, 4, 6] });
   const [cicloSeleccionado, setCicloSeleccionado] = useState(null);
 
-  // ===== FILTROS =====
   const [filtros, setFiltros] = useState({
     turno: 'todos',
     ciclo_id: '',
@@ -41,11 +41,10 @@ export default function HorariosPage() {
     search: '',
   });
 
-  // ===== HORARIOS =====
   const [archivosSubidos, setArchivosSubidos] = useState([]);
   const [contadorFaltantes, setContadorFaltantes] = useState({ total: 0, subidos: 0, faltantes: 0, porcentaje: 0 });
 
-  // ===== SUBIDA INDIVIDUAL =====
+  // ===== ADMIN: modales =====
   const [modalUploadOpen, setModalUploadOpen] = useState(false);
   const [uploadForm, setUploadForm] = useState({
     nombre: '',
@@ -61,7 +60,6 @@ export default function HorariosPage() {
   const [archivoSeleccionado, setArchivoSeleccionado] = useState(null);
   const [subiendo, setSubiendo] = useState(false);
 
-  // ===== SUBIDA MASIVA =====
   const [modalBatchOpen, setModalBatchOpen] = useState(false);
   const [batchItems, setBatchItems] = useState([]);
   const [batchForm, setBatchForm] = useState({
@@ -77,7 +75,6 @@ export default function HorariosPage() {
   const [batchGrupoEncontrado, setBatchGrupoEncontrado] = useState(null);
   const [batchSubiendo, setBatchSubiendo] = useState(false);
 
-  // ===== EDICIÓN =====
   const [modalEditOpen, setModalEditOpen] = useState(false);
   const [editando, setEditando] = useState(null);
   const [editForm, setEditForm] = useState({
@@ -92,33 +89,12 @@ export default function HorariosPage() {
   const [editGrupoEncontrado, setEditGrupoEncontrado] = useState(null);
   const [editandoId, setEditandoId] = useState(null);
 
-  // ===== CONFIRMACIÓN =====
   const [confirmModal, setConfirmModal] = useState({ open: false, message: '', onConfirm: null });
 
-  // ===== HELPERS DE ESPECIALIDAD -> LETRA =====
-  const getLetrasPorEspecialidad = useCallback((especialidadId) => {
-    if (!especialidadId) return ['A', 'B', 'C', 'D'];
-    const especialidad = especialidades.find(e => e.id === parseInt(especialidadId));
-    if (!especialidad) return ['A', 'B', 'C', 'D'];
-    const clave = especialidad.clave?.toUpperCase() || '';
-    if (clave === 'DGD') return ['A', 'B'];
-    if (clave === 'ELEC') return ['C'];
-    if (clave === 'PIA') return ['D'];
-    return ['A', 'B', 'C', 'D'];
-  }, [especialidades]);
-
-  const getLetraDefault = useCallback((especialidadId) => {
-    if (!especialidadId) return '';
-    const especialidad = especialidades.find(e => e.id === parseInt(especialidadId));
-    if (!especialidad) return '';
-    const clave = especialidad.clave?.toUpperCase() || '';
-    if (clave === 'ELEC') return 'C';
-    if (clave === 'PIA') return 'D';
-    return '';
-  }, [especialidades]);
-
-  // ===== SEMESTRE ACTUAL =====
+  // ===== SOLO ADMIN: cargar datos =====
   useEffect(() => {
+    if (!isAdmin) return;
+
     const cargarSemestreActual = async () => {
       try {
         const res = await horariosService.getSemestreActual();
@@ -130,10 +106,7 @@ export default function HorariosPage() {
       }
     };
     cargarSemestreActual();
-  }, []);
 
-  // ===== CARGAR CATÁLOGOS =====
-  useEffect(() => {
     const cargarCatalogos = async () => {
       try {
         const [ciclosRes, espRes, turnRes, gruposRes, docentesRes, labsRes] = await Promise.all([
@@ -162,9 +135,31 @@ export default function HorariosPage() {
       }
     };
     cargarCatalogos();
-  }, []);
+  }, [isAdmin]);
 
-  // ===== BUSCAR GRUPO POR SEMESTRE + LETRA + TURNO + CICLO =====
+  // ===== HELPERS DE ESPECIALIDAD -> LETRA (solo admin) =====
+  const getLetrasPorEspecialidad = useCallback((especialidadId) => {
+    if (!especialidadId) return ['A', 'B', 'C', 'D'];
+    const especialidad = especialidades.find(e => e.id === parseInt(especialidadId));
+    if (!especialidad) return ['A', 'B', 'C', 'D'];
+    const clave = especialidad.clave?.toUpperCase() || '';
+    if (clave === 'DGD') return ['A', 'B'];
+    if (clave === 'ELEC') return ['C'];
+    if (clave === 'PIA') return ['D'];
+    return ['A', 'B', 'C', 'D'];
+  }, [especialidades]);
+
+  const getLetraDefault = useCallback((especialidadId) => {
+    if (!especialidadId) return '';
+    const especialidad = especialidades.find(e => e.id === parseInt(especialidadId));
+    if (!especialidad) return '';
+    const clave = especialidad.clave?.toUpperCase() || '';
+    if (clave === 'ELEC') return 'C';
+    if (clave === 'PIA') return 'D';
+    return '';
+  }, [especialidades]);
+
+  // ===== BUSCAR GRUPO (solo admin) =====
   const buscarGrupo = (semestre, letra, turno_id, ciclo_id) => {
     if (!semestre || !letra || !turno_id || !ciclo_id) return null;
     return grupos.find(
@@ -175,8 +170,9 @@ export default function HorariosPage() {
     ) || null;
   };
 
-  // ===== EFECTOS PARA AUTOSELECCIÓN DE LETRA POR ESPECIALIDAD (UPLOAD) =====
+  // ===== EFECTOS DE AUTOSELECCIÓN (solo admin) =====
   useEffect(() => {
+    if (!isAdmin) return;
     const letras = getLetrasPorEspecialidad(uploadForm.especialidad_id);
     const defaultLetra = getLetraDefault(uploadForm.especialidad_id);
     if (uploadForm.letra && !letras.includes(uploadForm.letra)) {
@@ -185,10 +181,10 @@ export default function HorariosPage() {
     if (!uploadForm.letra && letras.length === 1) {
       setUploadForm(prev => ({ ...prev, letra: letras[0] }));
     }
-  }, [uploadForm.especialidad_id, getLetrasPorEspecialidad, getLetraDefault]);
+  }, [uploadForm.especialidad_id, getLetrasPorEspecialidad, getLetraDefault, isAdmin]);
 
-  // ===== EFECTOS PARA AUTOSELECCIÓN DE LETRA POR ESPECIALIDAD (BATCH) =====
   useEffect(() => {
+    if (!isAdmin) return;
     const letras = getLetrasPorEspecialidad(batchForm.especialidad_id);
     const defaultLetra = getLetraDefault(batchForm.especialidad_id);
     if (batchForm.letra && !letras.includes(batchForm.letra)) {
@@ -197,10 +193,10 @@ export default function HorariosPage() {
     if (!batchForm.letra && letras.length === 1) {
       setBatchForm(prev => ({ ...prev, letra: letras[0] }));
     }
-  }, [batchForm.especialidad_id, getLetrasPorEspecialidad, getLetraDefault]);
+  }, [batchForm.especialidad_id, getLetrasPorEspecialidad, getLetraDefault, isAdmin]);
 
-  // ===== EFECTOS PARA AUTOSELECCIÓN DE LETRA POR ESPECIALIDAD (EDIT) =====
   useEffect(() => {
+    if (!isAdmin) return;
     const letras = getLetrasPorEspecialidad(editForm.especialidad_id);
     const defaultLetra = getLetraDefault(editForm.especialidad_id);
     if (editForm.letra && !letras.includes(editForm.letra)) {
@@ -209,10 +205,11 @@ export default function HorariosPage() {
     if (!editForm.letra && letras.length === 1) {
       setEditForm(prev => ({ ...prev, letra: letras[0] }));
     }
-  }, [editForm.especialidad_id, getLetrasPorEspecialidad, getLetraDefault]);
+  }, [editForm.especialidad_id, getLetrasPorEspecialidad, getLetraDefault, isAdmin]);
 
-  // ===== EFECTOS PARA BUSCAR GRUPO EN CADA MODAL =====
+  // ===== EFECTOS PARA BUSCAR GRUPO (solo admin) =====
   useEffect(() => {
+    if (!isAdmin) return;
     const grupo = buscarGrupo(
       uploadForm.semestre,
       uploadForm.letra,
@@ -220,9 +217,10 @@ export default function HorariosPage() {
       uploadForm.ciclo_id
     );
     setGrupoEncontrado(grupo);
-  }, [uploadForm.semestre, uploadForm.letra, uploadForm.turno_id, uploadForm.ciclo_id, grupos]);
+  }, [uploadForm.semestre, uploadForm.letra, uploadForm.turno_id, uploadForm.ciclo_id, grupos, isAdmin]);
 
   useEffect(() => {
+    if (!isAdmin) return;
     const grupo = buscarGrupo(
       batchForm.semestre,
       batchForm.letra,
@@ -230,9 +228,10 @@ export default function HorariosPage() {
       batchForm.ciclo_id
     );
     setBatchGrupoEncontrado(grupo);
-  }, [batchForm.semestre, batchForm.letra, batchForm.turno_id, batchForm.ciclo_id, grupos]);
+  }, [batchForm.semestre, batchForm.letra, batchForm.turno_id, batchForm.ciclo_id, grupos, isAdmin]);
 
   useEffect(() => {
+    if (!isAdmin) return;
     const grupo = buscarGrupo(
       editForm.semestre,
       editForm.letra,
@@ -240,10 +239,11 @@ export default function HorariosPage() {
       editForm.ciclo_id
     );
     setEditGrupoEncontrado(grupo);
-  }, [editForm.semestre, editForm.letra, editForm.turno_id, editForm.ciclo_id, grupos]);
+  }, [editForm.semestre, editForm.letra, editForm.turno_id, editForm.ciclo_id, grupos, isAdmin]);
 
-  // ===== CARGAR HORARIOS CON FILTROS =====
+  // ===== CARGAR HORARIOS (solo admin) =====
   const cargarHorarios = useCallback(async () => {
+    if (!isAdmin) return;
     setCargando(true);
     try {
       const params = {};
@@ -270,9 +270,10 @@ export default function HorariosPage() {
     } finally {
       setCargando(false);
     }
-  }, [filtros, tabActiva]);
+  }, [filtros, tabActiva, isAdmin]);
 
   const cargarContadorFaltantes = useCallback(async () => {
+    if (!isAdmin) return;
     if (!filtros.ciclo_id || !filtros.semestre) return;
     try {
       const res = await horariosService.contarFaltantes(filtros.ciclo_id, filtros.semestre);
@@ -282,14 +283,16 @@ export default function HorariosPage() {
     } catch (e) {
       console.error('Error cargando contador:', e);
     }
-  }, [filtros.ciclo_id, filtros.semestre]);
+  }, [filtros.ciclo_id, filtros.semestre, isAdmin]);
 
   useEffect(() => {
-    cargarHorarios();
-    cargarContadorFaltantes();
-  }, [cargarHorarios, cargarContadorFaltantes]);
+    if (isAdmin) {
+      cargarHorarios();
+      cargarContadorFaltantes();
+    }
+  }, [cargarHorarios, cargarContadorFaltantes, isAdmin]);
 
-  // ===== ABRIR MODAL DE SUBIDA =====
+  // ===== HANDLERS (solo admin) =====
   const abrirModalUpload = () => {
     if (!isAdmin) return;
     setUploadForm({
@@ -308,7 +311,6 @@ export default function HorariosPage() {
     setError('');
   };
 
-  // ===== SUBIR ARCHIVO INDIVIDUAL =====
   const handleUpload = async (e) => {
     if (!isAdmin) return;
     const file = e.target.files[0];
@@ -384,7 +386,6 @@ export default function HorariosPage() {
     }
   };
 
-  // ===== ABRIR MODAL DE EDICIÓN =====
   const abrirModalEditar = (horario) => {
     if (!isAdmin) return;
     const grupo = grupos.find(g => g.id === horario.grupo_id);
@@ -445,7 +446,6 @@ export default function HorariosPage() {
     }
   };
 
-  // ===== ELIMINAR =====
   const handleEliminar = (id, nombre) => {
     if (!isAdmin) return;
     setConfirmModal({
@@ -470,7 +470,6 @@ export default function HorariosPage() {
     });
   };
 
-  // ===== SUBIDA MASIVA =====
   const abrirModalBatch = () => {
     if (!isAdmin) return;
     setBatchItems([]);
@@ -611,7 +610,6 @@ export default function HorariosPage() {
     }
   };
 
-  // ===== LIMPIAR FILTROS =====
   const limpiarFiltros = () => {
     setFiltros({
       turno: 'todos',
@@ -621,6 +619,17 @@ export default function HorariosPage() {
       especialidad_id: '',
       search: '',
     });
+  };
+
+  const handleDescargar = async (key, nombre) => {
+    try {
+      const res = await horariosService.solicitarDescarga(key);
+      if (!res.success) throw new Error(res.message || 'Error al obtener URL de descarga');
+      window.open(res.data.downloadUrl, '_blank');
+    } catch (err) {
+      console.error('Error al descargar:', err);
+      setError(err.message || 'Error al descargar el archivo');
+    }
   };
 
   // ===== RENDER MODAL DE CONFIRMACIÓN =====
@@ -653,7 +662,7 @@ export default function HorariosPage() {
 
   // ===== RENDER MODAL DE SUBIDA INDIVIDUAL =====
   const renderUploadModal = () => {
-    if (!modalUploadOpen) return null;
+    if (!modalUploadOpen || !isAdmin) return null;
     return (
       <div className={styles.modalOverlay} onClick={() => setModalUploadOpen(false)}>
         <div className={styles.modal} onClick={e => e.stopPropagation()}>
@@ -750,7 +759,6 @@ export default function HorariosPage() {
               </select>
             </div>
 
-            {/* Estado del grupo */}
             {uploadForm.semestre && uploadForm.letra && uploadForm.turno_id && uploadForm.ciclo_id && (
               <div className={styles.grupoStatus}>
                 {grupoEncontrado ? (
@@ -800,7 +808,7 @@ export default function HorariosPage() {
 
   // ===== RENDER MODAL DE EDICIÓN =====
   const renderEditModal = () => {
-    if (!modalEditOpen) return null;
+    if (!modalEditOpen || !isAdmin) return null;
     return (
       <div className={styles.modalOverlay} onClick={() => setModalEditOpen(false)}>
         <div className={styles.modal} onClick={e => e.stopPropagation()}>
@@ -933,7 +941,7 @@ export default function HorariosPage() {
 
   // ===== RENDER MODAL DE SUBIDA MASIVA =====
   const renderBatchModal = () => {
-    if (!modalBatchOpen) return null;
+    if (!modalBatchOpen || !isAdmin) return null;
     return (
       <div className={styles.modalOverlay} onClick={() => setModalBatchOpen(false)}>
         <div className={styles.modalLarge} onClick={e => e.stopPropagation()}>
@@ -1155,7 +1163,6 @@ export default function HorariosPage() {
               </div>
             </div>
             <div className={styles.archivoActions}>
-              {/* Descargar: todos pueden */}
               <button
                 className={styles.btnDescargar}
                 onClick={() => handleDescargar(archivo.key, archivo.nombre)}
@@ -1163,25 +1170,20 @@ export default function HorariosPage() {
               >
                 <Download size={16} />
               </button>
-              {/* Editar y Eliminar: solo admin */}
-              {isAdmin && (
-                <>
-                  <button
-                    className={styles.btnEditarArchivo}
-                    onClick={() => abrirModalEditar(archivo)}
-                    title="Editar metadatos"
-                  >
-                    <Edit2 size={16} />
-                  </button>
-                  <button
-                    className={styles.btnEliminarArchivo}
-                    onClick={() => handleEliminar(archivo.id, archivo.nombre)}
-                    title="Eliminar"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </>
-              )}
+              <button
+                className={styles.btnEditarArchivo}
+                onClick={() => abrirModalEditar(archivo)}
+                title="Editar metadatos"
+              >
+                <Edit2 size={16} />
+              </button>
+              <button
+                className={styles.btnEliminarArchivo}
+                onClick={() => handleEliminar(archivo.id, archivo.nombre)}
+                title="Eliminar"
+              >
+                <Trash2 size={16} />
+              </button>
             </div>
           </div>
         ))}
@@ -1189,23 +1191,9 @@ export default function HorariosPage() {
     );
   };
 
-  // ===== HANDLER DESCARGA =====
-  const handleDescargar = async (key, nombre) => {
-    try {
-      const res = await horariosService.solicitarDescarga(key);
-      if (!res.success) throw new Error(res.message || 'Error al obtener URL de descarga');
-      window.open(res.data.downloadUrl, '_blank');
-    } catch (err) {
-      console.error('Error al descargar:', err);
-      setError(err.message || 'Error al descargar el archivo');
-    }
-  };
-
   // ===== FILTROS =====
   const renderFiltros = () => {
-    // Filtros de gestión solo para admin (ciclo, semestre, grupo letra, especialidad)
     if (!isAdmin) return null;
-
     return (
       <div className={styles.filtrosContainer}>
         <div className={styles.filtrosTurno}>
@@ -1298,7 +1286,6 @@ export default function HorariosPage() {
 
   // ===== CONTADOR DE HORARIOS FALTANTES =====
   const renderContador = () => {
-    // Solo admin ve el contador
     if (!isAdmin) return null;
     if (!filtros.ciclo_id || !filtros.semestre) return null;
     const { total, subidos, faltantes, porcentaje } = contadorFaltantes;
@@ -1322,6 +1309,45 @@ export default function HorariosPage() {
     );
   };
 
+  // ===== VISTA PARA DOCENTES Y ALUMNOS =====
+  if (!isAdmin) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.pageHeader}>
+          <div>
+            <h1 className={styles.title}>Mi Horario</h1>
+            <p className={styles.subtitle}>
+              {isDocente ? 'Consulta tu horario de clases' : 'Consulta el horario de tu grupo'}
+            </p>
+          </div>
+        </div>
+
+        <div className={styles.horarioInfoCard}>
+          <div className={styles.horarioInfoIcon}>
+            <Clock size={48} />
+          </div>
+          <div className={styles.horarioInfoContent}>
+            <h2>Tu horario está disponible</h2>
+            <p>
+              {isDocente 
+                ? 'Puedes consultar y descargar tu horario de clases desde el módulo de Reportes.' 
+                : 'Puedes consultar el horario de tu grupo desde el módulo de Reportes.'}
+            </p>
+            <div className={styles.horarioInfoActions}>
+              <button 
+                className={styles.btnPrimary}
+                onClick={() => window.location.href = '/reportes'}
+              >
+                <FileText size={16} /> Ir a Reportes
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ===== VISTA COMPLETA PARA ADMIN =====
   return (
     <div className={styles.page}>
       {error && <div className={styles.errorMsg}>{error}</div>}
@@ -1333,17 +1359,12 @@ export default function HorariosPage() {
           <p className={styles.subtitle}>Gestión de horarios para grupos, maestros y laboratorios</p>
         </div>
         <div className={styles.headerActions}>
-          {/* Solo admin puede subir/editar/eliminar */}
-          {isAdmin && (
-            <>
-              <button className={styles.btnPrimary} onClick={abrirModalUpload}>
-                <Upload size={16} /> Subir horario
-              </button>
-              <button className={styles.btnSecondary} onClick={abrirModalBatch}>
-                <Plus size={16} /> Subida masiva
-              </button>
-            </>
-          )}
+          <button className={styles.btnPrimary} onClick={abrirModalUpload}>
+            <Upload size={16} /> Subir horario
+          </button>
+          <button className={styles.btnSecondary} onClick={abrirModalBatch}>
+            <Plus size={16} /> Subida masiva
+          </button>
           <button className={styles.btnSecondary} onClick={() => { cargarHorarios(); cargarContadorFaltantes(); }}>
             <RefreshCw size={16} /> Actualizar
           </button>
@@ -1376,12 +1397,66 @@ export default function HorariosPage() {
 
       <div className={styles.horariosSection}>
         <h3 className={styles.sectionTitle}>Horarios subidos ({archivosSubidos.length})</h3>
-        {renderArchivos()}
+        {cargando ? (
+          <div className={styles.loading}>Cargando horarios...</div>
+        ) : archivosSubidos.length === 0 ? (
+          <div className={styles.empty}>
+            <FileText size={32} />
+            <p>No hay horarios subidos</p>
+            <p className={styles.emptySub}>Haz clic en "Subir horario" para agregar un archivo</p>
+          </div>
+        ) : (
+          <div className={styles.archivosGrid}>
+            {archivosSubidos.map((archivo) => (
+              <div key={archivo.id} className={styles.archivoCard}>
+                <div className={styles.archivoInfo}>
+                  <FileText size={20} />
+                  <div className={styles.archivoDetails}>
+                    <span className={styles.archivoNombre}>{archivo.nombre}</span>
+                    <span className={styles.archivoMeta}>
+                      {archivo.grupo_nombre || 'Sin grupo'} • {archivo.semestre}° • {archivo.especialidad_nombre || '—'} • {archivo.turno_nombre || '—'}
+                    </span>
+                    <span className={styles.archivoFecha}>
+                      {new Date(archivo.fecha).toLocaleDateString('es-MX', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                      })}
+                    </span>
+                  </div>
+                </div>
+                <div className={styles.archivoActions}>
+                  <button
+                    className={styles.btnDescargar}
+                    onClick={() => handleDescargar(archivo.key, archivo.nombre)}
+                    title="Descargar"
+                  >
+                    <Download size={16} />
+                  </button>
+                  <button
+                    className={styles.btnEditarArchivo}
+                    onClick={() => abrirModalEditar(archivo)}
+                    title="Editar metadatos"
+                  >
+                    <Edit2 size={16} />
+                  </button>
+                  <button
+                    className={styles.btnEliminarArchivo}
+                    onClick={() => handleEliminar(archivo.id, archivo.nombre)}
+                    title="Eliminar"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {isAdmin && renderUploadModal()}
-      {isAdmin && renderEditModal()}
-      {isAdmin && renderBatchModal()}
+      {renderUploadModal()}
+      {renderEditModal()}
+      {renderBatchModal()}
       {renderConfirmModal()}
     </div>
   );
