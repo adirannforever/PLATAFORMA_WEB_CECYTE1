@@ -52,6 +52,40 @@ const TIPO_EVALUACION_BADGE = {
   extraordinario: { label: 'Extraordinario', className: 'tipoExtraordinario' },
 };
 
+/**
+ * Convierte cualquier fecha a formato YYYY-MM-DD para inputs type="date"
+ */
+function toDateInputValue(dateStr) {
+  if (!dateStr) return '';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '';
+    return d.toISOString().split('T')[0];
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Convierte un error de la API en un mensaje legible para el usuario
+ */
+function manejarError(err) {
+  const mensaje = err.response?.data?.message || err.message || 'Ocurrió un error inesperado.';
+  if (err.code === '23505' || (typeof mensaje === 'string' && mensaje.includes('duplicate'))) {
+    if (mensaje.includes('ciclos_escolares_nombre_key')) {
+      return 'Ya existe un ciclo con ese nombre. Elige otro.';
+    }
+    if (mensaje.includes('un_ciclo_activo')) {
+      return 'No se puede activar este ciclo porque ya hay otro ciclo activo. Desactiva el actual primero.';
+    }
+    return 'Ya existe un registro con esos datos. Revisa que no esté duplicado.';
+  }
+  if (err.code === '23503') {
+    return 'No se puede eliminar porque este registro está siendo usado en otra parte del sistema.';
+  }
+  return mensaje;
+}
+
 export default function ConfiguracionAcademicaPage() {
   const { usuario } = useAuth();
 
@@ -130,7 +164,7 @@ export default function ConfiguracionAcademicaPage() {
         setCicloSeleccionadoId(activo ? activo.id : res.data[0].id);
       }
     } catch (e) {
-      setError('Error al cargar ciclos');
+      setError(manejarError(e));
       console.error(e);
     } finally {
       setCargandoCiclos(false);
@@ -143,7 +177,7 @@ export default function ConfiguracionAcademicaPage() {
       const res = await catalogosService.getEspecialidades();
       setEspecialidades(res.data || []);
     } catch (e) {
-      setError('Error al cargar especialidades');
+      setError(manejarError(e));
       console.error(e);
     } finally {
       setCargandoEspecialidades(false);
@@ -164,7 +198,7 @@ export default function ConfiguracionAcademicaPage() {
       setPeriodosEscolares(esc.data || []);
       setPeriodosEvaluacion(eva.data || []);
     } catch (e) {
-      setError('Error al cargar períodos');
+      setError(manejarError(e));
       console.error(e);
     } finally {
       setCargandoPeriodos(false);
@@ -180,7 +214,7 @@ export default function ConfiguracionAcademicaPage() {
       const res = await materiasCatalogoService.getAll(params);
       setMaterias(res.data || []);
     } catch (e) {
-      setError('Error al cargar materias');
+      setError(manejarError(e));
       console.error(e);
     } finally {
       setCargandoMaterias(false);
@@ -236,7 +270,13 @@ export default function ConfiguracionAcademicaPage() {
   const abrirModalEditar = (tipo, item) => {
     setModalTipo(tipo);
     setModalEditando(item);
-    setForm({ ...item });
+    const formData = { ...item };
+    // Formatear fechas para inputs tipo date
+    if (tipo === 'ciclo' || tipo === 'periodo_escolar' || tipo === 'periodo_evaluacion') {
+      formData.fecha_inicio = toDateInputValue(formData.fecha_inicio);
+      formData.fecha_fin = toDateInputValue(formData.fecha_fin);
+    }
+    setForm(formData);
     setModalAbierto(true);
     setError('');
   };
@@ -266,7 +306,6 @@ export default function ConfiguracionAcademicaPage() {
         await cargarPeriodos();
       } else if (modalTipo === 'periodo_evaluacion') {
         const data = { ...form };
-        // Si tipo no es 'parcial', no enviar parcial (o enviar 0)
         if (data.tipo !== 'parcial') {
           delete data.parcial;
         }
@@ -296,7 +335,8 @@ export default function ConfiguracionAcademicaPage() {
       setModalAbierto(false);
       setTimeout(() => setExito(''), 4000);
     } catch (err) {
-      setError(err.response?.data?.message || 'Error al guardar');
+      setError(manejarError(err));
+      console.error(err);
     } finally {
       setEnviando(false);
     }
@@ -315,7 +355,8 @@ export default function ConfiguracionAcademicaPage() {
         setExito('Eliminado correctamente');
         setTimeout(() => setExito(''), 4000);
       } catch (err) {
-        setError(err.response?.data?.message || 'Error al eliminar');
+        setError(manejarError(err));
+        console.error(err);
       }
     });
   };
@@ -328,7 +369,8 @@ export default function ConfiguracionAcademicaPage() {
         setExito('Períodos regenerados correctamente');
         setTimeout(() => setExito(''), 4000);
       } catch (err) {
-        setError(err.response?.data?.message || 'Error al regenerar');
+        setError(manejarError(err));
+        console.error(err);
       }
     });
   };
@@ -417,7 +459,8 @@ export default function ConfiguracionAcademicaPage() {
         setError(res.message || 'Error al guardar');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Error al guardar');
+      setError(manejarError(err));
+      console.error(err);
     } finally {
       setBatchEnviando(false);
     }
