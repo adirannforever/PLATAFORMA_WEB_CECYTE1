@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import styles from './DashboardLayout.module.css';
+import { getMenuItems } from '../config/menuItems';
+import { usePermissions } from '../hooks/usePermissions';
 import logoCecyte from '../../assets/logo_cecyte.png';
 import {
   Users,

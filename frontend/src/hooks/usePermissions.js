@@ -1,81 +1,46 @@
-import { useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { PERMISOS, ROLES } from '../config/permissions';
 
-export function usePermissions() {
+/**
+ * Hook para gestionar permisos basados en el rol del usuario
+ * @returns {Object} - { hasPermission, checkRole, isAdmin, isDocente, isAlumno }
+ */
+export const usePermissions = () => {
   const { usuario } = useAuth();
-  const rol = usuario?.rol;
 
-  const tienePermiso = useMemo(() => {
-    return (modulo, accion) => {
-      if (!rol) return false;
-      if (rol === ROLES.ADMINISTRADOR) return true; 
-      const permisosModulo = PERMISOS[modulo];
-      if (!permisosModulo) return false;
-      const rolesPermitidos = permisosModulo[accion];
-      if (!rolesPermitidos) return false;
-      return rolesPermitidos.includes(rol);
-    };
-  }, [rol]);
+  const rol = usuario?.rol || null;
 
-  const puedeVerModulo = useMemo(() => {
-    return (modulo) => {
-      return tienePermiso(modulo, 'ver');
-    };
-  }, [tienePermiso]);
+  /**
+   * Verifica si el usuario tiene un rol específico
+   * @param {string|string[]} roles 
+   * @returns {boolean}
+   */
+  const checkRole = (roles) => {
+    if (!rol) return false;
+    if (Array.isArray(roles)) {
+      return roles.includes(rol);
+    }
+    return roles === rol;
+  };
 
-  const puedeCrear = useMemo(() => {
-    return (modulo) => {
-      return tienePermiso(modulo, 'crear');
-    };
-  }, [tienePermiso]);
+  /**
+   * Verifica si el usuario tiene permiso para acceder a un recurso
+   * @param {string|string[]} requiredRoles - Rol o lista de roles permitidos
+   * @returns {boolean}
+   */
+  const hasPermission = (requiredRoles) => {
+    return checkRole(requiredRoles);
+  };
 
-  const puedeEditar = useMemo(() => {
-    return (modulo) => {
-      return tienePermiso(modulo, 'editar');
-    };
-  }, [tienePermiso]);
-
-  const puedeEliminar = useMemo(() => {
-    return (modulo) => {
-      return tienePermiso(modulo, 'eliminar');
-    };
-  }, [tienePermiso]);
-
-  const puedeRegistrar = useMemo(() => {
-    return (modulo) => {
-      return tienePermiso(modulo, 'registrar');
-    };
-  }, [tienePermiso]);
-
-  const puedeResolver = useMemo(() => {
-    return (modulo) => {
-      return tienePermiso(modulo, 'resolver');
-    };
-  }, [tienePermiso]);
-
-  const puedeExportar = useMemo(() => {
-    return (modulo) => {
-      return tienePermiso(modulo, 'exportar');
-    };
-  }, [tienePermiso]);
-
-  const esAdmin = rol === ROLES.ADMINISTRADOR;
-  const esDocente = rol === ROLES.DOCENTE;
-  const esAlumno = rol === ROLES.ALUMNO;
+  const isAdmin = rol === 'administrador';
+  const isDocente = rol === 'docente';
+  const isAlumno = rol === 'alumno';
 
   return {
-    tienePermiso,
-    puedeVerModulo,
-    puedeCrear,
-    puedeEditar,
-    puedeEliminar,
-    puedeRegistrar,
-    puedeResolver,
-    puedeExportar,
-    esAdmin,
-    esDocente,
-    esAlumno,
+    hasPermission,
+    checkRole,
+    isAdmin,
+    isDocente,
+    isAlumno,
     rol,
   };
-}
+};
