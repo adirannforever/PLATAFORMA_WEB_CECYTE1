@@ -21,7 +21,7 @@ import ServicioSocialPage from './pages/ServicioSocialPage';
 import TitulacionPage from './pages/TitulacionPage';
 import ConfiguracionAcademicaPage from './pages/ConfiguracionAcademicaPage';
 import IncidenciasPage from './pages/IncidenciasPage';
-import AuditoriaPage from './pages/AuditoriaPage';
+// import AuditoriaPage from './pages/AuditoriaPage';
 import ReportesPage from './pages/ReportesPage';
 import HorariosPage from './pages/HorariosPage';
 
@@ -229,14 +229,14 @@ export default function App() {
             </RutaProtegida>
           }
         />
-        <Route
+        {/* <Route
           path="auditoria"
           element={
             <RutaProtegida rolesPermitidos={['administrador']}>
               <AuditoriaPage />
             </RutaProtegida>
           }
-        />
+        /> */}
 
         <Route
           path="materias"

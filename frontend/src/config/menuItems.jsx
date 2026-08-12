@@ -197,12 +197,12 @@ export const menuItems = [
     icon: <Settings size={18} />,
     roles: ['administrador'],
   },
-  {
-    to: '/auditoria',
-    label: 'Auditoría',
-    icon: <Activity size={18} />,
-    roles: ['administrador'],
-  },
+  // {
+  //   to: '/auditoria',
+  //   label: 'Auditoría',
+  //   icon: <Activity size={18} />,
+  //   roles: ['administrador'],
+  // },
 
 ];
 
