@@ -4,7 +4,6 @@ import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import { query } from './config/db.js';
 import { crearCiclosFuturos } from './utils/ciclos.js';
-import consoleStamp from 'console-stamp';
 
 import authRoutes from './routes/auth.routes.js';
 import usuariosRoutes from './routes/usuarios.routes.js';
@@ -31,8 +30,6 @@ import auditoriaRoutes from './routes/auditoria.routes.js';
 import { auditoriaGlobal } from './middlewares/auditoriaGlobal.js'; 
 import reportesRoutes from './routes/reportes.routes.js';
 import materiasGrupoRoutes from './routes/materiasGrupo.routes.js';
-
-consoleStamp(console, { format: ':date(HH:MM:ss)' });
 
 dotenv.config();
 
