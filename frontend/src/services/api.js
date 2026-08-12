@@ -636,6 +636,12 @@ export const reportesService = {
       responseType: 'blob' 
     }).then(res => res.data);
   },
+  generarExcelAsistencias: (params) => {
+    return api.get('/reportes/asistencias-excel', { 
+      params, 
+      responseType: 'blob' 
+    }).then(res => res.data);
+  },
 };
 
 export default api;

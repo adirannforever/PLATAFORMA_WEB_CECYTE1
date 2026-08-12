@@ -3,39 +3,32 @@ import {
   generarConstanciaPDF,
   generarListadoAlumnosExcel,
   generarEstadisticasExcel,
+  generarExcelAsistenciasClase as generarExcelAsistenciasClaseService,
 } from '../services/reportes.service.js';
 import { query } from '../config/db.js';
 
-// Función auxiliar para obtener el alumno_id real a partir del usuario_id
-async function obtenerAlumnoIdPorUsuario(usuario_id) {
-  const result = await query('SELECT id FROM alumnos WHERE usuario_id = $1', [usuario_id]);
-  if (result.rows.length === 0) {
-    throw new Error('Alumno no encontrado para este usuario');
-  }
-  return result.rows[0].id;
-}
-
+// ============================================================
+// VERIFICAR PERMISOS DE ALUMNO
+// ============================================================
 async function verificarPermisosAlumno(req, alumno_id) {
   const userId = req.user.id;
   const userRole = req.user.rol;
 
-  // Admin: puede todo
   if (userRole === 'administrador') {
     return { permitido: true, mensaje: null };
   }
 
-  // Alumno: solo puede ver sus propios datos
   if (userRole === 'alumno') {
-    // Obtenemos el alumno_id real del usuario logueado
-    const realAlumnoId = await obtenerAlumnoIdPorUsuario(userId);
-    // Comparamos con el alumno_id solicitado
-    if (realAlumnoId !== alumno_id) {
+    const alumnoRes = await query(
+      'SELECT usuario_id FROM alumnos WHERE id = $1',
+      [alumno_id]
+    );
+    if (!alumnoRes.rows[0] || alumnoRes.rows[0].usuario_id !== userId) {
       return { permitido: false, mensaje: 'No puedes generar reportes de otro alumno' };
     }
     return { permitido: true, mensaje: null };
   }
 
-  // Docente: solo puede ver alumnos de sus grupos
   if (userRole === 'docente') {
     const docenteRes = await query(
       `SELECT COUNT(*) as total
@@ -53,17 +46,24 @@ async function verificarPermisosAlumno(req, alumno_id) {
   return { permitido: false, mensaje: 'Rol no autorizado' };
 }
 
+// ============================================================
+// GENERAR BOLETA (PDF)
+// ============================================================
 export const generarBoleta = async (req, res) => {
   try {
     const { alumno_id, ciclo_id } = req.query;
     let alumnoIdFinal;
 
-    // Si es alumno, obtenemos su id real
     if (req.user.rol === 'alumno') {
-      alumnoIdFinal = await obtenerAlumnoIdPorUsuario(req.user.id);
-      // No necesitamos verificar permisos porque es él mismo
+      const result = await query(
+        'SELECT id FROM alumnos WHERE usuario_id = $1',
+        [req.user.id]
+      );
+      if (result.rows.length === 0) {
+        return res.status(404).json({ success: false, message: 'Alumno no encontrado' });
+      }
+      alumnoIdFinal = result.rows[0].id;
     } else {
-      // Admin o docente: debe venir alumno_id y ciclo_id
       if (!alumno_id || !ciclo_id) {
         return res.status(400).json({ success: false, message: 'Se requiere alumno_id y ciclo_id' });
       }
@@ -89,14 +89,23 @@ export const generarBoleta = async (req, res) => {
   }
 };
 
+// ============================================================
+// GENERAR CONSTANCIA (PDF)
+// ============================================================
 export const generarConstancia = async (req, res) => {
   try {
-    const { alumno_id } = req.query;
     let alumnoIdFinal;
-
     if (req.user.rol === 'alumno') {
-      alumnoIdFinal = await obtenerAlumnoIdPorUsuario(req.user.id);
+      const result = await query(
+        'SELECT id FROM alumnos WHERE usuario_id = $1',
+        [req.user.id]
+      );
+      if (result.rows.length === 0) {
+        return res.status(404).json({ success: false, message: 'Alumno no encontrado' });
+      }
+      alumnoIdFinal = result.rows[0].id;
     } else {
+      const { alumno_id } = req.query;
       if (!alumno_id) {
         return res.status(400).json({ success: false, message: 'Se requiere alumno_id' });
       }
@@ -118,6 +127,9 @@ export const generarConstancia = async (req, res) => {
   }
 };
 
+// ============================================================
+// GENERAR LISTADO DE ALUMNOS (EXCEL)
+// ============================================================
 export const generarListadoAlumnos = async (req, res) => {
   try {
     if (req.user.rol === 'alumno') {
@@ -153,6 +165,9 @@ export const generarListadoAlumnos = async (req, res) => {
   }
 };
 
+// ============================================================
+// GENERAR ESTADÍSTICAS (EXCEL)
+// ============================================================
 export const generarEstadisticas = async (req, res) => {
   try {
     if (req.user.rol !== 'administrador') {
@@ -174,30 +189,30 @@ export const generarEstadisticas = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
-export const generarExcelCalificacionesMateria = async (req, res) => {
+
+// ============================================================
+// EXPORTAR ASISTENCIAS A EXCEL
+// ============================================================
+export const generarExcelAsistenciasClase = async (req, res) => {
   try {
-    const { materia_grupo_id, ciclo_id } = req.query;
-    if (!materia_grupo_id) {
-      return res.status(400).json({ success: false, message: 'Se requiere materia_grupo_id' });
+    const { materia_grupo_id, fecha } = req.query;
+    if (!materia_grupo_id || !fecha) {
+      return res.status(400).json({ success: false, message: 'Se requiere materia_grupo_id y fecha' });
     }
 
-    // Verificar permisos (solo admin y docente pueden exportar)
     if (req.user.rol === 'alumno') {
       return res.status(403).json({ success: false, message: 'No autorizado' });
     }
 
-    const buffer = await generarExcelCalificacionesMateria(
-      parseInt(materia_grupo_id),
-      ciclo_id ? parseInt(ciclo_id) : null
-    );
+    const buffer = await generarExcelAsistenciasClaseService(parseInt(materia_grupo_id), fecha);
 
-    const filename = `calificaciones_materia_${materia_grupo_id}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    const filename = `asistencias_${materia_grupo_id}_${fecha}.xlsx`;
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
     res.send(buffer);
   } catch (err) {
-    console.error('Error exportando calificaciones a Excel:', err);
+    console.error('Error exportando asistencias a Excel:', err);
     res.status(500).json({ success: false, message: err.message });
   }
 };

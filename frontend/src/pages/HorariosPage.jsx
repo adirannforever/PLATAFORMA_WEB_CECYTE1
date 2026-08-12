@@ -515,7 +515,7 @@ export default function HorariosPage() {
         } catch (err) {
           // Captura el error completo y muestra el mensaje más específico
           const errorMsg = err.response?.data?.message || err.message || 'Error al eliminar';
-          setError(`❌ ${errorMsg}`);
+          setError(` ${errorMsg}`);
           console.error('Error al eliminar horario:', err);
           if (err.response) {
             console.error('Detalles del error (response):', err.response.data);

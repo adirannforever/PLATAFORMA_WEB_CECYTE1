@@ -1,9 +1,9 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
-import { asistenciaService, materiasService, catalogosService } from '../services/api';
+import { asistenciaService, materiasService, catalogosService, reportesService } from '../services/api';
 import Skeleton from '../components/Skeleton';
-import { Clock, FileText, Calendar, User, BookOpen, CheckCircle } from 'lucide-react';
+import { Clock, FileText, Calendar, User, BookOpen, CheckCircle, Download } from 'lucide-react';
 import styles from './AsistenciaPage.module.css';
 
 const ESTADOS = [
@@ -22,6 +22,7 @@ export default function AsistenciaPage() {
   const [error, setError] = useState('');
   const [exito, setExito] = useState('');
   const [guardando, setGuardando] = useState(false);
+  const [exportando, setExportando] = useState(false);
 
   // Estados para admin/docente (registro)
   const [materias, setMaterias] = useState([]);
@@ -42,19 +43,15 @@ export default function AsistenciaPage() {
       try {
         let res;
         if (isAdmin) {
-          // Admin: todas las materias_grupo
           res = await materiasService.getAll();
         } else if (isDocente) {
-          // Docente: solo sus materias asignadas
           res = await materiasService.getAll({ docente_id: usuario.id });
         } else {
-          // Alumno: no necesita materias para registrar
           setMaterias([]);
           setCargando(false);
           return;
         }
         setMaterias(res.materias || []);
-        // Si solo hay una materia, seleccionarla automáticamente
         if (res.materias?.length === 1) {
           setMateriaSeleccionada(String(res.materias[0].id));
         }
@@ -192,6 +189,34 @@ export default function AsistenciaPage() {
       setError(e.response?.data?.message || 'Error al guardar asistencias.');
     } finally {
       setGuardando(false);
+    }
+  };
+
+  // ===== Exportar a Excel =====
+  const exportarExcel = async () => {
+    if (!materiaSeleccionada || !fecha) return;
+    setExportando(true);
+    setError('');
+    try {
+      const blob = await reportesService.generarExcelAsistencias({
+        materia_grupo_id: materiaSeleccionada,
+        fecha: fecha,
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `asistencias_${materiaSeleccionada}_${fecha}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      setExito(' Excel exportado correctamente.');
+      setTimeout(() => setExito(''), 4000);
+    } catch (err) {
+      console.error('Error exportando Excel:', err);
+      setError(err.response?.data?.message || 'Error al exportar a Excel');
+    } finally {
+      setExportando(false);
     }
   };
 
@@ -338,13 +363,22 @@ export default function AsistenciaPage() {
         </div>
 
         {materiaSeleccionada && !cargando && (isAdmin || isDocente) && (
-          <button
-            className={styles.btnPrimary}
-            onClick={handleGuardar}
-            disabled={guardando || alumnos.length === 0}
-          >
-            {guardando ? 'Guardando...' : 'Guardar todo'}
-          </button>
+          <>
+            <button
+              className={styles.btnPrimary}
+              onClick={handleGuardar}
+              disabled={guardando || alumnos.length === 0}
+            >
+              {guardando ? 'Guardando...' : 'Guardar todo'}
+            </button>
+            <button
+              className={styles.btnExport}
+              onClick={exportarExcel}
+              disabled={exportando || alumnos.length === 0}
+            >
+              <Download size={16} /> {exportando ? 'Exportando...' : 'Exportar Excel'}
+            </button>
+          </>
         )}
       </div>
 

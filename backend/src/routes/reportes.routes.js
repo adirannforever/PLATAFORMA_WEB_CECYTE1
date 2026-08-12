@@ -5,18 +5,17 @@ import {
   generarConstancia,
   generarListadoAlumnos,
   generarEstadisticas,
-  generarExcelCalificacionesMateria,
+  generarExcelAsistenciasClase,
 } from '../controllers/reportes.controller.js';
 
 const router = Router();
 
 router.use(verifyToken);
 
-// Las rutas ahora tienen la lógica de permisos en el controlador
 router.get('/boleta', generarBoleta);
 router.get('/constancia', generarConstancia);
 router.get('/listado-alumnos', generarListadoAlumnos);
 router.get('/estadisticas', generarEstadisticas);
-router.get('/calificaciones-excel', generarExcelCalificacionesMateria);
+router.get('/asistencias-excel', generarExcelAsistenciasClase);
 
 export default router;
