@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import { query } from './config/db.js';
 import { crearCiclosFuturos } from './utils/ciclos.js';
+import '../scripts/scheduler.js';
 
 import authRoutes from './routes/auth.routes.js';
 import usuariosRoutes from './routes/usuarios.routes.js';
