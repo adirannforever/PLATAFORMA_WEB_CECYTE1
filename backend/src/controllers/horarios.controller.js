@@ -79,13 +79,11 @@ export const actualizarConfiguracion = async (req, res) => {
 };
 
 // ============================================================
-// OBTENER SEMESTRE ACTUAL (lógica)
+// SEMESTRE ACTUAL
 // ============================================================
 export const getSemestreActual = (req, res) => {
   const hoy = new Date();
   const mes = hoy.getMonth() + 1;
-  // Enero-Junio → semestres 2, 4, 6
-  // Julio-Diciembre → semestres 1, 3, 5
   if (mes >= 1 && mes <= 6) {
     return res.json({ success: true, data: { semestres: [2, 4, 6] } });
   } else {
@@ -115,7 +113,7 @@ export const listarHorarios = async (req, res) => {
         ha.key,
         ha.fecha,
         ha.semestre,
-        ha.tipo,
+        ha.tipo_horario,
         ha.descripcion,
         ha.grupo_id,
         g.nombre AS grupo_nombre,
@@ -149,7 +147,7 @@ export const listarHorarios = async (req, res) => {
       params.push(semestre);
     }
     if (tipo) {
-      conditions.push(`ha.tipo = $${params.length + 1}`);
+      conditions.push(`ha.tipo_horario = $${params.length + 1}`);
       params.push(tipo);
     }
     if (especialidad_id) {
@@ -188,7 +186,7 @@ export const listarHorarios = async (req, res) => {
 };
 
 // ============================================================
-// CONTAR HORARIOS FALTANTES POR SEMESTRE
+// CONTAR HORARIOS FALTANTES
 // ============================================================
 export const contarHorariosFaltantes = async (req, res) => {
   try {
@@ -197,17 +195,15 @@ export const contarHorariosFaltantes = async (req, res) => {
       return res.status(400).json({ success: false, message: 'ciclo_id y semestre son requeridos' });
     }
 
-    // Obtener total de grupos para ese semestre (4 por semestre: A, B, C, D)
     const gruposResult = await query(
       `SELECT COUNT(*) as total FROM grupos WHERE ciclo_id = $1 AND semestre = $2 AND activo = TRUE`,
       [ciclo_id, semestre]
     );
     const totalGrupos = parseInt(gruposResult.rows[0]?.total || 0);
 
-    // Contar horarios subidos para ese semestre
     const subidosResult = await query(
       `SELECT COUNT(DISTINCT grupo_id) as subidos FROM horario_archivos 
-       WHERE ciclo_id = $1 AND semestre = $2 AND tipo = 'grupo'`,
+       WHERE ciclo_id = $1 AND semestre = $2 AND tipo_horario = 'grupo'`,
       [ciclo_id, semestre]
     );
     const subidos = parseInt(subidosResult.rows[0]?.subidos || 0);
@@ -230,7 +226,7 @@ export const contarHorariosFaltantes = async (req, res) => {
 };
 
 // ============================================================
-// SOLICITAR UPLOAD (con metadatos)
+// SOLICITAR UPLOAD (INDIVIDUAL)
 // ============================================================
 export const solicitarUploadHorario = async (req, res) => {
   try {
@@ -246,30 +242,32 @@ export const solicitarUploadHorario = async (req, res) => {
       ciclo_id,
       especialidad_id,
       turno_id,
-      tipo_horario, // 'grupo', 'maestro', 'laboratorio'
+      tipo_horario,
       descripcion,
     } = req.body;
 
-    if (!nombre || !tipo || !grupo_id || !semestre || !ciclo_id) {
+    if (!nombre || !tipo || !grupo_id || !semestre || !ciclo_id || !turno_id) {
       return res.status(400).json({
         success: false,
-        message: 'Nombre, tipo (MIME), grupo_id, semestre y ciclo_id son requeridos',
+        message: 'Faltan campos requeridos: nombre, tipo, grupo_id, semestre, ciclo_id, turno_id',
       });
     }
 
-    // Validar tipo MIME
-    const tiposPermitidos = [
+    const tiposValidosMIME = [
       'application/pdf',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'application/vnd.ms-excel',
     ];
-    if (!tiposPermitidos.includes(tipo)) {
+    if (!tiposValidosMIME.includes(tipo)) {
       return res.status(400).json({ success: false, message: 'Formato no permitido. Solo PDF o Excel' });
     }
 
+    // Validar tipo_horario
+    const tiposHorarioValidos = ['grupo', 'maestro', 'laboratorio'];
+    const tipoHorarioFinal = tiposHorarioValidos.includes(tipo_horario) ? tipo_horario : 'grupo';
+
     const { url, key } = await generateUploadUrl(nombre, tipo);
 
-    // Guardar en BD con todos los metadatos
     await query(
       `INSERT INTO horario_archivos 
        (nombre, key, tipo, grupo_id, semestre, ciclo_id, especialidad_id, turno_id, tipo_horario, descripcion, subido_por, fecha)
@@ -282,8 +280,8 @@ export const solicitarUploadHorario = async (req, res) => {
         semestre,
         ciclo_id,
         especialidad_id || null,
-        turno_id || null,
-        tipo_horario || 'grupo',
+        turno_id,
+        tipoHorarioFinal,
         descripcion || null,
         req.user.id,
       ]
@@ -304,7 +302,7 @@ export const solicitarUploadHorario = async (req, res) => {
 };
 
 // ============================================================
-// ACTUALIZAR HORARIO (editar metadatos)
+// ACTUALIZAR HORARIO
 // ============================================================
 export const actualizarHorario = async (req, res) => {
   const { id } = req.params;
@@ -370,6 +368,7 @@ export const uploadMultipleHorarios = async (req, res) => {
 
     const resultados = [];
     const errores = [];
+    const tiposHorarioValidos = ['grupo', 'maestro', 'laboratorio'];
 
     for (const h of horarios) {
       const {
@@ -384,12 +383,13 @@ export const uploadMultipleHorarios = async (req, res) => {
         descripcion,
       } = h;
 
-      if (!nombre || !tipo_mime || !grupo_id || !semestre || !ciclo_id) {
+      if (!nombre || !tipo_mime || !grupo_id || !semestre || !ciclo_id || !turno_id) {
         errores.push({ nombre, error: 'Faltan campos requeridos' });
         continue;
       }
 
       try {
+        const tipoHorarioFinal = tiposHorarioValidos.includes(tipo_horario) ? tipo_horario : 'grupo';
         const { url, key } = await generateUploadUrl(nombre, tipo_mime);
 
         await query(
@@ -404,8 +404,8 @@ export const uploadMultipleHorarios = async (req, res) => {
             semestre,
             ciclo_id,
             especialidad_id || null,
-            turno_id || null,
-            tipo_horario || 'grupo',
+            turno_id,
+            tipoHorarioFinal,
             descripcion || null,
             req.user.id,
           ]
@@ -413,6 +413,7 @@ export const uploadMultipleHorarios = async (req, res) => {
 
         resultados.push({ nombre, key, success: true });
       } catch (err) {
+        console.error('Error en batch item:', err);
         errores.push({ nombre, error: err.message });
       }
     }

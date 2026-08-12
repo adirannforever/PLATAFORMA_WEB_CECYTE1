@@ -742,9 +742,9 @@ export default function HorariosPage() {
             {uploadForm.semestre && uploadForm.letra && uploadForm.turno_id && uploadForm.ciclo_id && (
               <div className={styles.grupoStatus}>
                 {grupoEncontrado ? (
-                  <span className={styles.grupoOk}>✅ Grupo encontrado: {grupoEncontrado.nombre}</span>
+                  <span className={styles.grupoOk}> Grupo encontrado: {grupoEncontrado.nombre}</span>
                 ) : (
-                  <span className={styles.grupoError}>❌ No existe un grupo con esa combinación</span>
+                  <span className={styles.grupoError}> No existe un grupo con esa combinación</span>
                 )}
               </div>
             )}
@@ -875,9 +875,9 @@ export default function HorariosPage() {
             {editForm.semestre && editForm.letra && editForm.turno_id && editForm.ciclo_id && (
               <div className={styles.grupoStatus}>
                 {editGrupoEncontrado ? (
-                  <span className={styles.grupoOk}>✅ Grupo encontrado: {editGrupoEncontrado.nombre}</span>
+                  <span className={styles.grupoOk}> Grupo encontrado: {editGrupoEncontrado.nombre}</span>
                 ) : (
-                  <span className={styles.grupoError}>❌ No existe un grupo con esa combinación</span>
+                  <span className={styles.grupoError}> No existe un grupo con esa combinación</span>
                 )}
               </div>
             )}
@@ -1008,9 +1008,9 @@ export default function HorariosPage() {
             {batchForm.semestre && batchForm.letra && batchForm.turno_id && batchForm.ciclo_id && (
               <div className={styles.grupoStatus}>
                 {batchGrupoEncontrado ? (
-                  <span className={styles.grupoOk}>✅ Grupo encontrado: {batchGrupoEncontrado.nombre}</span>
+                  <span className={styles.grupoOk}> Grupo encontrado: {batchGrupoEncontrado.nombre}</span>
                 ) : (
-                  <span className={styles.grupoError}>❌ No existe un grupo con esa combinación</span>
+                  <span className={styles.grupoError}> No existe un grupo con esa combinación</span>
                 )}
               </div>
             )}
@@ -1283,7 +1283,7 @@ export default function HorariosPage() {
           <span className={styles.contadorTotal}>Total: {total} grupos</span>
           <span className={styles.contadorSubidos}>Subidos: {subidos}</span>
           <span className={faltantes > 0 ? styles.contadorFaltantes : styles.contadorCompleto}>
-            {faltantes > 0 ? `Faltan: ${faltantes}` : '✅ Completo'}
+            {faltantes > 0 ? `Faltan: ${faltantes}` : ' Completo'}
           </span>
         </div>
         <div className={styles.contadorBarra}>
