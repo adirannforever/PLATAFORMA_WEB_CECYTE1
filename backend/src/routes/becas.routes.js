@@ -23,7 +23,8 @@ router.put('/:id', requireRole('administrador'), actualizarBeca);
 router.patch('/:id/estatus-pago', requireRole('administrador'), actualizarEstatusPago);
 router.delete('/:id', requireRole('administrador'), eliminarBeca);
 
-console.log(' Archivo becas.routes.js cargado');
-console.log(' Rutas definidas:', router.stack.map(r => r.route?.path).filter(Boolean));
+// depuracion
+// console.log(' Archivo becas.routes.js cargado');
+// console.log(' Rutas definidas:', router.stack.map(r => r.route?.path).filter(Boolean));
 
 export default router;

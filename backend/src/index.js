@@ -26,8 +26,8 @@ import tutoriasRoutes from './routes/tutorias.routes.js';
 import periodosRoutes from './routes/periodos.routes.js';
 import ciclosRoutes from './routes/ciclos.routes.js';
 import materiasCatalogoRoutes from './routes/materiasCatalogo.routes.js';
-import auditoriaRoutes from './routes/auditoria.routes.js';
-import { auditoriaGlobal } from './middlewares/auditoriaGlobal.js'; 
+// import auditoriaRoutes from './routes/auditoria.routes.js';
+// import { auditoriaGlobal } from './middlewares/auditoriaGlobal.js'; 
 import reportesRoutes from './routes/reportes.routes.js';
 import materiasGrupoRoutes from './routes/materiasGrupo.routes.js';
 
@@ -65,12 +65,12 @@ app.use('/api/tutorias', tutoriasRoutes);
 app.use('/api/periodos', periodosRoutes);
 app.use('/api/ciclos', ciclosRoutes);
 app.use('/api/materias-catalogo', materiasCatalogoRoutes);
-app.use('/api/auditoria', auditoriaRoutes);
+// app.use('/api/auditoria', auditoriaRoutes);
 app.use('/api/reportes', reportesRoutes);
 app.use('/api/horarios', horariosRoutes);
 app.use('/api/materias-grupo', materiasGrupoRoutes);
 
-app.use(auditoriaGlobal);
+// app.use(auditoriaGlobal);
 
 
 app.get('/api/health', (req, res) => {
