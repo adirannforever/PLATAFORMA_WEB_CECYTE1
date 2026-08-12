@@ -1,93 +1,16 @@
-import { useState } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useMemo } from 'react';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getMenuItems } from '../../config/menuItems'; // ← importa .jsx automáticamente
+import { getMenuItems, categoryOrder, CATEGORIES } from '../../config/menuItems';
 import { usePermissions } from '../../hooks/usePermissions';
 import styles from './DashboardLayout.module.css';
 import logoCecyte from '../../assets/logo_cecyte.png';
-import {
-  Users,
-  FileText,
-  Gift,
-  CreditCard,
-  Briefcase,
-  GraduationCap,
-  Settings,
-  AlertCircle,
-  Activity,
-  Calendar,
-  BookOpen,
-  UserCheck,
-  Home,
-  ClipboardList,
-} from 'lucide-react';
+import { ChevronDown, ChevronRight, Home, AlertCircle } from 'lucide-react';
 
 const IconPortal = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M19 12H5" />
     <polyline points="12 19 5 12 12 5" />
-  </svg>
-);
-
-const IconDashboard = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="3" width="7" height="7" />
-    <rect x="14" y="3" width="7" height="7" />
-    <rect x="14" y="14" width="7" height="7" />
-    <rect x="3" y="14" width="7" height="7" />
-  </svg>
-);
-
-const IconComunicados = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-  </svg>
-);
-
-const IconCalif = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-    <polyline points="14,2 14,8 20,8" />
-    <line x1="16" y1="13" x2="8" y2="13" />
-    <line x1="16" y1="17" x2="8" y2="17" />
-    <polyline points="10,9 9,9 8,9" />
-  </svg>
-);
-
-const IconGrupos = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-  </svg>
-);
-
-const IconUsuarios = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-    <circle cx="9" cy="7" r="4" />
-    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-  </svg>
-);
-
-const IconInscripciones = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="8" y1="6" x2="21" y2="6" />
-    <line x1="8" y1="12" x2="21" y2="12" />
-    <line x1="8" y1="18" x2="21" y2="18" />
-    <line x1="3" y1="6" x2="3.01" y2="6" />
-    <line x1="3" y1="12" x2="3.01" y2="12" />
-    <line x1="3" y1="18" x2="3.01" y2="18" />
-  </svg>
-);
-
-const IconAsistencia = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-    <line x1="16" y1="2" x2="16" y2="6" />
-    <line x1="8" y1="2" x2="8" y2="6" />
-    <line x1="3" y1="10" x2="21" y2="10" />
-    <polyline points="9 15 11 17 15 13" />
   </svg>
 );
 
@@ -117,13 +40,74 @@ const ETIQUETA_ROL = {
   alumno: 'Alumno',
 };
 
+// Mapeo de rutas a nombres para breadcrumbs
+const ROUTE_NAMES = {
+  '/dashboard': 'Inicio',
+  '/comunicados': 'Comunicados',
+  '/reportes': 'Reportes',
+  '/horarios': 'Horarios',
+  '/grupos': 'Grupos',
+  '/asistencia': 'Asistencias',
+  '/calificaciones': 'Calificaciones',
+  '/mis-calificaciones': 'Mis Calificaciones',
+  '/inscripciones': 'Inscripciones',
+  '/incidencias': 'Incidencias',
+  '/usuarios': 'Usuarios',
+  '/becas': 'Becas',
+  '/pagos': 'Pagos',
+  '/titulacion': 'Titulación',
+  '/servicio-social': 'Servicio Social',
+  '/expediente': 'Expediente',
+  '/configuracion-academica': 'Configuración Académica',
+};
+
 export default function DashboardLayout() {
   const { usuario, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { hasPermission } = usePermissions();
 
   const [sidebarAbierto, setSidebarAbierto] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [collapsedSections, setCollapsedSections] = useState(() => {
+    const saved = localStorage.getItem('sidebar_collapsed');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return {};
+      }
+    }
+    return {};
+  });
+
+  const groupedItems = getMenuItems(usuario?.rol);
+  const categoriesWithItems = categoryOrder.filter((cat) => groupedItems[cat]?.length > 0);
+
+  // Badge dinámico (por ahora sin datos reales)
+  // Cuando tengas un endpoint que cuente incidencias pendientes,
+  // puedes reemplazar este bloque con una llamada real.
+  const badgeCounts = useMemo(() => {
+    // Ejemplo: si tuvieras un servicio de incidencias:
+    // const res = await incidenciasService.getPendientesCount();
+    // return { incidencias: res.count };
+    // Por ahora, sin badge.
+    return {};
+  }, [usuario]);
+
+  // Breadcrumbs
+  const breadcrumbs = useMemo(() => {
+    const path = location.pathname;
+    const parts = path.split('/').filter(Boolean);
+    const crumbs = [];
+    let currentPath = '';
+    parts.forEach((part) => {
+      currentPath += `/${part}`;
+      const label = ROUTE_NAMES[currentPath] || part.charAt(0).toUpperCase() + part.slice(1);
+      crumbs.push({ path: currentPath, label });
+    });
+    return crumbs;
+  }, [location]);
 
   const handleLogout = async () => {
     try {
@@ -134,13 +118,19 @@ export default function DashboardLayout() {
     }
   };
 
-  const navItems = getMenuItems(usuario?.rol);
+  const toggleSection = (catKey) => {
+    setCollapsedSections((prev) => {
+      const newState = { ...prev, [catKey]: !prev[catKey] };
+      localStorage.setItem('sidebar_collapsed', JSON.stringify(newState));
+      return newState;
+    });
+  };
 
   return (
     <div className={styles.shell}>
       {sidebarAbierto && <div className={styles.overlay} onClick={() => setSidebarAbierto(false)} />}
 
-      <aside className={`${styles.sidebar} ${sidebarAbierto ? styles.sidebarOpen : ''}`}>
+      <aside className={`${styles.sidebar} ${sidebarAbierto ? styles.sidebarOpen : ''}`} role="navigation" aria-label="Menú principal">
         <div className={styles.brand}>
           <LogoCECyTE />
           <div className={styles.brandText}>
@@ -161,30 +151,69 @@ export default function DashboardLayout() {
         </div>
 
         <nav className={styles.nav}>
-          <span className={styles.navLabel}>Menú principal</span>
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) =>
-                `${styles.navItem} ${isActive ? styles.navItemActive : ''}`
-              }
-              onClick={() => setSidebarAbierto(false)}
-            >
-              <span className={styles.navIcon}>{item.icon}</span>
-              {item.label}
-            </NavLink>
-          ))}
+          {categoriesWithItems.map((catKey) => {
+            const items = groupedItems[catKey];
+            const category = CATEGORIES[catKey];
+            if (!category || items.length === 0) return null;
+            const isCollapsed = collapsedSections[catKey] || false;
+            const sectionId = `nav-section-${catKey}`;
+            const labelId = `${sectionId}-label`;
+
+            return (
+              <div key={catKey} className={styles.navSection} role="group" aria-labelledby={labelId}>
+                <button
+                  className={styles.navSectionToggle}
+                  onClick={() => toggleSection(catKey)}
+                  aria-expanded={!isCollapsed}
+                  aria-controls={sectionId}
+                  id={labelId}
+                >
+                  <span className={styles.navSectionLabel}>{category.label}</span>
+                  <span className={styles.navSectionArrow}>
+                    {isCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+                  </span>
+                </button>
+                <div
+                  id={sectionId}
+                  className={`${styles.navSectionItems} ${isCollapsed ? styles.navSectionCollapsed : ''}`}
+                  role="list"
+                >
+                  {items.map((item) => {
+                    let badge = null;
+                    // Solo mostrar badge si realmente hay datos
+                    if (item.badge === 'notificaciones' && badgeCounts.incidencias) {
+                      badge = <span className={styles.navBadge}>{badgeCounts.incidencias}</span>;
+                    }
+                    return (
+                      <NavLink
+                        key={item.to}
+                        to={item.to}
+                        className={({ isActive }) =>
+                          `${styles.navItem} ${isActive ? styles.navItemActive : ''}`
+                        }
+                        onClick={() => setSidebarAbierto(false)}
+                        aria-current={({ isActive }) => (isActive ? 'page' : undefined)}
+                      >
+                        <span className={styles.navIcon} aria-hidden="true">{item.icon}</span>
+                        {item.label}
+                        {badge}
+                      </NavLink>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
         </nav>
 
         <div className={styles.sidebarFooter}>
-          <NavLink to="/" className={styles.navItem} onClick={() => setSidebarAbierto(false)}>
-            <span className={styles.navIcon}><IconPortal /></span>
+          <NavLink to="/" className={styles.navItemPortal} onClick={() => setSidebarAbierto(false)}>
+            <span className={styles.navIcon} aria-hidden="true"><IconPortal /></span>
             Volver al Portal
           </NavLink>
 
           <button className={styles.logoutBtn} onClick={() => setShowLogoutConfirm(true)}>
-            <span className={styles.navIcon}><IconLogout /></span>
+            <span className={styles.navIcon} aria-hidden="true"><IconLogout /></span>
             Cerrar sesión
           </button>
         </div>
@@ -195,7 +224,7 @@ export default function DashboardLayout() {
           <button
             className={styles.menuBtn}
             onClick={() => setSidebarAbierto(!sidebarAbierto)}
-            aria-label="Abrir menú"
+            aria-label="Abrir menú de navegación"
           >
             <IconMenu />
           </button>
@@ -209,34 +238,44 @@ export default function DashboardLayout() {
           </div>
         </header>
 
-        <main className={styles.content}>
+        <div className={styles.breadcrumbs} aria-label="Ruta de navegación">
+          <Home size={14} className={styles.breadcrumbIcon} />
+          {breadcrumbs.map((crumb, index) => {
+            const isLast = index === breadcrumbs.length - 1;
+            return (
+              <span key={crumb.path} className={styles.breadcrumbItem}>
+                {!isLast ? (
+                  <NavLink to={crumb.path} className={styles.breadcrumbLink}>
+                    {crumb.label}
+                  </NavLink>
+                ) : (
+                  <span className={styles.breadcrumbCurrent}>{crumb.label}</span>
+                )}
+                {!isLast && <span className={styles.breadcrumbSeparator}>/</span>}
+              </span>
+            );
+          })}
+        </div>
+
+        <main className={styles.content} id="main-content">
           <Outlet />
         </main>
       </div>
 
       {showLogoutConfirm && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
-          backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', justifyContent: 'center',
-          alignItems: 'center', zIndex: 9999,
-        }}>
-          <div style={{
-            backgroundColor: '#ffffff', padding: '24px', borderRadius: '12px',
-            width: '320px', textAlign: 'center', boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
-          }}>
-            <h3 style={{ margin: '0 0 8px 0', color: '#111827', fontSize: '18px' }}>¿Cerrar sesión?</h3>
+        <div className={styles.confirmOverlay} role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+          <div className={styles.confirmBox}>
+            <h3 id="confirm-title" style={{ margin: '0 0 8px 0', color: '#111827', fontSize: '18px' }}>¿Cerrar sesión?</h3>
             <p style={{ margin: '0 0 20px 0', color: '#6b7280', fontSize: '14px' }}>
               ¿Estás seguro de que deseas salir de la plataforma académica?
             </p>
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-              <button type="button" onClick={() => setShowLogoutConfirm(false)} style={{
-                padding: '8px 16px', backgroundColor: '#f3f4f6', color: '#374151',
-                border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', flex: 1,
-              }}>Cancelar</button>
-              <button type="button" onClick={handleLogout} style={{
-                padding: '8px 16px', backgroundColor: '#dc2626', color: '#ffffff',
-                border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', flex: 1,
-              }}>Cerrar sesión</button>
+              <button type="button" onClick={() => setShowLogoutConfirm(false)} className={styles.confirmCancel}>
+                Cancelar
+              </button>
+              <button type="button" onClick={handleLogout} className={styles.confirmLogout}>
+                Cerrar sesión
+              </button>
             </div>
           </div>
         </div>

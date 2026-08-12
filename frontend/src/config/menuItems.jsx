@@ -16,7 +16,7 @@ import {
   BarChart3,
 } from 'lucide-react';
 
-// Iconos personalizados (los que ya tenías)
+// Iconos personalizados
 const IconDashboard = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="3" width="7" height="7" />
@@ -79,139 +79,176 @@ const IconAsistencia = () => (
   </svg>
 );
 
+// Definición de categorías con orden
+export const CATEGORIES = {
+  general: { label: 'General', order: 0 },
+  academico: { label: 'Académico', order: 1 },
+  administrativo: { label: 'Administración', order: 2 },
+  configuracion: { label: 'Configuración', order: 3 },
+};
+
+// Los ítems ahora pueden tener un badge (número o texto)
+// y pueden ser padres de submenús (aunque no se usará en esta versión)
 export const menuItems = [
-  // ===== COMUNES A TODOS =====
+  // ===== GENERAL =====
   {
     to: '/dashboard',
     label: 'Inicio',
     icon: <IconDashboard />,
     roles: ['administrador', 'docente', 'alumno'],
+    category: 'general',
+    order: 0,
   },
   {
     to: '/comunicados',
     label: 'Comunicados',
     icon: <IconComunicados />,
     roles: ['administrador', 'docente', 'alumno'],
-  },
-
-  // ===== ALUMNO (exclusivo) =====
-  {
-    to: '/mis-calificaciones',
-    label: 'Mis Calificaciones',
-    icon: <IconCalif />,
-    roles: ['alumno'],
-  },
-
-  // ===== ADMIN + DOCENTE =====
-  {
-    to: '/grupos',
-    label: 'Grupos',
-    icon: <IconGrupos />,
-    roles: ['administrador', 'docente'],
-  },
-  {
-    to: '/asistencia',
-    label: 'Asistencias',
-    icon: <IconAsistencia />,
-    roles: ['administrador', 'docente'],
-  },
-
-  // ===== ADMIN + DOCENTE + ALUMNO (con especificaciones) =====
-  {
-    to: '/calificaciones',
-    label: 'Calificaciones',
-    icon: <BookOpen size={18} />,
-    roles: ['administrador', 'docente'],
-  },
-  // {
-  //   to: '/tutorias',
-  //   label: 'Tutorías',
-  //   icon: <UserCheck size={18} />,
-  //   roles: ['administrador', 'docente'],
-  // },
-  {
-    to: '/incidencias',
-    label: 'Incidencias',
-    icon: <AlertCircle size={18} />,
-    roles: ['administrador', 'docente'],
-  },
-  {
-    to: '/horarios',
-    label: 'Horarios',
-    icon: <Calendar size={18} />,
-    roles: ['administrador', 'docente', 'alumno'],
+    category: 'general',
+    order: 1,
   },
   {
     to: '/reportes',
     label: 'Reportes',
     icon: <FileText size={18} />,
     roles: ['administrador', 'docente', 'alumno'],
+    category: 'general',
+    order: 2,
+  },
+  {
+    to: '/horarios',
+    label: 'Horarios',
+    icon: <Calendar size={18} />,
+    roles: ['administrador', 'docente', 'alumno'],
+    category: 'general',
+    order: 3,
   },
 
-  // ===== SOLO ADMIN =====
+  // ===== ACADÉMICO =====
   {
-    to: '/usuarios',
-    label: 'Usuarios',
-    icon: <IconUsuarios />,
-    roles: ['administrador'],
+    to: '/grupos',
+    label: 'Grupos',
+    icon: <IconGrupos />,
+    roles: ['administrador', 'docente'],
+    category: 'academico',
+    order: 0,
   },
   {
-    to: '/becas',
-    label: 'Becas',
-    icon: <Gift size={18} />,
-    roles: ['administrador'],
+    to: '/asistencia',
+    label: 'Asistencias',
+    icon: <IconAsistencia />,
+    roles: ['administrador', 'docente'],
+    category: 'academico',
+    order: 1,
   },
   {
-    to: '/expediente',
-    label: 'Expediente',
-    icon: <FileText size={18} />,
-    roles: ['administrador'],
+    to: '/calificaciones',
+    label: 'Calificaciones',
+    icon: <BookOpen size={18} />,
+    roles: ['administrador', 'docente'],
+    category: 'academico',
+    order: 2,
+  },
+  {
+    to: '/mis-calificaciones',
+    label: 'Mis Calificaciones',
+    icon: <IconCalif />,
+    roles: ['alumno'],
+    category: 'academico',
+    order: 3,
   },
   {
     to: '/inscripciones',
     label: 'Inscripciones',
     icon: <IconInscripciones />,
     roles: ['administrador'],
+    category: 'academico',
+    order: 4,
+  },
+  {
+    to: '/incidencias',
+    label: 'Incidencias',
+    icon: <AlertCircle size={18} />,
+    roles: ['administrador', 'docente'],
+    category: 'academico',
+    order: 5,
+    badge: 'notificaciones', // se resolverá dinámicamente
+  },
+
+  // ===== ADMINISTRATIVO =====
+  {
+    to: '/usuarios',
+    label: 'Usuarios',
+    icon: <IconUsuarios />,
+    roles: ['administrador'],
+    category: 'administrativo',
+    order: 0,
+  },
+  {
+    to: '/becas',
+    label: 'Becas',
+    icon: <Gift size={18} />,
+    roles: ['administrador'],
+    category: 'administrativo',
+    order: 1,
   },
   {
     to: '/pagos',
     label: 'Pagos',
     icon: <CreditCard size={18} />,
     roles: ['administrador'],
-  },
-  {
-    to: '/servicio-social',
-    label: 'Servicio Social',
-    icon: <Briefcase size={18} />,
-    roles: ['administrador'],
+    category: 'administrativo',
+    order: 2,
   },
   {
     to: '/titulacion',
     label: 'Titulación',
     icon: <GraduationCap size={18} />,
     roles: ['administrador'],
+    category: 'administrativo',
+    order: 3,
   },
+  {
+    to: '/servicio-social',
+    label: 'Servicio Social',
+    icon: <Briefcase size={18} />,
+    roles: ['administrador'],
+    category: 'administrativo',
+    order: 4,
+  },
+  {
+    to: '/expediente',
+    label: 'Expediente',
+    icon: <FileText size={18} />,
+    roles: ['administrador'],
+    category: 'administrativo',
+    order: 5,
+  },
+
+  // ===== CONFIGURACIÓN =====
   {
     to: '/configuracion-academica',
     label: 'Configuración Académica',
     icon: <Settings size={18} />,
     roles: ['administrador'],
+    category: 'configuracion',
+    order: 0,
   },
-  // {
-  //   to: '/auditoria',
-  //   label: 'Auditoría',
-  //   icon: <Activity size={18} />,
-  //   roles: ['administrador'],
-  // },
-
 ];
 
-/**
- * Obtiene los ítems del menú según el rol del usuario
- * @param {string} rol - Rol del usuario ('administrador', 'docente', 'alumno')
- * @returns {Array} - Lista de ítems de menú filtrados
- */
+export const categoryOrder = ['general', 'academico', 'administrativo', 'configuracion'];
+
 export const getMenuItems = (rol) => {
-  if (!rol) return [];
-  return menuItems.filter((item) => item.roles.includes(rol));
+  if (!rol) return {};
+  const filtered = menuItems.filter((item) => item.roles.includes(rol));
+  const grouped = {};
+  filtered.forEach((item) => {
+    const cat = item.category || 'general';
+    if (!grouped[cat]) grouped[cat] = [];
+    grouped[cat].push(item);
+  });
+  Object.keys(grouped).forEach((cat) => {
+    grouped[cat].sort((a, b) => (a.order || 0) - (b.order || 0));
+  });
+  return grouped;
 };
