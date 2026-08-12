@@ -324,8 +324,18 @@ export const horariosService = {
   },
 
   // Subida con metadata
-  solicitarUpload: async (data) => {
-    const response = await api.post('/horarios/upload/solicitar', data);
+  solicitarUpload: async (nombre, tipo_mime, grupo_id, semestre, ciclo_id, especialidad_id, turno_id, tipo_horario, descripcion) => {
+    const response = await api.post('/horarios/upload/solicitar', {
+      nombre,
+      tipo: tipo_mime,
+      grupo_id,
+      semestre,
+      ciclo_id,
+      especialidad_id,
+      turno_id,
+      tipo_horario,
+      descripcion,
+    });
     return response.data;
   },
 
@@ -358,7 +368,28 @@ export const horariosService = {
     const response = await api.delete(`/horarios/${id}`);
     return response.data;
   },
+  getSemestreActual: async () => {
+    const response = await api.get('/horarios/semestre-actual');
+    return response.data;
+  },
+  listarHorarios: async (params = {}) => {
+    const response = await api.get('/horarios/listar', { params });
+    return response.data;
+  },
+  contarFaltantes: async (ciclo_id, semestre) => {
+    const response = await api.get('/horarios/contar-faltantes', { params: { ciclo_id, semestre } });
+    return response.data;
+  },
+  actualizarHorario: async (id, data) => {
+    const response = await api.put(`/horarios/${id}`, data);
+    return response.data;
+  },
+  uploadBatch: async (horarios) => {
+    const response = await api.post('/horarios/upload/batch', { horarios });
+    return response.data;
+  },
 };
+
 
 
 export const incidenciasService = {

@@ -385,7 +385,7 @@ export const asignarMaterias = async (req, res) => {
       if (existente.rows.length === 0) {
         await query(
           `INSERT INTO materias_grupo (grupo_id, materia_catalogo_id, docente_id, ciclo_id, activa)
-           VALUES ($1, $2, NULL, $3, TRUE)`, // ✅ docente_id = NULL
+           VALUES ($1, $2, NULL, $3, TRUE)`, //  docente_id = NULL
           [id, materia_id, ciclo_id]
         );
         asignadas++;

@@ -1,163 +1,258 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { horariosService, catalogosService, usuariosService } from '../services/api';
-import { Settings, Users, User, FlaskConical, RefreshCw, Save, AlertCircle, Download, FileText, Upload, X, Plus } from 'lucide-react';
+import { 
+  Settings, Users, User, FlaskConical, RefreshCw, 
+  Download, FileText, Upload, Edit2, Trash2, X, 
+  Plus, Filter, CheckCircle, AlertCircle, Save
+} from 'lucide-react';
 import styles from './HorariosPage.module.css';
+
+const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
 
 export default function HorariosPage() {
   const { usuario } = useAuth();
+  const esAdmin = usuario?.rol === 'administrador';
 
-  // Estados base
+  // ===== ESTADOS BÁSICOS =====
+  const [tabActiva, setTabActiva] = useState('grupos');
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
   const [exito, setExito] = useState('');
 
-  // Catálogos
-  const [grupos, setGrupos] = useState([]);
-  const [docentes, setDocentes] = useState([]);
-  const [laboratorios, setLaboratorios] = useState([]);
+  // ===== CATÁLOGOS =====
   const [ciclos, setCiclos] = useState([]);
   const [especialidades, setEspecialidades] = useState([]);
   const [turnos, setTurnos] = useState([]);
+  const [grupos, setGrupos] = useState([]);
+  const [docentes, setDocentes] = useState([]);
+  const [laboratorios, setLaboratorios] = useState([]);
+  const [semestreActual, setSemestreActual] = useState({ semestres: [2, 4, 6] });
+  const [cicloSeleccionado, setCicloSeleccionado] = useState(null);
 
-  // Tipo de horario (alumnos, maestros, laboratorios)
-  const [tipoHorario, setTipoHorario] = useState('alumnos');
-
-  // Filtros de turno
-  const [filtroTurno, setFiltroTurno] = useState('todos'); // 'todos', '1', '2'
-
-  // Filtros para listado
+  // ===== FILTROS =====
   const [filtros, setFiltros] = useState({
-    tipo_horario: 'alumnos',
+    turno: 'todos',
     ciclo_id: '',
     semestre: '',
-    letra: '',
+    grupo_letra: '',
     especialidad_id: '',
-    turno_id: '',
-    docente_id: '',
-    laboratorio_id: '',
+    search: '',
   });
 
-  // Archivos subidos
+  // ===== HORARIOS =====
   const [archivosSubidos, setArchivosSubidos] = useState([]);
+  const [contadorFaltantes, setContadorFaltantes] = useState({ total: 0, subidos: 0, faltantes: 0, porcentaje: 0 });
 
-  // Modal de subida
+  // ===== SUBIDA INDIVIDUAL =====
   const [modalUploadOpen, setModalUploadOpen] = useState(false);
   const [uploadForm, setUploadForm] = useState({
     nombre: '',
-    tipo: '',
-    tipo_horario: 'alumnos',
-    ciclo_id: '',
     semestre: '',
     letra: '',
+    ciclo_id: '',
     especialidad_id: '',
     turno_id: '',
-    docente_id: '',
-    laboratorio_id: '',
-    archivo: null,
+    tipo_horario: 'grupo',
+    descripcion: '',
   });
+  const [grupoEncontrado, setGrupoEncontrado] = useState(null);
+  const [archivoSeleccionado, setArchivoSeleccionado] = useState(null);
   const [subiendo, setSubiendo] = useState(false);
-  const [descargando, setDescargando] = useState(false);
 
-  // Cargar catálogos
+  // ===== SUBIDA MASIVA =====
+  const [modalBatchOpen, setModalBatchOpen] = useState(false);
+  const [batchItems, setBatchItems] = useState([]);
+  const [batchForm, setBatchForm] = useState({
+    semestre: '',
+    letra: '',
+    ciclo_id: '',
+    especialidad_id: '',
+    turno_id: '',
+    tipo_horario: 'grupo',
+    descripcion: '',
+    archivos: [],
+  });
+  const [batchGrupoEncontrado, setBatchGrupoEncontrado] = useState(null);
+  const [batchSubiendo, setBatchSubiendo] = useState(false);
+
+  // ===== EDICIÓN =====
+  const [modalEditOpen, setModalEditOpen] = useState(false);
+  const [editando, setEditando] = useState(null);
+  const [editForm, setEditForm] = useState({
+    semestre: '',
+    letra: '',
+    ciclo_id: '',
+    especialidad_id: '',
+    turno_id: '',
+    tipo_horario: '',
+    descripcion: '',
+  });
+  const [editGrupoEncontrado, setEditGrupoEncontrado] = useState(null);
+  const [editandoId, setEditandoId] = useState(null);
+
+  // ===== CONFIRMACIÓN =====
+  const [confirmModal, setConfirmModal] = useState({ open: false, message: '', onConfirm: null });
+
+  // ===== SEMESTRE ACTUAL =====
+  useEffect(() => {
+    const cargarSemestreActual = async () => {
+      try {
+        const res = await horariosService.getSemestreActual();
+        if (res.success) {
+          setSemestreActual(res.data);
+        }
+      } catch (e) {
+        console.error('Error cargando semestre actual:', e);
+      }
+    };
+    cargarSemestreActual();
+  }, []);
+
+  // ===== CARGAR CATÁLOGOS =====
   useEffect(() => {
     const cargarCatalogos = async () => {
       try {
-        const [gruposRes, docentesRes, labsRes, ciclosRes, espRes, turnRes] = await Promise.all([
-          catalogosService.getGrupos(),
-          usuariosService.getAll({ rol: 'docente' }),
-          catalogosService.getAulas(),
+        const [ciclosRes, espRes, turnRes, gruposRes, docentesRes, labsRes] = await Promise.all([
           catalogosService.getCiclos(),
           catalogosService.getEspecialidades(),
           catalogosService.getTurnos(),
+          catalogosService.getGrupos(),
+          usuariosService.getAll({ rol: 'docente' }),
+          catalogosService.getAulas(),
         ]);
-        setGrupos(gruposRes.data || []);
-        setDocentes(docentesRes.usuarios || []);
-        setLaboratorios(labsRes.data || []);
         setCiclos(ciclosRes.data || []);
         setEspecialidades(espRes.data || []);
         setTurnos(turnRes.data || []);
+        setGrupos(gruposRes.data || []);
+        setDocentes(docentesRes.usuarios || []);
+        setLaboratorios(labsRes.data || []);
+
+        const activo = ciclosRes.data?.find(c => c.activo);
+        if (activo) {
+          setCicloSeleccionado(activo);
+          setFiltros(prev => ({ ...prev, ciclo_id: String(activo.id) }));
+        }
       } catch (e) {
         console.error('Error cargando catálogos:', e);
-        setError('No se pudieron cargar los catálogos');
+        setError('No se pudieron cargar los datos');
       }
     };
     cargarCatalogos();
   }, []);
 
-  // Cargar horarios con filtros
+  // ===== BUSCAR GRUPO POR SEMESTRE + LETRA + TURNO + CICLO =====
+  const buscarGrupo = (semestre, letra, turno_id, ciclo_id) => {
+    if (!semestre || !letra || !turno_id || !ciclo_id) return null;
+    return grupos.find(
+      g => g.semestre === parseInt(semestre) &&
+           g.letra === letra.toUpperCase() &&
+           g.turno_id === parseInt(turno_id) &&
+           g.ciclo_id === parseInt(ciclo_id)
+    ) || null;
+  };
+
+  // ===== EFECTOS PARA BUSCAR GRUPO EN CADA MODAL =====
+  useEffect(() => {
+    const grupo = buscarGrupo(
+      uploadForm.semestre,
+      uploadForm.letra,
+      uploadForm.turno_id,
+      uploadForm.ciclo_id
+    );
+    setGrupoEncontrado(grupo);
+  }, [uploadForm.semestre, uploadForm.letra, uploadForm.turno_id, uploadForm.ciclo_id, grupos]);
+
+  useEffect(() => {
+    const grupo = buscarGrupo(
+      batchForm.semestre,
+      batchForm.letra,
+      batchForm.turno_id,
+      batchForm.ciclo_id
+    );
+    setBatchGrupoEncontrado(grupo);
+  }, [batchForm.semestre, batchForm.letra, batchForm.turno_id, batchForm.ciclo_id, grupos]);
+
+  useEffect(() => {
+    const grupo = buscarGrupo(
+      editForm.semestre,
+      editForm.letra,
+      editForm.turno_id,
+      editForm.ciclo_id
+    );
+    setEditGrupoEncontrado(grupo);
+  }, [editForm.semestre, editForm.letra, editForm.turno_id, editForm.ciclo_id, grupos]);
+
+  // ===== CARGAR HORARIOS CON FILTROS =====
   const cargarHorarios = useCallback(async () => {
     setCargando(true);
     try {
-      const params = { ...filtros };
-      // Si el filtro de turno es 'todos', no enviar turno_id
-      if (filtroTurno === 'todos') {
-        delete params.turno_id;
-      } else {
-        params.turno_id = parseInt(filtroTurno);
-      }
-      // Limpiar filtros vacíos
-      Object.keys(params).forEach(key => {
-        if (params[key] === '' || params[key] === null || params[key] === undefined) {
-          delete params[key];
-        }
-      });
+      const params = {};
+      if (filtros.ciclo_id) params.ciclo_id = filtros.ciclo_id;
+      if (filtros.semestre) params.semestre = filtros.semestre;
+      if (filtros.grupo_letra) params.grupo_letra = filtros.grupo_letra;
+      if (filtros.especialidad_id) params.especialidad_id = filtros.especialidad_id;
+      if (filtros.search) params.search = filtros.search;
+      if (filtros.turno === 'matutino') params.turno_id = 1;
+      else if (filtros.turno === 'vespertino') params.turno_id = 2;
+
+      const tipoMap = { grupos: 'grupo', maestros: 'maestro', laboratorios: 'laboratorio' };
+      params.tipo = tipoMap[tabActiva] || 'grupo';
+
       const res = await horariosService.listarHorarios(params);
       if (res.success) {
         setArchivosSubidos(res.data || []);
+      } else {
+        setArchivosSubidos([]);
       }
     } catch (e) {
       console.error('Error cargando horarios:', e);
-      setError('No se pudieron cargar los horarios');
+      setArchivosSubidos([]);
     } finally {
       setCargando(false);
     }
-  }, [filtros, filtroTurno]);
+  }, [filtros, tabActiva]);
+
+  const cargarContadorFaltantes = useCallback(async () => {
+    if (!filtros.ciclo_id || !filtros.semestre) return;
+    try {
+      const res = await horariosService.contarFaltantes(filtros.ciclo_id, filtros.semestre);
+      if (res.success) {
+        setContadorFaltantes(res.data);
+      }
+    } catch (e) {
+      console.error('Error cargando contador:', e);
+    }
+  }, [filtros.ciclo_id, filtros.semestre]);
 
   useEffect(() => {
     cargarHorarios();
-  }, [cargarHorarios]);
+    cargarContadorFaltantes();
+  }, [cargarHorarios, cargarContadorFaltantes]);
 
-  // Manejar cambios en filtros
-  const handleFilterChange = (e) => {
-    const { name, value } = e.target;
-    setFiltros(prev => ({ ...prev, [name]: value }));
-  };
-
-  // Manejar click en botones de turno
-  const handleTurnoClick = (turno) => {
-    setFiltroTurno(turno);
-  };
-
-  // Abrir modal de subida
-  const handleAbrirUpload = () => {
+  // ===== ABRIR MODAL DE SUBIDA =====
+  const abrirModalUpload = () => {
     setUploadForm({
       nombre: '',
-      tipo: '',
-      tipo_horario: tipoHorario,
-      ciclo_id: '',
-      semestre: '',
+      semestre: filtros.semestre || '',
       letra: '',
+      ciclo_id: filtros.ciclo_id || '',
       especialidad_id: '',
       turno_id: '',
-      docente_id: '',
-      laboratorio_id: '',
-      archivo: null,
+      tipo_horario: tabActiva === 'grupos' ? 'grupo' : tabActiva === 'maestros' ? 'maestro' : 'laboratorio',
+      descripcion: '',
     });
+    setGrupoEncontrado(null);
+    setArchivoSeleccionado(null);
     setModalUploadOpen(true);
     setError('');
   };
 
-  // Subir archivo
+  // ===== SUBIR ARCHIVO INDIVIDUAL =====
   const handleUpload = async (e) => {
-    e.preventDefault();
-    const file = uploadForm.archivo;
-    if (!file) {
-      setError('Selecciona un archivo');
-      return;
-    }
+    const file = e.target.files[0];
+    if (!file) return;
 
-    // Validar tipo de archivo
     const tiposPermitidos = [
       'application/pdf',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -165,89 +260,983 @@ export default function HorariosPage() {
     ];
     if (!tiposPermitidos.includes(file.type)) {
       setError('Formato no permitido. Solo PDF o Excel (.xlsx, .xls)');
+      e.target.value = '';
       return;
     }
 
     if (file.size > 10 * 1024 * 1024) {
       setError('El archivo no debe superar los 10 MB');
+      e.target.value = '';
       return;
     }
 
-    // Validar campos según tipo_horario
-    const { tipo_horario, ciclo_id, semestre, letra, especialidad_id, turno_id, docente_id, laboratorio_id } = uploadForm;
-    if (tipo_horario === 'alumnos' && (!ciclo_id || !semestre || !letra || !especialidad_id || !turno_id)) {
-      setError('Para horario de alumnos, completa ciclo, semestre, letra, especialidad y turno');
+    setArchivoSeleccionado(file);
+    setUploadForm(prev => ({ ...prev, nombre: file.name }));
+    e.target.value = '';
+  };
+
+  const handleSubmitUpload = async () => {
+    if (!archivoSeleccionado) {
+      setError('Selecciona un archivo');
       return;
     }
-    if (tipo_horario === 'maestros' && (!ciclo_id || !docente_id)) {
-      setError('Para horario de maestros, completa ciclo y docente');
+    if (!uploadForm.semestre || !uploadForm.letra || !uploadForm.ciclo_id || !uploadForm.turno_id) {
+      setError('Semestre, letra, ciclo y turno son requeridos');
       return;
     }
-    if (tipo_horario === 'laboratorios' && (!ciclo_id || !laboratorio_id)) {
-      setError('Para horario de laboratorios, completa ciclo y laboratorio');
+    if (!grupoEncontrado) {
+      setError('No existe un grupo con esa combinación');
       return;
     }
 
     setSubiendo(true);
     setError('');
     try {
-      const data = {
-        nombre: file.name,
-        tipo: file.type,
-        tipo_horario: uploadForm.tipo_horario,
-        ciclo_id: uploadForm.ciclo_id || null,
-        semestre: uploadForm.semestre || null,
-        letra: uploadForm.letra || null,
-        especialidad_id: uploadForm.especialidad_id || null,
-        turno_id: uploadForm.turno_id || null,
-        docente_id: uploadForm.docente_id || null,
-        laboratorio_id: uploadForm.laboratorio_id || null,
-      };
+      const grupo_id = grupoEncontrado.id;
+      const res = await horariosService.solicitarUpload(
+        uploadForm.nombre,
+        archivoSeleccionado.type,
+        grupo_id,
+        parseInt(uploadForm.semestre),
+        parseInt(uploadForm.ciclo_id),
+        uploadForm.especialidad_id ? parseInt(uploadForm.especialidad_id) : null,
+        parseInt(uploadForm.turno_id),
+        uploadForm.tipo_horario || 'grupo',
+        uploadForm.descripcion || null
+      );
+      if (!res.success) throw new Error(res.message || 'Error al solicitar subida');
 
-      const res = await horariosService.solicitarUpload(data);
-      if (!res.success) {
-        throw new Error(res.message || 'Error al solicitar subida');
-      }
+      const uploadRes = await horariosService.subirArchivo(res.data.uploadUrl, archivoSeleccionado);
+      if (!uploadRes.ok) throw new Error(`Error al subir archivo: ${uploadRes.status}`);
 
-      const uploadRes = await horariosService.subirArchivo(res.data.uploadUrl, file);
-      if (!uploadRes.ok) {
-        throw new Error(`Error al subir archivo: ${uploadRes.status}`);
-      }
-
-      setModalUploadOpen(false);
-      await cargarHorarios();
       setExito('Horario subido correctamente');
+      setModalUploadOpen(false);
+      cargarHorarios();
+      cargarContadorFaltantes();
       setTimeout(() => setExito(''), 5000);
     } catch (err) {
-      console.error('Error al subir archivo:', err);
+      console.error('Error:', err);
       setError(err.message || 'Error al subir el archivo');
     } finally {
       setSubiendo(false);
     }
   };
 
-  // Descargar archivo
-  const handleDescargar = async (key, nombre) => {
-    setDescargando(true);
+  // ===== ABRIR MODAL DE EDICIÓN =====
+  const abrirModalEditar = (horario) => {
+    const grupo = grupos.find(g => g.id === horario.grupo_id);
+    setEditando(horario);
+    setEditandoId(horario.id);
+    setEditForm({
+      semestre: String(grupo?.semestre || ''),
+      letra: grupo?.letra || '',
+      ciclo_id: String(horario.ciclo_id || ''),
+      especialidad_id: String(horario.especialidad_id || ''),
+      turno_id: String(horario.turno_id || ''),
+      tipo_horario: horario.tipo_horario || 'grupo',
+      descripcion: horario.descripcion || '',
+    });
+    setEditGrupoEncontrado(grupo || null);
+    setModalEditOpen(true);
+    setError('');
+  };
+
+  const handleSubmitEditar = async () => {
+    if (!editForm.semestre || !editForm.letra || !editForm.ciclo_id || !editForm.turno_id) {
+      setError('Semestre, letra, ciclo y turno son requeridos');
+      return;
+    }
+    if (!editGrupoEncontrado) {
+      setError('No existe un grupo con esa combinación');
+      return;
+    }
+
+    const data = {
+      grupo_id: editGrupoEncontrado.id,
+      semestre: parseInt(editForm.semestre),
+      ciclo_id: parseInt(editForm.ciclo_id),
+      especialidad_id: editForm.especialidad_id ? parseInt(editForm.especialidad_id) : null,
+      turno_id: parseInt(editForm.turno_id),
+      tipo_horario: editForm.tipo_horario,
+      descripcion: editForm.descripcion || null,
+    };
+
+    setSubiendo(true);
+    setError('');
     try {
-      const res = await horariosService.solicitarDescarga(key);
-      if (!res.success) {
-        throw new Error(res.message || 'Error al obtener URL de descarga');
+      const res = await horariosService.actualizarHorario(editandoId, data);
+      if (res.success) {
+        setExito('Horario actualizado correctamente');
+        setModalEditOpen(false);
+        cargarHorarios();
+        cargarContadorFaltantes();
+        setTimeout(() => setExito(''), 5000);
+      } else {
+        setError(res.message || 'Error al actualizar');
       }
-      window.open(res.data.downloadUrl, '_blank');
     } catch (err) {
-      console.error('Error al descargar archivo:', err);
-      setError(err.message || 'Error al descargar el archivo');
+      setError(err.response?.data?.message || 'Error al actualizar');
     } finally {
-      setDescargando(false);
+      setSubiendo(false);
     }
   };
 
-  // Renderizar semestres según ciclo actual
-  const getSemestresParaCiclo = () => {
-    // Esto podría ser dinámico según el ciclo seleccionado
-    // Por simplicidad, mostramos 1-6
-    return [1, 2, 3, 4, 5, 6];
+  // ===== ELIMINAR =====
+  const handleEliminar = (id, nombre) => {
+    setConfirmModal({
+      open: true,
+      message: `¿Eliminar el horario "${nombre}"? Esta acción no se puede deshacer.`,
+      onConfirm: async () => {
+        try {
+          const res = await horariosService.eliminarHorario(id);
+          if (res.success) {
+            setExito('Horario eliminado correctamente');
+            cargarHorarios();
+            cargarContadorFaltantes();
+            setTimeout(() => setExito(''), 5000);
+          } else {
+            setError(res.message || 'Error al eliminar');
+          }
+        } catch (err) {
+          setError(err.response?.data?.message || 'Error al eliminar');
+        }
+        setConfirmModal({ open: false, message: '', onConfirm: null });
+      },
+    });
+  };
+
+  // ===== SUBIDA MASIVA =====
+  const abrirModalBatch = () => {
+    setBatchItems([]);
+    setBatchForm({
+      semestre: filtros.semestre || '',
+      letra: '',
+      ciclo_id: filtros.ciclo_id || '',
+      especialidad_id: '',
+      turno_id: '',
+      tipo_horario: tabActiva === 'grupos' ? 'grupo' : tabActiva === 'maestros' ? 'maestro' : 'laboratorio',
+      descripcion: '',
+      archivos: [],
+    });
+    setBatchGrupoEncontrado(null);
+    setModalBatchOpen(true);
+    setError('');
+  };
+
+  const handleBatchFileChange = (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+    const validFiles = files.filter(f => {
+      const tiposPermitidos = ['application/pdf', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'];
+      return tiposPermitidos.includes(f.type) && f.size <= 10 * 1024 * 1024;
+    });
+    if (validFiles.length !== files.length) {
+      setError('Algunos archivos no son válidos (formato o tamaño)');
+    }
+    setBatchForm(prev => ({ ...prev, archivos: [...prev.archivos, ...validFiles] }));
+    e.target.value = '';
+  };
+
+  const generarBatchItems = () => {
+    if (batchForm.archivos.length === 0) {
+      setError('Selecciona al menos un archivo');
+      return;
+    }
+    if (!batchForm.semestre || !batchForm.letra || !batchForm.ciclo_id || !batchForm.turno_id) {
+      setError('Semestre, letra, ciclo y turno son requeridos');
+      return;
+    }
+    if (!batchGrupoEncontrado) {
+      setError('No existe un grupo con esa combinación');
+      return;
+    }
+
+    const grupo_id = batchGrupoEncontrado.id;
+    const items = batchForm.archivos.map(file => ({
+      nombre: file.name,
+      tipo_mime: file.type,
+      grupo_id,
+      semestre: parseInt(batchForm.semestre),
+      ciclo_id: parseInt(batchForm.ciclo_id),
+      especialidad_id: batchForm.especialidad_id ? parseInt(batchForm.especialidad_id) : null,
+      turno_id: parseInt(batchForm.turno_id),
+      tipo_horario: batchForm.tipo_horario || 'grupo',
+      descripcion: batchForm.descripcion || null,
+      archivo: file,
+      _tempId: Date.now() + Math.random() * 1000,
+    }));
+
+    setBatchItems(prev => [...prev, ...items]);
+    setBatchForm(prev => ({ ...prev, archivos: [] }));
+    setError('');
+  };
+
+  const eliminarItemBatch = (tempId) => {
+    setConfirmModal({
+      open: true,
+      message: '¿Eliminar este elemento de la lista?',
+      onConfirm: () => {
+        setBatchItems(prev => prev.filter(item => item._tempId !== tempId));
+        setConfirmModal({ open: false, message: '', onConfirm: null });
+      },
+    });
+  };
+
+  const guardarBatch = async () => {
+    if (batchItems.length === 0) {
+      setError('No hay elementos para guardar');
+      return;
+    }
+
+    setBatchSubiendo(true);
+    setError('');
+    try {
+      const resultados = [];
+      const errores = [];
+
+      for (const item of batchItems) {
+        try {
+          const res = await horariosService.solicitarUpload(
+            item.nombre,
+            item.tipo_mime,
+            item.grupo_id,
+            item.semestre,
+            item.ciclo_id,
+            item.especialidad_id,
+            item.turno_id,
+            item.tipo_horario,
+            item.descripcion
+          );
+          if (!res.success) {
+            errores.push({ nombre: item.nombre, error: res.message || 'Error al solicitar subida' });
+            continue;
+          }
+
+          const uploadRes = await horariosService.subirArchivo(res.data.uploadUrl, item.archivo);
+          if (!uploadRes.ok) {
+            errores.push({ nombre: item.nombre, error: `Error al subir archivo: ${uploadRes.status}` });
+            continue;
+          }
+
+          resultados.push({ nombre: item.nombre, success: true });
+        } catch (err) {
+          errores.push({ nombre: item.nombre, error: err.message });
+        }
+      }
+
+      if (errores.length > 0) {
+        setError(`${errores.length} archivos fallaron. Revisa los logs.`);
+      } else {
+        setExito(`${resultados.length} horarios subidos correctamente`);
+      }
+
+      setModalBatchOpen(false);
+      cargarHorarios();
+      cargarContadorFaltantes();
+      setTimeout(() => setExito(''), 5000);
+    } catch (err) {
+      setError(err.message || 'Error al guardar batch');
+    } finally {
+      setBatchSubiendo(false);
+    }
+  };
+
+  // ===== LIMPIAR FILTROS =====
+  const limpiarFiltros = () => {
+    setFiltros({
+      turno: 'todos',
+      ciclo_id: cicloSeleccionado?.id ? String(cicloSeleccionado.id) : '',
+      semestre: '',
+      grupo_letra: '',
+      especialidad_id: '',
+      search: '',
+    });
+  };
+
+  // ===== RENDER MODAL DE CONFIRMACIÓN =====
+  const renderConfirmModal = () => {
+    if (!confirmModal.open) return null;
+    return (
+      <div className={styles.modalOverlay} onClick={() => setConfirmModal({ open: false, message: '', onConfirm: null })}>
+        <div className={styles.confirmModal} onClick={e => e.stopPropagation()}>
+          <div className={styles.modalHeader}>
+            <h3 className={styles.modalTitle}>Confirmar</h3>
+            <button className={styles.modalClose} onClick={() => setConfirmModal({ open: false, message: '', onConfirm: null })}>
+              <X size={18} />
+            </button>
+          </div>
+          <div className={styles.confirmBody}>
+            <p>{confirmModal.message}</p>
+          </div>
+          <div className={styles.modalActions}>
+            <button className={styles.btnSecondary} onClick={() => setConfirmModal({ open: false, message: '', onConfirm: null })}>
+              Cancelar
+            </button>
+            <button className={styles.btnDanger} onClick={confirmModal.onConfirm}>
+              Confirmar
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ===== RENDER MODAL DE SUBIDA INDIVIDUAL =====
+  const renderUploadModal = () => {
+    if (!modalUploadOpen) return null;
+    return (
+      <div className={styles.modalOverlay} onClick={() => setModalUploadOpen(false)}>
+        <div className={styles.modal} onClick={e => e.stopPropagation()}>
+          <div className={styles.modalHeader}>
+            <h3 className={styles.modalTitle}>Subir horario</h3>
+            <button className={styles.modalClose} onClick={() => setModalUploadOpen(false)}>
+              <X size={18} />
+            </button>
+          </div>
+          {error && <div className={styles.errorMsg}>{error}</div>}
+          <div className={styles.form}>
+            <div className={styles.field}>
+              <label className={styles.label}>Archivo *</label>
+              <div className={styles.fileInputWrapper}>
+                <label className={styles.btnFile}>
+                  <Upload size={16} /> Seleccionar archivo
+                  <input type="file" accept=".pdf,.xlsx,.xls" onChange={handleUpload} style={{ display: 'none' }} />
+                </label>
+                {archivoSeleccionado && (
+                  <span className={styles.fileName}>{archivoSeleccionado.name}</span>
+                )}
+              </div>
+            </div>
+
+            <div className={styles.row2}>
+              <div className={styles.field}>
+                <label className={styles.label}>Semestre *</label>
+                <select
+                  className={styles.select}
+                  value={uploadForm.semestre}
+                  onChange={e => setUploadForm({ ...uploadForm, semestre: e.target.value })}
+                >
+                  <option value="">Seleccionar...</option>
+                  {[1,2,3,4,5,6].map(s => (
+                    <option key={s} value={s}>{s}°</option>
+                  ))}
+                </select>
+              </div>
+              <div className={styles.field}>
+                <label className={styles.label}>Letra *</label>
+                <select
+                  className={styles.select}
+                  value={uploadForm.letra}
+                  onChange={e => setUploadForm({ ...uploadForm, letra: e.target.value })}
+                >
+                  <option value="">Seleccionar...</option>
+                  {['A','B','C','D'].map(l => (
+                    <option key={l} value={l}>{l}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className={styles.row2}>
+              <div className={styles.field}>
+                <label className={styles.label}>Ciclo escolar *</label>
+                <select
+                  className={styles.select}
+                  value={uploadForm.ciclo_id}
+                  onChange={e => setUploadForm({ ...uploadForm, ciclo_id: e.target.value })}
+                >
+                  <option value="">Seleccionar ciclo...</option>
+                  {ciclos.map(c => (
+                    <option key={c.id} value={c.id}>{c.nombre} {c.activo ? '(Activo)' : ''}</option>
+                  ))}
+                </select>
+              </div>
+              <div className={styles.field}>
+                <label className={styles.label}>Turno *</label>
+                <select
+                  className={styles.select}
+                  value={uploadForm.turno_id}
+                  onChange={e => setUploadForm({ ...uploadForm, turno_id: e.target.value })}
+                >
+                  <option value="">Seleccionar turno...</option>
+                  {turnos.map(t => (
+                    <option key={t.id} value={t.id}>{t.nombre}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Estado del grupo */}
+            {uploadForm.semestre && uploadForm.letra && uploadForm.turno_id && uploadForm.ciclo_id && (
+              <div className={styles.grupoStatus}>
+                {grupoEncontrado ? (
+                  <span className={styles.grupoOk}> Grupo encontrado: {grupoEncontrado.nombre}</span>
+                ) : (
+                  <span className={styles.grupoError}> No existe un grupo con esa combinación</span>
+                )}
+              </div>
+            )}
+
+            <div className={styles.row2}>
+              <div className={styles.field}>
+                <label className={styles.label}>Especialidad</label>
+                <select
+                  className={styles.select}
+                  value={uploadForm.especialidad_id}
+                  onChange={e => setUploadForm({ ...uploadForm, especialidad_id: e.target.value })}
+                >
+                  <option value="">Todas</option>
+                  {especialidades.map(e => (
+                    <option key={e.id} value={e.id}>{e.nombre}</option>
+                  ))}
+                </select>
+              </div>
+              <div className={styles.field}>
+                <label className={styles.label}>Tipo de horario</label>
+                <select
+                  className={styles.select}
+                  value={uploadForm.tipo_horario}
+                  onChange={e => setUploadForm({ ...uploadForm, tipo_horario: e.target.value })}
+                >
+                  <option value="grupo">Grupo</option>
+                  <option value="maestro">Maestro</option>
+                  <option value="laboratorio">Laboratorio</option>
+                </select>
+              </div>
+            </div>
+
+            <div className={styles.field}>
+              <label className={styles.label}>Descripción</label>
+              <textarea
+                className={styles.textarea}
+                value={uploadForm.descripcion}
+                onChange={e => setUploadForm({ ...uploadForm, descripcion: e.target.value })}
+                placeholder="Observaciones adicionales..."
+                rows={2}
+              />
+            </div>
+
+            <div className={styles.modalActions}>
+              <button className={styles.btnSecondary} onClick={() => setModalUploadOpen(false)}>Cancelar</button>
+              <button className={styles.btnPrimary} onClick={handleSubmitUpload} disabled={subiendo || !grupoEncontrado}>
+                {subiendo ? 'Subiendo...' : 'Subir horario'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ===== RENDER MODAL DE EDICIÓN =====
+  const renderEditModal = () => {
+    if (!modalEditOpen) return null;
+    return (
+      <div className={styles.modalOverlay} onClick={() => setModalEditOpen(false)}>
+        <div className={styles.modal} onClick={e => e.stopPropagation()}>
+          <div className={styles.modalHeader}>
+            <h3 className={styles.modalTitle}>Editar horario</h3>
+            <button className={styles.modalClose} onClick={() => setModalEditOpen(false)}>
+              <X size={18} />
+            </button>
+          </div>
+          {error && <div className={styles.errorMsg}>{error}</div>}
+          <div className={styles.form}>
+            <div className={styles.row2}>
+              <div className={styles.field}>
+                <label className={styles.label}>Semestre</label>
+                <select
+                  className={styles.select}
+                  value={editForm.semestre}
+                  onChange={e => setEditForm({ ...editForm, semestre: e.target.value })}
+                >
+                  <option value="">Seleccionar...</option>
+                  {[1,2,3,4,5,6].map(s => (
+                    <option key={s} value={s}>{s}°</option>
+                  ))}
+                </select>
+              </div>
+              <div className={styles.field}>
+                <label className={styles.label}>Letra</label>
+                <select
+                  className={styles.select}
+                  value={editForm.letra}
+                  onChange={e => setEditForm({ ...editForm, letra: e.target.value })}
+                >
+                  <option value="">Seleccionar...</option>
+                  {['A','B','C','D'].map(l => (
+                    <option key={l} value={l}>{l}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className={styles.row2}>
+              <div className={styles.field}>
+                <label className={styles.label}>Ciclo escolar</label>
+                <select
+                  className={styles.select}
+                  value={editForm.ciclo_id}
+                  onChange={e => setEditForm({ ...editForm, ciclo_id: e.target.value })}
+                >
+                  <option value="">Seleccionar ciclo...</option>
+                  {ciclos.map(c => (
+                    <option key={c.id} value={c.id}>{c.nombre}</option>
+                  ))}
+                </select>
+              </div>
+              <div className={styles.field}>
+                <label className={styles.label}>Turno</label>
+                <select
+                  className={styles.select}
+                  value={editForm.turno_id}
+                  onChange={e => setEditForm({ ...editForm, turno_id: e.target.value })}
+                >
+                  <option value="">Seleccionar turno...</option>
+                  {turnos.map(t => (
+                    <option key={t.id} value={t.id}>{t.nombre}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {editForm.semestre && editForm.letra && editForm.turno_id && editForm.ciclo_id && (
+              <div className={styles.grupoStatus}>
+                {editGrupoEncontrado ? (
+                  <span className={styles.grupoOk}> Grupo encontrado: {editGrupoEncontrado.nombre}</span>
+                ) : (
+                  <span className={styles.grupoError}> No existe un grupo con esa combinación</span>
+                )}
+              </div>
+            )}
+
+            <div className={styles.row2}>
+              <div className={styles.field}>
+                <label className={styles.label}>Especialidad</label>
+                <select
+                  className={styles.select}
+                  value={editForm.especialidad_id}
+                  onChange={e => setEditForm({ ...editForm, especialidad_id: e.target.value })}
+                >
+                  <option value="">Todas</option>
+                  {especialidades.map(e => (
+                    <option key={e.id} value={e.id}>{e.nombre}</option>
+                  ))}
+                </select>
+              </div>
+              <div className={styles.field}>
+                <label className={styles.label}>Tipo de horario</label>
+                <select
+                  className={styles.select}
+                  value={editForm.tipo_horario}
+                  onChange={e => setEditForm({ ...editForm, tipo_horario: e.target.value })}
+                >
+                  <option value="grupo">Grupo</option>
+                  <option value="maestro">Maestro</option>
+                  <option value="laboratorio">Laboratorio</option>
+                </select>
+              </div>
+            </div>
+
+            <div className={styles.field}>
+              <label className={styles.label}>Descripción</label>
+              <textarea
+                className={styles.textarea}
+                value={editForm.descripcion}
+                onChange={e => setEditForm({ ...editForm, descripcion: e.target.value })}
+                placeholder="Observaciones adicionales..."
+                rows={2}
+              />
+            </div>
+
+            <div className={styles.modalActions}>
+              <button className={styles.btnSecondary} onClick={() => setModalEditOpen(false)}>Cancelar</button>
+              <button className={styles.btnPrimary} onClick={handleSubmitEditar} disabled={subiendo || !editGrupoEncontrado}>
+                {subiendo ? 'Guardando...' : 'Guardar cambios'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ===== RENDER MODAL DE SUBIDA MASIVA =====
+  const renderBatchModal = () => {
+    if (!modalBatchOpen) return null;
+    return (
+      <div className={styles.modalOverlay} onClick={() => setModalBatchOpen(false)}>
+        <div className={styles.modalLarge} onClick={e => e.stopPropagation()}>
+          <div className={styles.modalHeader}>
+            <h3 className={styles.modalTitle}>Subida masiva de horarios</h3>
+            <button className={styles.modalClose} onClick={() => setModalBatchOpen(false)}>
+              <X size={18} />
+            </button>
+          </div>
+          {error && <div className={styles.errorMsg}>{error}</div>}
+          <div className={styles.batchForm}>
+            <div className={styles.batchRow}>
+              <div className={styles.field}>
+                <label className={styles.label}>Semestre *</label>
+                <select
+                  className={styles.select}
+                  value={batchForm.semestre}
+                  onChange={e => setBatchForm({ ...batchForm, semestre: e.target.value })}
+                >
+                  <option value="">Seleccionar...</option>
+                  {[1,2,3,4,5,6].map(s => (
+                    <option key={s} value={s}>{s}°</option>
+                  ))}
+                </select>
+              </div>
+              <div className={styles.field}>
+                <label className={styles.label}>Letra *</label>
+                <select
+                  className={styles.select}
+                  value={batchForm.letra}
+                  onChange={e => setBatchForm({ ...batchForm, letra: e.target.value })}
+                >
+                  <option value="">Seleccionar...</option>
+                  {['A','B','C','D'].map(l => (
+                    <option key={l} value={l}>{l}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className={styles.batchRow}>
+              <div className={styles.field}>
+                <label className={styles.label}>Ciclo *</label>
+                <select
+                  className={styles.select}
+                  value={batchForm.ciclo_id}
+                  onChange={e => setBatchForm({ ...batchForm, ciclo_id: e.target.value })}
+                >
+                  <option value="">Seleccionar ciclo...</option>
+                  {ciclos.map(c => (
+                    <option key={c.id} value={c.id}>{c.nombre}</option>
+                  ))}
+                </select>
+              </div>
+              <div className={styles.field}>
+                <label className={styles.label}>Turno *</label>
+                <select
+                  className={styles.select}
+                  value={batchForm.turno_id}
+                  onChange={e => setBatchForm({ ...batchForm, turno_id: e.target.value })}
+                >
+                  <option value="">Seleccionar turno...</option>
+                  {turnos.map(t => (
+                    <option key={t.id} value={t.id}>{t.nombre}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {batchForm.semestre && batchForm.letra && batchForm.turno_id && batchForm.ciclo_id && (
+              <div className={styles.grupoStatus}>
+                {batchGrupoEncontrado ? (
+                  <span className={styles.grupoOk}> Grupo encontrado: {batchGrupoEncontrado.nombre}</span>
+                ) : (
+                  <span className={styles.grupoError}> No existe un grupo con esa combinación</span>
+                )}
+              </div>
+            )}
+
+            <div className={styles.batchRow}>
+              <div className={styles.field}>
+                <label className={styles.label}>Especialidad</label>
+                <select
+                  className={styles.select}
+                  value={batchForm.especialidad_id}
+                  onChange={e => setBatchForm({ ...batchForm, especialidad_id: e.target.value })}
+                >
+                  <option value="">Todas</option>
+                  {especialidades.map(e => (
+                    <option key={e.id} value={e.id}>{e.nombre}</option>
+                  ))}
+                </select>
+              </div>
+              <div className={styles.field}>
+                <label className={styles.label}>Tipo</label>
+                <select
+                  className={styles.select}
+                  value={batchForm.tipo_horario}
+                  onChange={e => setBatchForm({ ...batchForm, tipo_horario: e.target.value })}
+                >
+                  <option value="grupo">Grupo</option>
+                  <option value="maestro">Maestro</option>
+                  <option value="laboratorio">Laboratorio</option>
+                </select>
+              </div>
+            </div>
+
+            <div className={styles.field}>
+              <label className={styles.label}>Descripción</label>
+              <textarea
+                className={styles.textarea}
+                value={batchForm.descripcion}
+                onChange={e => setBatchForm({ ...batchForm, descripcion: e.target.value })}
+                placeholder="Descripción general para todos los horarios..."
+                rows={2}
+              />
+            </div>
+
+            <div className={styles.batchRow}>
+              <div className={styles.field}>
+                <label className={styles.label}>Archivos</label>
+                <div className={styles.fileInputWrapper}>
+                  <label className={styles.btnFile}>
+                    <Upload size={16} /> Seleccionar archivos
+                    <input type="file" accept=".pdf,.xlsx,.xls" multiple onChange={handleBatchFileChange} style={{ display: 'none' }} />
+                  </label>
+                  <span className={styles.fileCount}>{batchForm.archivos.length} archivo(s) pendientes</span>
+                </div>
+              </div>
+              <button className={styles.btnPrimary} onClick={generarBatchItems} disabled={!batchGrupoEncontrado} style={{ alignSelf: 'flex-end' }}>
+                <Plus size={16} /> Generar
+              </button>
+            </div>
+          </div>
+
+          {batchItems.length > 0 && (
+            <div className={styles.batchPreview}>
+              <h4>Vista previa ({batchItems.length} elementos)</h4>
+              <div className={styles.tableWrapper}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Archivo</th>
+                      <th>Grupo</th>
+                      <th>Semestre</th>
+                      <th>Tipo</th>
+                      <th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {batchItems.map((item, idx) => {
+                      const grupo = grupos.find(g => g.id === item.grupo_id);
+                      return (
+                        <tr key={item._tempId}>
+                          <td>{idx + 1}</td>
+                          <td>{item.nombre}</td>
+                          <td>{grupo ? grupo.nombre : '—'}</td>
+                          <td>{item.semestre}°</td>
+                          <td>{item.tipo_horario}</td>
+                          <td>
+                            <button className={styles.btnEliminar} onClick={() => eliminarItemBatch(item._tempId)}>
+                              <Trash2 size={16} />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <div className={styles.batchActions}>
+                <button className={styles.btnSecondary} onClick={() => setBatchItems([])}>Vaciar</button>
+                <button className={styles.btnPrimary} onClick={guardarBatch} disabled={batchSubiendo}>
+                  {batchSubiendo ? 'Guardando...' : `Guardar ${batchItems.length} horario(s)`}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // ===== RENDER LISTA DE HORARIOS =====
+  const renderArchivos = () => {
+    if (cargando) {
+      return <div className={styles.loading}>Cargando horarios...</div>;
+    }
+
+    if (archivosSubidos.length === 0) {
+      return (
+        <div className={styles.empty}>
+          <FileText size={32} />
+          <p>No hay horarios subidos</p>
+          <p className={styles.emptySub}>Haz clic en "Subir horario" para agregar un archivo</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className={styles.archivosGrid}>
+        {archivosSubidos.map((archivo) => (
+          <div key={archivo.id} className={styles.archivoCard}>
+            <div className={styles.archivoInfo}>
+              <FileText size={20} />
+              <div className={styles.archivoDetails}>
+                <span className={styles.archivoNombre}>{archivo.nombre}</span>
+                <span className={styles.archivoMeta}>
+                  {archivo.grupo_nombre || 'Sin grupo'} • {archivo.semestre}° • {archivo.especialidad_nombre || '—'} • {archivo.turno_nombre || '—'}
+                </span>
+                <span className={styles.archivoFecha}>
+                  {new Date(archivo.fecha).toLocaleDateString('es-MX', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                  })}
+                </span>
+              </div>
+            </div>
+            <div className={styles.archivoActions}>
+              <button
+                className={styles.btnDescargar}
+                onClick={() => handleDescargar(archivo.key, archivo.nombre)}
+                title="Descargar"
+              >
+                <Download size={16} />
+              </button>
+              <button
+                className={styles.btnEditarArchivo}
+                onClick={() => abrirModalEditar(archivo)}
+                title="Editar metadatos"
+              >
+                <Edit2 size={16} />
+              </button>
+              <button
+                className={styles.btnEliminarArchivo}
+                onClick={() => handleEliminar(archivo.id, archivo.nombre)}
+                title="Eliminar"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  // ===== HANDLER DESCARGA =====
+  const handleDescargar = async (key, nombre) => {
+    try {
+      const res = await horariosService.solicitarDescarga(key);
+      if (!res.success) throw new Error(res.message || 'Error al obtener URL de descarga');
+      window.open(res.data.downloadUrl, '_blank');
+    } catch (err) {
+      console.error('Error al descargar:', err);
+      setError(err.message || 'Error al descargar el archivo');
+    }
+  };
+
+  // ===== FILTROS =====
+  const renderFiltros = () => (
+    <div className={styles.filtrosContainer}>
+      <div className={styles.filtrosTurno}>
+        <button
+          className={`${styles.btnTurno} ${filtros.turno === 'todos' ? styles.btnTurnoActive : ''}`}
+          onClick={() => setFiltros({ ...filtros, turno: 'todos' })}
+        >
+          Todos
+        </button>
+        <button
+          className={`${styles.btnTurno} ${filtros.turno === 'matutino' ? styles.btnTurnoActive : ''}`}
+          onClick={() => setFiltros({ ...filtros, turno: 'matutino' })}
+        >
+          Matutino
+        </button>
+        <button
+          className={`${styles.btnTurno} ${filtros.turno === 'vespertino' ? styles.btnTurnoActive : ''}`}
+          onClick={() => setFiltros({ ...filtros, turno: 'vespertino' })}
+        >
+          Vespertino
+        </button>
+      </div>
+
+      <div className={styles.filtrosGrid}>
+        <div className={styles.filtroGroup}>
+          <label className={styles.label}>Ciclo</label>
+          <select
+            className={styles.select}
+            value={filtros.ciclo_id}
+            onChange={e => setFiltros({ ...filtros, ciclo_id: e.target.value })}
+          >
+            <option value="">Todos</option>
+            {ciclos.map(c => (
+              <option key={c.id} value={c.id}>{c.nombre} {c.activo ? '(Activo)' : ''}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className={styles.filtroGroup}>
+          <label className={styles.label}>Semestre</label>
+          <select
+            className={styles.select}
+            value={filtros.semestre}
+            onChange={e => setFiltros({ ...filtros, semestre: e.target.value })}
+          >
+            <option value="">Todos</option>
+            {[1,2,3,4,5,6].map(s => (
+              <option key={s} value={s}>{s}°</option>
+            ))}
+          </select>
+        </div>
+
+        <div className={styles.filtroGroup}>
+          <label className={styles.label}>Grupo (letra)</label>
+          <select
+            className={styles.select}
+            value={filtros.grupo_letra}
+            onChange={e => setFiltros({ ...filtros, grupo_letra: e.target.value })}
+          >
+            <option value="">Todos</option>
+            {['A','B','C','D'].map(l => (
+              <option key={l} value={l}>{l}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className={styles.filtroGroup}>
+          <label className={styles.label}>Especialidad</label>
+          <select
+            className={styles.select}
+            value={filtros.especialidad_id}
+            onChange={e => setFiltros({ ...filtros, especialidad_id: e.target.value })}
+          >
+            <option value="">Todas</option>
+            {especialidades.map(e => (
+              <option key={e.id} value={e.id}>{e.nombre}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className={styles.filtrosActions}>
+        <button className={styles.btnLimpiarFiltros} onClick={limpiarFiltros}>
+          <Filter size={14} /> Limpiar filtros
+        </button>
+      </div>
+    </div>
+  );
+
+  // ===== CONTADOR DE HORARIOS FALTANTES =====
+  const renderContador = () => {
+    if (!filtros.ciclo_id || !filtros.semestre) return null;
+    const { total, subidos, faltantes, porcentaje } = contadorFaltantes;
+    return (
+      <div className={styles.contadorContainer}>
+        <div className={styles.contadorInfo}>
+          <span className={styles.contadorTotal}>Total: {total} grupos</span>
+          <span className={styles.contadorSubidos}>Subidos: {subidos}</span>
+          <span className={faltantes > 0 ? styles.contadorFaltantes : styles.contadorCompleto}>
+            {faltantes > 0 ? `Faltan: ${faltantes}` : ' Completo'}
+          </span>
+        </div>
+        <div className={styles.contadorBarra}>
+          <div
+            className={styles.contadorBarraFill}
+            style={{ width: `${porcentaje}%`, backgroundColor: porcentaje === 100 ? '#1A6B35' : '#F37238' }}
+          />
+        </div>
+        <span className={styles.contadorPorcentaje}>{porcentaje}%</span>
+      </div>
+    );
   };
 
   return (
@@ -261,441 +1250,51 @@ export default function HorariosPage() {
           <p className={styles.subtitle}>Gestión de horarios para grupos, maestros y laboratorios</p>
         </div>
         <div className={styles.headerActions}>
-          <button className={styles.btnUpload} onClick={handleAbrirUpload}>
+          <button className={styles.btnPrimary} onClick={abrirModalUpload}>
             <Upload size={16} /> Subir horario
           </button>
-          <button className={styles.btnSecondary} onClick={cargarHorarios}>
+          <button className={styles.btnSecondary} onClick={abrirModalBatch}>
+            <Plus size={16} /> Subida masiva
+          </button>
+          <button className={styles.btnSecondary} onClick={() => { cargarHorarios(); cargarContadorFaltantes(); }}>
             <RefreshCw size={16} /> Actualizar
           </button>
         </div>
       </div>
 
-      {/* Tabs: tipo de horario */}
       <div className={styles.tabsContainer}>
         <button
-          className={`${styles.tab} ${tipoHorario === 'alumnos' ? styles.tabActive : ''}`}
-          onClick={() => {
-            setTipoHorario('alumnos');
-            setFiltros(prev => ({ ...prev, tipo_horario: 'alumnos', docente_id: '', laboratorio_id: '' }));
-          }}
+          className={`${styles.tab} ${tabActiva === 'grupos' ? styles.tabActive : ''}`}
+          onClick={() => setTabActiva('grupos')}
         >
-          <Users size={16} /> Alumnos
+          <Users size={16} /> Grupos
         </button>
         <button
-          className={`${styles.tab} ${tipoHorario === 'maestros' ? styles.tabActive : ''}`}
-          onClick={() => {
-            setTipoHorario('maestros');
-            setFiltros(prev => ({ ...prev, tipo_horario: 'maestros', letra: '', semestre: '', especialidad_id: '', turno_id: '', laboratorio_id: '' }));
-          }}
+          className={`${styles.tab} ${tabActiva === 'maestros' ? styles.tabActive : ''}`}
+          onClick={() => setTabActiva('maestros')}
         >
           <User size={16} /> Maestros
         </button>
         <button
-          className={`${styles.tab} ${tipoHorario === 'laboratorios' ? styles.tabActive : ''}`}
-          onClick={() => {
-            setTipoHorario('laboratorios');
-            setFiltros(prev => ({ ...prev, tipo_horario: 'laboratorios', letra: '', semestre: '', especialidad_id: '', turno_id: '', docente_id: '' }));
-          }}
+          className={`${styles.tab} ${tabActiva === 'laboratorios' ? styles.tabActive : ''}`}
+          onClick={() => setTabActiva('laboratorios')}
         >
           <FlaskConical size={16} /> Laboratorios
         </button>
       </div>
 
-      {/* Botones de turno (Matutino, Vespertino, Todos) */}
-      <div className={styles.turnoButtons}>
-        <button
-          className={`${styles.turnoBtn} ${filtroTurno === 'todos' ? styles.turnoBtnActive : ''}`}
-          onClick={() => handleTurnoClick('todos')}
-        >
-          Todos
-        </button>
-        <button
-          className={`${styles.turnoBtn} ${filtroTurno === '1' ? styles.turnoBtnActive : ''}`}
-          onClick={() => handleTurnoClick('1')}
-        >
-          Matutino
-        </button>
-        <button
-          className={`${styles.turnoBtn} ${filtroTurno === '2' ? styles.turnoBtnActive : ''}`}
-          onClick={() => handleTurnoClick('2')}
-        >
-          Vespertino
-        </button>
-      </div>
+      {renderFiltros()}
+      {renderContador()}
 
-      {/* Filtros */}
-      <div className={styles.filtrosContainer}>
-        <div className={styles.filtrosGrid}>
-          {/* Ciclo */}
-          <div className={styles.filtroGroup}>
-            <label className={styles.label}>Ciclo</label>
-            <select
-              className={styles.select}
-              name="ciclo_id"
-              value={filtros.ciclo_id}
-              onChange={handleFilterChange}
-            >
-              <option value="">Todos</option>
-              {ciclos.map(c => (
-                <option key={c.id} value={c.id}>{c.nombre}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Semestre (solo para alumnos) */}
-          {tipoHorario === 'alumnos' && (
-            <div className={styles.filtroGroup}>
-              <label className={styles.label}>Semestre</label>
-              <select
-                className={styles.select}
-                name="semestre"
-                value={filtros.semestre}
-                onChange={handleFilterChange}
-              >
-                <option value="">Todos</option>
-                {getSemestresParaCiclo().map(s => (
-                  <option key={s} value={s}>{s}°</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Letra (solo para alumnos) */}
-          {tipoHorario === 'alumnos' && (
-            <div className={styles.filtroGroup}>
-              <label className={styles.label}>Grupo</label>
-              <select
-                className={styles.select}
-                name="letra"
-                value={filtros.letra}
-                onChange={handleFilterChange}
-              >
-                <option value="">Todos</option>
-                <option value="A">A</option>
-                <option value="B">B</option>
-                <option value="C">C</option>
-                <option value="D">D</option>
-              </select>
-            </div>
-          )}
-
-          {/* Especialidad (solo para alumnos) */}
-          {tipoHorario === 'alumnos' && (
-            <div className={styles.filtroGroup}>
-              <label className={styles.label}>Especialidad</label>
-              <select
-                className={styles.select}
-                name="especialidad_id"
-                value={filtros.especialidad_id}
-                onChange={handleFilterChange}
-              >
-                <option value="">Todas</option>
-                {especialidades.map(e => (
-                  <option key={e.id} value={e.id}>{e.nombre}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Turno (solo para alumnos) */}
-          {tipoHorario === 'alumnos' && (
-            <div className={styles.filtroGroup}>
-              <label className={styles.label}>Turno</label>
-              <select
-                className={styles.select}
-                name="turno_id"
-                value={filtros.turno_id}
-                onChange={handleFilterChange}
-              >
-                <option value="">Todos</option>
-                <option value="1">Matutino</option>
-                <option value="2">Vespertino</option>
-              </select>
-            </div>
-          )}
-
-          {/* Docente (solo para maestros) */}
-          {tipoHorario === 'maestros' && (
-            <div className={styles.filtroGroup}>
-              <label className={styles.label}>Docente</label>
-              <select
-                className={styles.select}
-                name="docente_id"
-                value={filtros.docente_id}
-                onChange={handleFilterChange}
-              >
-                <option value="">Todos</option>
-                {docentes.map(d => (
-                  <option key={d.id} value={d.id}>{d.apellidos}, {d.nombre}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Laboratorio (solo para laboratorios) */}
-          {tipoHorario === 'laboratorios' && (
-            <div className={styles.filtroGroup}>
-              <label className={styles.label}>Laboratorio</label>
-              <select
-                className={styles.select}
-                name="laboratorio_id"
-                value={filtros.laboratorio_id}
-                onChange={handleFilterChange}
-              >
-                <option value="">Todos</option>
-                {laboratorios.map(l => (
-                  <option key={l.id} value={l.id}>{l.nombre}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          <button className={styles.btnLimpiar} onClick={() => {
-            setFiltros({
-              tipo_horario: tipoHorario,
-              ciclo_id: '',
-              semestre: '',
-              letra: '',
-              especialidad_id: '',
-              turno_id: '',
-              docente_id: '',
-              laboratorio_id: '',
-            });
-            setFiltroTurno('todos');
-          }}>
-            Limpiar filtros
-          </button>
-        </div>
-      </div>
-
-      {/* Lista de horarios */}
       <div className={styles.horariosSection}>
-        <h3 className={styles.sectionTitle}>
-          Horarios subidos ({archivosSubidos.length})
-        </h3>
-        {cargando ? (
-          <div className={styles.loading}>Cargando horarios...</div>
-        ) : archivosSubidos.length === 0 ? (
-          <div className={styles.empty}>
-            <FileText size={32} />
-            <p>No hay horarios subidos</p>
-            <p className={styles.emptySub}>Haz clic en "Subir horario" para agregar un archivo PDF o Excel</p>
-          </div>
-        ) : (
-          <div className={styles.archivosGrid}>
-            {archivosSubidos.map((archivo) => (
-              <div key={archivo.id} className={styles.archivoCard}>
-                <div className={styles.archivoInfo}>
-                  <FileText size={20} />
-                  <span className={styles.archivoNombre}>{archivo.nombre}</span>
-                  <div className={styles.archivoMeta}>
-                    {archivo.tipo_horario === 'alumnos' && (
-                      <span className={styles.metaBadge}>
-                        {archivo.semestre}° {archivo.letra} - {archivo.especialidad_nombre || 'Sin especialidad'}
-                      </span>
-                    )}
-                    {archivo.tipo_horario === 'maestros' && archivo.docente_nombre && (
-                      <span className={styles.metaBadge}>
-                        {archivo.docente_apellidos}, {archivo.docente_nombre}
-                      </span>
-                    )}
-                    {archivo.tipo_horario === 'laboratorios' && archivo.laboratorio_nombre && (
-                      <span className={styles.metaBadge}>
-                        {archivo.laboratorio_nombre}
-                      </span>
-                    )}
-                    <span className={styles.archivoFecha}>
-                      {new Date(archivo.fecha).toLocaleDateString('es-MX', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                      })}
-                    </span>
-                  </div>
-                </div>
-                <button
-                  className={styles.btnDescargar}
-                  onClick={() => handleDescargar(archivo.key, archivo.nombre)}
-                  disabled={descargando}
-                  title="Descargar"
-                >
-                  <Download size={16} />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+        <h3 className={styles.sectionTitle}>Horarios subidos ({archivosSubidos.length})</h3>
+        {renderArchivos()}
       </div>
 
-      {/* Modal de subida */}
-      {modalUploadOpen && (
-        <div className={styles.modalOverlay} onClick={() => setModalUploadOpen(false)}>
-          <div className={styles.modalLarge} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.modalHeader}>
-              <h3 className={styles.modalTitle}>Subir horario</h3>
-              <button className={styles.modalClose} onClick={() => setModalUploadOpen(false)}>
-                <X size={18} />
-              </button>
-            </div>
-            {error && <div className={styles.errorMsg}>{error}</div>}
-            <form onSubmit={handleUpload} className={styles.form}>
-              {/* Tipo de horario (fijo según la pestaña) */}
-              <div className={styles.field}>
-                <label className={styles.label}>Tipo de horario</label>
-                <select
-                  className={styles.select}
-                  value={uploadForm.tipo_horario}
-                  onChange={(e) => setUploadForm({ ...uploadForm, tipo_horario: e.target.value })}
-                >
-                  <option value="alumnos">Alumnos</option>
-                  <option value="maestros">Maestros</option>
-                  <option value="laboratorios">Laboratorios</option>
-                </select>
-              </div>
-
-              {/* Archivo */}
-              <div className={styles.field}>
-                <label className={styles.label}>Archivo *</label>
-                <input
-                  type="file"
-                  className={styles.fileInput}
-                  accept=".pdf,.xlsx,.xls"
-                  onChange={(e) => setUploadForm({ ...uploadForm, archivo: e.target.files[0] })}
-                  required
-                />
-                {uploadForm.archivo && (
-                  <span className={styles.fileName}>{uploadForm.archivo.name}</span>
-                )}
-              </div>
-
-              {/* Ciclo */}
-              <div className={styles.field}>
-                <label className={styles.label}>Ciclo escolar *</label>
-                <select
-                  className={styles.select}
-                  value={uploadForm.ciclo_id}
-                  onChange={(e) => setUploadForm({ ...uploadForm, ciclo_id: e.target.value })}
-                  required
-                >
-                  <option value="">Seleccionar ciclo...</option>
-                  {ciclos.map(c => (
-                    <option key={c.id} value={c.id}>{c.nombre}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Campos según tipo_horario */}
-              {uploadForm.tipo_horario === 'alumnos' && (
-                <>
-                  <div className={styles.row2}>
-                    <div className={styles.field}>
-                      <label className={styles.label}>Semestre *</label>
-                      <select
-                        className={styles.select}
-                        value={uploadForm.semestre}
-                        onChange={(e) => setUploadForm({ ...uploadForm, semestre: e.target.value })}
-                        required
-                      >
-                        <option value="">Seleccionar...</option>
-                        {getSemestresParaCiclo().map(s => (
-                          <option key={s} value={s}>{s}°</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className={styles.field}>
-                      <label className={styles.label}>Grupo (letra) *</label>
-                      <select
-                        className={styles.select}
-                        value={uploadForm.letra}
-                        onChange={(e) => setUploadForm({ ...uploadForm, letra: e.target.value })}
-                        required
-                      >
-                        <option value="">Seleccionar...</option>
-                        <option value="A">A</option>
-                        <option value="B">B</option>
-                        <option value="C">C</option>
-                        <option value="D">D</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className={styles.row2}>
-                    <div className={styles.field}>
-                      <label className={styles.label}>Especialidad *</label>
-                      <select
-                        className={styles.select}
-                        value={uploadForm.especialidad_id}
-                        onChange={(e) => setUploadForm({ ...uploadForm, especialidad_id: e.target.value })}
-                        required
-                      >
-                        <option value="">Seleccionar...</option>
-                        {especialidades.map(e => (
-                          <option key={e.id} value={e.id}>{e.nombre}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className={styles.field}>
-                      <label className={styles.label}>Turno *</label>
-                      <select
-                        className={styles.select}
-                        value={uploadForm.turno_id}
-                        onChange={(e) => setUploadForm({ ...uploadForm, turno_id: e.target.value })}
-                        required
-                      >
-                        <option value="">Seleccionar...</option>
-                        <option value="1">Matutino</option>
-                        <option value="2">Vespertino</option>
-                      </select>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {uploadForm.tipo_horario === 'maestros' && (
-                <div className={styles.field}>
-                  <label className={styles.label}>Docente *</label>
-                  <select
-                    className={styles.select}
-                    value={uploadForm.docente_id}
-                    onChange={(e) => setUploadForm({ ...uploadForm, docente_id: e.target.value })}
-                    required
-                  >
-                    <option value="">Seleccionar docente...</option>
-                    {docentes.map(d => (
-                      <option key={d.id} value={d.id}>{d.apellidos}, {d.nombre}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {uploadForm.tipo_horario === 'laboratorios' && (
-                <div className={styles.field}>
-                  <label className={styles.label}>Laboratorio *</label>
-                  <select
-                    className={styles.select}
-                    value={uploadForm.laboratorio_id}
-                    onChange={(e) => setUploadForm({ ...uploadForm, laboratorio_id: e.target.value })}
-                    required
-                  >
-                    <option value="">Seleccionar laboratorio...</option>
-                    {laboratorios.map(l => (
-                      <option key={l.id} value={l.id}>{l.nombre}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              <div className={styles.modalActions}>
-                <button type="button" className={styles.btnSecondary} onClick={() => setModalUploadOpen(false)}>
-                  Cancelar
-                </button>
-                <button type="submit" className={styles.btnPrimary} disabled={subiendo}>
-                  {subiendo ? 'Subiendo...' : 'Subir horario'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {renderUploadModal()}
+      {renderEditModal()}
+      {renderBatchModal()}
+      {renderConfirmModal()}
     </div>
   );
 }
