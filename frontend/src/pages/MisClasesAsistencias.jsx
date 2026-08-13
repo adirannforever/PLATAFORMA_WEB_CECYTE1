@@ -60,7 +60,7 @@ export default function MisClasesAsistencias({ grupoId }) {
         });
         setAsistencias(initAsistencias);
       } catch (e) {
-        // ✅ Manejo silencioso del 404 (sin mostrar error en consola)
+        //  Manejo silencioso del 404 (sin mostrar error en consola)
         if (e.response?.status === 404) {
           setAlumnos([]);
           setAsistencias({});

@@ -1,15 +1,12 @@
 import { query } from '../config/db.js';
 
-// ============================================================
-// HELPERS: Validaciones basadas en reglamento
-// ============================================================
+
+
+
 
 const validarRequisitosPrevios = async (alumno_id, tipo) => {
-  // Verificar que el alumno tenga 4° semestre aprobado
   const result = await query(
-    `SELECT semestre_actual, id 
-     FROM alumnos 
-     WHERE id = $1`,
+    `SELECT semestre_actual FROM alumnos WHERE id = $1`,
     [alumno_id]
   );
   if (!result.rows[0]) {
@@ -20,74 +17,52 @@ const validarRequisitosPrevios = async (alumno_id, tipo) => {
   if (tipo === 'servicio_social' && semestre < 5) {
     throw new Error('El alumno debe estar en 5° semestre para realizar Servicio Social.');
   }
-  if (tipo === 'practicas_profesionales') {
-    if (semestre < 5) {
-      throw new Error('El alumno debe estar en 5° semestre para realizar Prácticas Profesionales.');
-    }
-    // Si está en 6° semestre, es extemporáneo (permitido)
+  if (tipo === 'practicas_profesionales' && semestre < 5) {
+    throw new Error('El alumno debe estar en 5° semestre para realizar Prácticas Profesionales.');
   }
   return semestre;
 };
 
-const obtenerNumeroReportes = (tipo) => {
-  return tipo === 'servicio_social' ? 3 : 2; // 3 bimestrales vs 2
-};
-
-const obtenerHorasTotales = (tipo) => {
-  return tipo === 'servicio_social' ? 480 : 240;
-};
-
 const obtenerFechasDefecto = (tipo, fecha_inicio = null) => {
-  // Si no se proporciona fecha_inicio, usar la fecha actual (inicio de clases)
-  const inicio = fecha_inicio ? new Date(fecha_inicio) : new Date();
+  const hoy = new Date();
+  const inicio = fecha_inicio ? new Date(fecha_inicio) : hoy;
   const fin = new Date(inicio);
-  if (tipo === 'servicio_social') {
-    fin.setMonth(fin.getMonth() + 6); // 6 meses exactos
-  } else {
-    // Prácticas: 4 meses (ordinario) o 6 meses (extemporáneo, lo dejamos flexible)
-    fin.setMonth(fin.getMonth() + 4);
-  }
+  fin.setMonth(fin.getMonth() + (tipo === 'servicio_social' ? 6 : 4));
   return {
     fecha_inicio: inicio.toISOString().split('T')[0],
     fecha_fin: fin.toISOString().split('T')[0],
   };
 };
 
-// ============================================================
-// CREAR REPORTES (bimestrales para servicio social, 2 para prácticas)
-// ============================================================
+
+
+
 const crearReportes = async (servicio_social_id, tipo, fecha_inicio, fecha_fin) => {
   const totalReportes = tipo === 'servicio_social' ? 3 : 2;
-  const intervalos = [];
-  
   const inicio = fecha_inicio ? new Date(fecha_inicio) : new Date();
   const fin = fecha_fin ? new Date(fecha_fin) : new Date(inicio);
   fin.setMonth(fin.getMonth() + (tipo === 'servicio_social' ? 6 : 4));
-  
-  if (isNaN(inicio.getTime())) {
-    console.warn('️ fecha_inicio inválida, usando fecha actual');
-    const now = new Date();
-    inicio.setTime(now.getTime());
-    fin.setTime(now.getTime());
-    fin.setMonth(fin.getMonth() + (tipo === 'servicio_social' ? 6 : 4));
+
+  if (isNaN(inicio.getTime()) || isNaN(fin.getTime())) {
+    console.error(' Fechas inválidas para crear reportes');
+    return;
   }
-  
+
   const diff = (fin - inicio) / (totalReportes + 1);
   for (let i = 1; i <= totalReportes; i++) {
     const fechaLimite = new Date(inicio);
-    fechaLimite.setDate(fechaLimite.getDate() + diff * i);
-    intervalos.push(fechaLimite.toISOString().split('T')[0]);
-  }
-
-  for (let i = 0; i < totalReportes; i++) {
-    const num = i + 1;
+    fechaLimite.setDate(fechaLimite.getDate() + Math.floor(diff * i));
     await query(
       `INSERT INTO servicio_social_reportes (servicio_social_id, numero, fecha_limite)
        VALUES ($1, $2, $3)`,
-      [servicio_social_id, num, intervalos[i] || null]
+      [servicio_social_id, i, fechaLimite.toISOString().split('T')[0]]
     );
   }
+  console.log(` ${totalReportes} reportes creados para SS ID ${servicio_social_id}`);
 };
+
+
+
 
 const actualizarEstadoCompletado = async (servicio_social_id) => {
   const reportes = await query(
@@ -96,20 +71,16 @@ const actualizarEstadoCompletado = async (servicio_social_id) => {
     [servicio_social_id]
   );
   const { total, entregados } = reportes.rows[0];
-  const totalNum = parseInt(total);
-  const entregadosNum = parseInt(entregados);
-  
-  if (totalNum === 0) return;
-  
+  if (parseInt(total) === 0) return;
+
   const tipoResult = await query(
     `SELECT tipo FROM servicio_social_practicas WHERE id = $1`,
     [servicio_social_id]
   );
   const tipo = tipoResult.rows[0]?.tipo;
   const horasTotales = tipo === 'servicio_social' ? 480 : 240;
-  
-  if (entregadosNum === totalNum) {
-    // Completado -> liberado
+
+  if (parseInt(entregados) === parseInt(total)) {
     await query(
       `UPDATE servicio_social_practicas
        SET estatus = 'liberado', horas_acumuladas = $1
@@ -117,7 +88,6 @@ const actualizarEstadoCompletado = async (servicio_social_id) => {
       [horasTotales, servicio_social_id]
     );
   } else {
-    // No completado -> en_proceso
     await query(
       `UPDATE servicio_social_practicas
        SET estatus = 'en_proceso', horas_acumuladas = 0
@@ -127,9 +97,9 @@ const actualizarEstadoCompletado = async (servicio_social_id) => {
   }
 };
 
-// ============================================================
-// OBTENER REGISTROS
-// ============================================================
+
+
+
 export const obtenerServicioSocial = async (req, res) => {
   try {
     const { alumno_id, tipo, estatus, search } = req.query;
@@ -140,12 +110,19 @@ export const obtenerServicioSocial = async (req, res) => {
              a.matricula,
              u2.nombre || ' ' || u2.apellidos AS registrado_por_nombre,
              a.semestre_actual,
-             (SELECT COUNT(*) FROM servicio_social_reportes WHERE servicio_social_id = ss.id) AS total_reportes,
-             (SELECT COUNT(*) FROM servicio_social_reportes WHERE servicio_social_id = ss.id AND entregado = TRUE) AS reportes_entregados
+             COALESCE(r.total_reportes, 0) AS total_reportes,
+             COALESCE(r.reportes_entregados, 0) AS reportes_entregados
       FROM servicio_social_practicas ss
       JOIN alumnos a ON a.id = ss.alumno_id
       JOIN usuarios u ON u.id = a.usuario_id
       LEFT JOIN usuarios u2 ON u2.id = ss.registrado_por
+      LEFT JOIN (
+        SELECT servicio_social_id,
+               COUNT(*) AS total_reportes,
+               SUM(CASE WHEN entregado THEN 1 ELSE 0 END) AS reportes_entregados
+        FROM servicio_social_reportes
+        GROUP BY servicio_social_id
+      ) r ON r.servicio_social_id = ss.id
       WHERE 1=1
     `;
     const params = [];
@@ -178,14 +155,14 @@ export const obtenerServicioSocial = async (req, res) => {
     const result = await query(sql, params);
     return res.json({ success: true, data: result.rows });
   } catch (err) {
-    console.error('Error en obtenerServicioSocial:', err);
+    console.error(' Error en obtenerServicioSocial:', err);
     return res.status(500).json({ success: false, message: 'Error interno.' });
   }
 };
 
-// ============================================================
-// OBTENER REPORTES
-// ============================================================
+
+
+
 export const obtenerReportes = async (req, res) => {
   const { id } = req.params;
   try {
@@ -195,14 +172,14 @@ export const obtenerReportes = async (req, res) => {
     );
     return res.json({ success: true, data: result.rows });
   } catch (err) {
-    console.error('Error en obtenerReportes:', err);
+    console.error(' Error en obtenerReportes:', err);
     return res.status(500).json({ success: false, message: 'Error interno.' });
   }
 };
 
-// ============================================================
-// TOGGLE REPORTE
-// ============================================================
+
+
+
 export const toggleReporte = async (req, res) => {
   const { id } = req.params;
   const { entregado } = req.body;
@@ -228,14 +205,14 @@ export const toggleReporte = async (req, res) => {
       data: result.rows[0],
     });
   } catch (err) {
-    console.error('Error en toggleReporte:', err);
+    console.error(' Error en toggleReporte:', err);
     return res.status(500).json({ success: false, message: 'Error interno.' });
   }
 };
 
-// ============================================================
-// REGISTRAR SERVICIO SOCIAL (con reglas reales)
-// ============================================================
+
+
+
 export const registrarServicioSocial = async (req, res) => {
   const {
     alumno_id,
@@ -250,6 +227,7 @@ export const registrarServicioSocial = async (req, res) => {
     observaciones,
   } = req.body;
 
+  
   if (!alumno_id || !tipo || !institucion_empresa) {
     return res.status(400).json({
       success: false,
@@ -265,7 +243,7 @@ export const registrarServicioSocial = async (req, res) => {
     });
   }
 
-  // Validar tipo de institución según reglamento
+  
   if (tipo === 'servicio_social') {
     if (!['gubernamental', 'publica'].includes(tipo_institucion)) {
       return res.status(400).json({
@@ -276,11 +254,10 @@ export const registrarServicioSocial = async (req, res) => {
     if (tiene_convenio) {
       return res.status(400).json({
         success: false,
-        message: 'El Servicio Social NO requiere convenio. Elimina el campo "tiene_convenio".',
+        message: 'El Servicio Social NO requiere convenio.',
       });
     }
   } else {
-    // Prácticas profesionales
     if (tipo_institucion !== 'privada_convenio') {
       return res.status(400).json({
         success: false,
@@ -296,22 +273,31 @@ export const registrarServicioSocial = async (req, res) => {
   }
 
   try {
-    // Validar requisitos previos
+    
+    const existe = await query(
+      `SELECT id FROM servicio_social_practicas WHERE alumno_id = $1 AND tipo = $2`,
+      [alumno_id, tipo]
+    );
+    if (existe.rows.length > 0) {
+      const mensajeTipo = tipo === 'servicio_social' ? 'Servicio Social' : 'Prácticas Profesionales';
+      return res.status(409).json({
+        success: false,
+        message: `El alumno ya cuenta con un registro de ${mensajeTipo}. No se pueden crear duplicados.`,
+      });
+    }
+
+    
     const semestre = await validarRequisitosPrevios(alumno_id, tipo);
 
-    // Fechas por defecto si no se proporcionan
+    
     let fechas = {};
     if (!fecha_inicio) {
       fechas = obtenerFechasDefecto(tipo);
-      const fechaInicio = fecha_inicio || fechas.fecha_inicio;
-      const fechaFin = fecha_fin || fechas.fecha_fin;
     } else {
       fechas = { fecha_inicio, fecha_fin };
     }
 
-    // Establecer estatus automático
-    const estatusInicial = 'en_proceso';
-
+    
     const result = await query(
       `INSERT INTO servicio_social_practicas
         (alumno_id, tipo, institucion_empresa, asesor_externo, tipo_institucion,
@@ -327,7 +313,7 @@ export const registrarServicioSocial = async (req, res) => {
         tipo_institucion || null,
         tiene_convenio || false,
         autorizacion_tutor || false,
-        estatusInicial,
+        'en_proceso',
         semestre,
         fechas.fecha_inicio || null,
         fechas.fecha_fin || null,
@@ -337,6 +323,7 @@ export const registrarServicioSocial = async (req, res) => {
     );
 
     const nuevoRegistro = result.rows[0];
+    
     await crearReportes(nuevoRegistro.id, tipo, fechas.fecha_inicio, fechas.fecha_fin);
 
     return res.status(201).json({
@@ -348,14 +335,14 @@ export const registrarServicioSocial = async (req, res) => {
     if (err.message.includes('semestre')) {
       return res.status(400).json({ success: false, message: err.message });
     }
-    console.error('Error en registrarServicioSocial:', err);
+    console.error(' Error en registrarServicioSocial:', err);
     return res.status(500).json({ success: false, message: 'Error interno.' });
   }
 };
 
-// ============================================================
-// ACTUALIZAR SERVICIO SOCIAL
-// ============================================================
+
+
+
 export const actualizarServicioSocial = async (req, res) => {
   const { id } = req.params;
   const {
@@ -430,14 +417,14 @@ export const actualizarServicioSocial = async (req, res) => {
       data: result.rows[0],
     });
   } catch (err) {
-    console.error('Error en actualizarServicioSocial:', err);
+    console.error(' Error en actualizarServicioSocial:', err);
     return res.status(500).json({ success: false, message: 'Error interno.' });
   }
 };
 
-// ============================================================
-// ELIMINAR
-// ============================================================
+
+
+
 export const eliminarServicioSocial = async (req, res) => {
   const { id } = req.params;
   try {
@@ -447,7 +434,7 @@ export const eliminarServicioSocial = async (req, res) => {
     }
     return res.json({ success: true, message: 'Registro eliminado correctamente.' });
   } catch (err) {
-    console.error('Error en eliminarServicioSocial:', err);
+    console.error(' Error en eliminarServicioSocial:', err);
     return res.status(500).json({ success: false, message: 'Error interno.' });
   }
 };
