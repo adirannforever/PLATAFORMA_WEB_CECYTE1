@@ -40,7 +40,7 @@ export default function UsuariosPage() {
 
   const [modalEditarAbierto, setModalEditarAbierto] = useState(false);
   const [usuarioEditando, setUsuarioEditando] = useState(null);
-  const [formEditar, setFormEditar] = useState({ nombre: '', apellidos: '', email: '', rol: '', activo: true });
+  const [formEditar, setFormEditar] = useState({ nombre: '', apellidos: '', email: '', rol: '', activo: true, password: '', });
   const [enviandoEditar, setEnviandoEditar] = useState(false);
   const [errorEditar, setErrorEditar] = useState('');
 
@@ -160,7 +160,22 @@ export default function UsuariosPage() {
     setErrorEditar('');
     setEnviandoEditar(true);
     try {
-      await usuariosService.actualizar(usuarioEditando.id, formEditar);
+      // Actualizar datos generales
+      await usuariosService.actualizar(usuarioEditando.id, {
+        nombre: formEditar.nombre,
+        apellidos: formEditar.apellidos,
+        email: formEditar.email,
+        rol: formEditar.rol,
+        activo: formEditar.activo,
+      });
+
+      // Si se escribió una contraseña, actualizarla
+      if (formEditar.password && formEditar.password.trim().length >= 8) {
+        await usuariosService.actualizarPassword(usuarioEditando.id, {
+          password: formEditar.password,
+        });
+      }
+
       setExito(' Usuario actualizado.');
       setModalEditarAbierto(false);
       await cargar();
@@ -539,6 +554,17 @@ export default function UsuariosPage() {
                   onChange={(e) => setFormEditar({ ...formEditar, email: e.target.value })}
                   required
                 />
+              </div>
+              <div className={styles.field}>
+                <label className={styles.label}>Nueva contraseña (opcional)</label>
+                <input
+                  className={styles.input}
+                  type="password"
+                  value={formEditar.password || ''}
+                  onChange={(e) => setFormEditar({ ...formEditar, password: e.target.value })}
+                  placeholder="Dejar en blanco para no cambiar"
+                />
+                <span className={styles.helpText}>Mínimo 8 caracteres. Solo se actualizará si se escribe algo.</span>
               </div>
               <div className={styles.field}>
                 <label className={styles.label}>Rol</label>

@@ -59,7 +59,11 @@ export const usuariosService = {
     const response = await api.delete(`/usuarios/${id}`);
     return response.data;
   },
-};
+  actualizarPassword: async (id, data) => {
+    const response = await api.patch(`/usuarios/${id}/password`, data);
+    return response.data;
+  },
+};  
 
 
 export const materiasService = {

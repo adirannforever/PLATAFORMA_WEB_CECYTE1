@@ -19,6 +19,7 @@ export const getUsuarios = async (req, res) => {
     const userRole = req.user.rol;
     const userId = req.user.id;
 
+    
     let sql = `
       SELECT 
         u.id,
@@ -39,12 +40,12 @@ export const getUsuarios = async (req, res) => {
       LEFT JOIN grupos g ON g.id = a.grupo_actual_id
       LEFT JOIN turnos t ON t.id = g.turno_id
       LEFT JOIN especialidades e ON e.id = g.especialidad_id
-      WHERE u.activo = TRUE
+      WHERE 1=1
     `;
     const params = [];
     const conditions = [];
 
-    // Si es docente y está pidiendo alumnos, filtrar por sus grupos
+    
     if (userRole === 'docente' && rol === 'alumno') {
       const docenteId = docente_id || userId;
       conditions.push(`a.grupo_actual_id IN (
@@ -66,10 +67,12 @@ export const getUsuarios = async (req, res) => {
       params.push(searchTerm);
     }
 
+    
     if (activo !== undefined) {
       conditions.push(`u.activo = $${params.length + 1}`);
       params.push(activo === 'true');
     }
+    
 
     if (semestre) {
       conditions.push(`a.semestre_actual = $${params.length + 1}`);
@@ -96,6 +99,7 @@ export const getUsuarios = async (req, res) => {
       params.push(grupo_letra.toUpperCase());
     }
 
+    
     if (conditions.length > 0) {
       sql += ' AND ' + conditions.join(' AND ');
     }
@@ -272,5 +276,63 @@ export const desactivarUsuario = async (req, res) => {
   } catch (err) {
     console.error('Error en desactivarUsuario:', err);
     return res.status(500).json({ success: false, message: 'Error interno.' });
+  }
+};
+
+// ============================================================
+// ACTUALIZAR CONTRASEÑA (solo administradores)
+// ============================================================
+export const actualizarPassword = async (req, res) => {
+  const { id } = req.params;
+  const { password } = req.body;
+
+  // Validar que el usuario autenticado sea administrador
+  if (req.user.rol !== 'administrador') {
+    return res.status(403).json({
+      success: false,
+      message: 'No tienes permisos para cambiar contraseñas de otros usuarios.',
+    });
+  }
+
+  // Validar que se envió una contraseña
+  if (!password || password.length < 8) {
+    return res.status(400).json({
+      success: false,
+      message: 'La contraseña debe tener al menos 8 caracteres.',
+    });
+  }
+
+  try {
+    // Verificar que el usuario existe
+    const userExists = await query(
+      'SELECT id FROM usuarios WHERE id = $1',
+      [id]
+    );
+    if (!userExists.rows[0]) {
+      return res.status(404).json({
+        success: false,
+        message: 'Usuario no encontrado.',
+      });
+    }
+
+    // Generar hash de la nueva contraseña
+    const hash = await bcrypt.hash(password, 12);
+
+    // Actualizar la contraseña
+    await query(
+      'UPDATE usuarios SET password_hash = $1 WHERE id = $2',
+      [hash, id]
+    );
+
+    return res.json({
+      success: true,
+      message: 'Contraseña actualizada correctamente.',
+    });
+  } catch (err) {
+    console.error('Error en actualizarPassword:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Error interno al actualizar la contraseña.',
+    });
   }
 };

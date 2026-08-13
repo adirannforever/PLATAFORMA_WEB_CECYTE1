@@ -6,6 +6,7 @@ import {
   crearUsuario,
   actualizarUsuario,
   desactivarUsuario,
+  actualizarPassword, 
 } from '../controllers/usuarios.controller.js';
 
 const router = Router();
@@ -17,5 +18,7 @@ router.get('/:id', getUsuarioById);
 router.post('/', crearUsuario);
 router.patch('/:id', actualizarUsuario);
 router.delete('/:id', desactivarUsuario);
+
+router.patch('/:id/password', actualizarPassword);
 
 export default router;
