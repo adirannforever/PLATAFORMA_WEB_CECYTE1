@@ -4,6 +4,22 @@ import { gruposService, calificacionesService } from '../services/api';
 import Skeleton from '../components/Skeleton';
 import styles from './MisClasesPage.module.css';
 
+
+const calcularPromedioSeguro = (calificaciones) => {
+  
+  const valores = [1, 2, 3].map(p => {
+    const val = calificaciones[p]?.valor;
+    if (val === null || val === undefined || val === '') return null;
+    
+    const num = parseFloat(val);
+    return isNaN(num) ? null : num;
+  });
+  const validos = valores.filter(v => v !== null);
+  if (validos.length === 0) return null;
+  const total = validos.reduce((a, b) => a + b, 0);
+  return Math.round((total / validos.length) * 10) / 10;
+};
+
 export default function MisClasesCalificaciones({ grupoId }) {
   const { usuario } = useAuth();
   const [materias, setMaterias] = useState([]);
@@ -20,7 +36,7 @@ export default function MisClasesCalificaciones({ grupoId }) {
   const [guardando, setGuardando] = useState(false);
   const [inputError, setInputError] = useState('');
 
-  // Cargar materias
+  
   useEffect(() => {
     const cargarMaterias = async () => {
       setCargando(true);
@@ -41,7 +57,7 @@ export default function MisClasesCalificaciones({ grupoId }) {
     cargarMaterias();
   }, [grupoId]);
 
-  // Cargar calificaciones al cambiar materia
+  
   useEffect(() => {
     if (!materiaSeleccionada) return;
     const cargar = async () => {
@@ -274,10 +290,9 @@ export default function MisClasesCalificaciones({ grupoId }) {
             </thead>
             <tbody>
               {alumnosList.map(alumno => {
-                const vals = [1, 2, 3].map(p => alumno.calificaciones[p]?.valor || null);
-                const prom = vals.filter(v => v !== null).length > 0
-                  ? vals.filter(v => v !== null).reduce((a, b) => a + b, 0) / vals.filter(v => v !== null).length
-                  : null;
+                
+                const prom = calcularPromedioSeguro(alumno.calificaciones);
+
                 return (
                   <tr key={alumno.alumno_id}>
                     <td>{alumno.nombre}</td>

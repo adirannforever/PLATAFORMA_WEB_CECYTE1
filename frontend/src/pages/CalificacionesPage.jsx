@@ -9,7 +9,7 @@ import {
 import Skeleton from '../components/Skeleton';
 import styles from './CalificacionesPage.module.css';
 
-// Iconos SVG
+
 const IconPencil = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M12 20h9" />
@@ -45,6 +45,21 @@ const validarCalificacion = (valor) => {
   return { valido: true, valor: num };
 };
 
+
+const calcularPromedioSeguro = (calificaciones) => {
+  if (!calificaciones || calificaciones.length === 0) return null;
+  const validas = calificaciones
+    .map(c => {
+      
+      const val = typeof c === 'string' ? parseFloat(c.trim()) : Number(c);
+      return isNaN(val) ? null : val;
+    })
+    .filter(v => v !== null && !isNaN(v));
+  if (validas.length === 0) return null;
+  const total = validas.reduce((a, b) => a + b, 0);
+  return Math.round((total / validas.length) * 10) / 10;
+};
+
 export default function CalificacionesPage() {
   const { usuario } = useAuth();
   const { materia_grupo_id, grupo_id } = useParams();
@@ -53,7 +68,7 @@ export default function CalificacionesPage() {
   const esAdmin = usuario.rol === 'administrador';
   const esDocente = usuario.rol === 'docente';
 
-  // ===== TODOS LOS HOOKS =====
+  
   const [datos, setDatos] = useState([]);
   const [periodos, setPeriodos] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -87,7 +102,7 @@ export default function CalificacionesPage() {
   const [guardandoColumna, setGuardandoColumna] = useState(false);
   const [camposVacios, setCamposVacios] = useState({});
 
-  // ===== useMemo =====
+  
   const porAlumno = useMemo(() => {
     const mapa = {};
     datos.forEach(row => {
@@ -123,7 +138,7 @@ export default function CalificacionesPage() {
       .sort((a, b) => a.nombre.localeCompare(b.nombre));
   }, [porAlumno, busquedaAlumno]);
 
-  // ===== EFECTOS =====
+  
   useEffect(() => {
     if (esAlumno || materia_grupo_id || grupo_id) return;
     const cargarCiclos = async () => {
@@ -142,27 +157,26 @@ export default function CalificacionesPage() {
     cargarCiclos();
   }, [esAlumno, materia_grupo_id, grupo_id]);
 
-    const cargarGrupos = useCallback(async () => {
-      if (esAlumno || materia_grupo_id || grupo_id) return;
-      setCargandoGrupos(true);
-      setError('');
-      try {
-        const params = {};
-        // Solo admin envía ciclo_id
-        if (esAdmin && filtros.ciclo_id) params.ciclo_id = filtros.ciclo_id;
-        if (filtros.semestre) params.semestre = filtros.semestre;
-        if (filtros.turno_id) params.turno_id = filtros.turno_id;
-        if (esDocente) params.docente_id = usuario.id;
+  const cargarGrupos = useCallback(async () => {
+    if (esAlumno || materia_grupo_id || grupo_id) return;
+    setCargandoGrupos(true);
+    setError('');
+    try {
+      const params = {};
+      if (esAdmin && filtros.ciclo_id) params.ciclo_id = filtros.ciclo_id;
+      if (filtros.semestre) params.semestre = filtros.semestre;
+      if (filtros.turno_id) params.turno_id = filtros.turno_id;
+      if (esDocente) params.docente_id = usuario.id;
 
-        const res = await gruposService.getAll(params);
-        setGrupos(res.data || []); // <--- Cambio: res.grupos -> res.data
-      } catch (e) {
-        console.error('Error cargando grupos:', e);
-        setError('Error al cargar los grupos.');
-      } finally {
-        setCargandoGrupos(false);
-      }
-    }, [filtros, esAlumno, materia_grupo_id, grupo_id, esDocente, usuario.id, esAdmin]);
+      const res = await gruposService.getAll(params);
+      setGrupos(res.data || []);
+    } catch (e) {
+      console.error('Error cargando grupos:', e);
+      setError('Error al cargar los grupos.');
+    } finally {
+      setCargandoGrupos(false);
+    }
+  }, [filtros, esAlumno, materia_grupo_id, grupo_id, esDocente, usuario.id, esAdmin]);
 
   useEffect(() => {
     if (esAlumno || materia_grupo_id || grupo_id) return;
@@ -240,7 +254,7 @@ export default function CalificacionesPage() {
     }
   }, [esAlumno, materia_grupo_id, cargarMisCalificaciones, cargarCalificaciones, cargarPeriodos]);
 
-  // ===== HANDLERS =====
+  
   const handleFiltroChange = (e) => {
     const { name, value } = e.target;
     setFiltros(prev => ({ ...prev, [name]: value }));
@@ -271,13 +285,12 @@ export default function CalificacionesPage() {
     setMateriaExpandida(materiaExpandida === id ? null : id);
   };
 
-  // ===== LÓGICA DE EDICIÓN =====
+  
   const isParcialEditable = (parcial) => {
     if (esAlumno) return false;
     if (esAdmin) return true;
     const periodo = periodos.find(p => p.parcial === parcial);
     if (!periodo) {
-      // Si no hay períodos configurados, permitir edición para docentes (pruebas)
       return esDocente;
     }
     const hoy = new Date();
@@ -471,7 +484,7 @@ export default function CalificacionesPage() {
 
   const parcialesEditables = PARCIALES.filter(p => esAdmin || isParcialEditable(p));
 
-  // ===== RENDERIZADO =====
+  
   if (esAlumno) {
     const primeraMateria = datos.length > 0 ? datos[0] : null;
     const grupoInfo = primeraMateria
@@ -640,7 +653,7 @@ export default function CalificacionesPage() {
                   <div className={styles.materiaCardHeader} onClick={() => toggleExpandirMateria(materia.id)}>
                     <span className={styles.materiaCardNombre}>{materia.materia_nombre}</span>
                     <span className={styles.materiaCardMeta}>
-                      {materia.docente_nombre} {materia.docente_apellidos || ''} • {materia.horas_semana || '—'} hrs
+                      {materia.docente_nombre || 'Sin docente'} {materia.docente_apellidos || ''} • {materia.horas_semana || '—'} hrs
                     </span>
                     <span className={styles.materiaCardArrow}>{expandida ? '▲' : '▼'}</span>
                   </div>
@@ -802,10 +815,19 @@ export default function CalificacionesPage() {
               </thead>
               <tbody>
                 {alumnosList.map(alumno => {
+                  
                   const vals = Object.values(alumno.calificaciones)
-                    .map(c => parseFloat(c.valor))
-                    .filter(v => !isNaN(v));
-                  const prom = vals.length > 0 ? vals.reduce((x, y) => x + y, 0) / vals.length : null;
+                    .map(c => {
+                      const val = typeof c.valor === 'string' 
+                        ? parseFloat(c.valor.trim()) 
+                        : Number(c.valor);
+                      return isNaN(val) ? null : val;
+                    })
+                    .filter(v => v !== null && !isNaN(v));
+                  const prom = vals.length > 0 
+                    ? vals.reduce((x, y) => x + y, 0) / vals.length 
+                    : null;
+
                   return (
                     <tr key={alumno.alumno_id} className={styles.tr}>
                       <td className={styles.tdNombre}>
@@ -854,7 +876,7 @@ export default function CalificacionesPage() {
                       })}
                       <td className={styles.tdCal}>
                         <span style={{ fontWeight: 700, color: prom ? COLOR_CALIF(prom) : '#94a3b8' }}>
-                          {prom !== null ? prom.toFixed(1) : '—'}
+                          {prom !== null && !isNaN(prom) ? prom.toFixed(1) : '—'}
                         </span>
                       </td>
                     </tr>
@@ -868,7 +890,7 @@ export default function CalificacionesPage() {
     );
   }
 
-  // 4. VISTA PRINCIPAL (admin/docente)
+  
   return (
     <div className={styles.page}>
       <div className={styles.pageHeader}>
