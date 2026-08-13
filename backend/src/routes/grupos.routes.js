@@ -16,7 +16,7 @@ router.use(verifyToken);
 
 router.get('/', requireRole('administrador', 'docente'), getGrupos);
 router.get('/:id', requireRole('administrador', 'docente'), getGrupoById);
-router.get('/:id/materias', requireRole('administrador', 'docente'), getMaterias);
+router.get('/:id/materias', verifyToken, getMaterias);
 router.get('/:id/alumnos', requireRole('administrador', 'docente'), getAlumnosDeGrupo);
 router.post('/', requireRole('administrador'), crearGrupo);
 router.patch('/:id', requireRole('administrador'), actualizarGrupo);

@@ -125,29 +125,30 @@ export const menuItems = [
   },
 
   // ===== ACADÉMICO =====
+  // SOLO ADMINISTRADOR (los docentes usan "Mis Clases")
   {
     to: '/grupos',
     label: 'Grupos',
     icon: <IconGrupos />,
-    roles: ['administrador', 'docente'],
+    roles: ['administrador'],
     category: 'academico',
-    order: 0,
+    order: 1,
   },
   {
     to: '/asistencia',
     label: 'Asistencias',
     icon: <IconAsistencia />,
-    roles: ['administrador', 'docente'],
+    roles: ['administrador'],
     category: 'academico',
-    order: 1,
+    order: 2,
   },
   {
     to: '/calificaciones',
     label: 'Calificaciones',
     icon: <BookOpen size={18} />,
-    roles: ['administrador', 'docente'],
+    roles: ['administrador'],
     category: 'academico',
-    order: 2,
+    order: 3,
   },
   {
     to: '/mis-calificaciones',
@@ -155,7 +156,7 @@ export const menuItems = [
     icon: <IconCalif />,
     roles: ['alumno'],
     category: 'academico',
-    order: 3,
+    order: 4,
   },
   {
     to: '/inscripciones',
@@ -163,16 +164,16 @@ export const menuItems = [
     icon: <IconInscripciones />,
     roles: ['administrador'],
     category: 'academico',
-    order: 4,
+    order: 5,
   },
   {
     to: '/incidencias',
     label: 'Incidencias',
     icon: <AlertCircle size={18} />,
-    roles: ['administrador', 'docente'],
+    roles: ['administrador'],
     category: 'academico',
-    order: 5,
-    badge: 'notificaciones', // se resolverá dinámicamente
+    order: 6,
+    badge: 'notificaciones',
   },
 
   // ===== ADMINISTRATIVO =====
@@ -232,6 +233,16 @@ export const menuItems = [
     icon: <Settings size={18} />,
     roles: ['administrador'],
     category: 'configuracion',
+    order: 0,
+  },
+
+  // ===== DOCENTE (Mis Clases) =====
+  {
+    to: '/mis-clases',
+    label: 'Mis Clases',
+    icon: <BookOpen size={18} />,
+    roles: ['docente'],
+    category: 'academico',
     order: 0,
   },
 ];

@@ -1,6 +1,5 @@
-// src/routes/usuarios.routes.js
 import { Router } from 'express';
-import { verifyToken, requireRole } from '../middlewares/auth.js';
+import { verifyToken } from '../middlewares/auth.js';
 import {
   getUsuarios,
   getUsuarioById,
@@ -11,14 +10,12 @@ import {
 
 const router = Router();
 
-// Todas las rutas requieren autenticación
 router.use(verifyToken);
 
-// Solo administrador
-router.get('/', requireRole('administrador'), getUsuarios);
-router.get('/:id', requireRole('administrador'), getUsuarioById);
-router.post('/', requireRole('administrador'), crearUsuario);
-router.patch('/:id', requireRole('administrador'), actualizarUsuario);
-router.delete('/:id', requireRole('administrador'), desactivarUsuario);
+router.get('/', getUsuarios);
+router.get('/:id', getUsuarioById);
+router.post('/', crearUsuario);
+router.patch('/:id', actualizarUsuario);
+router.delete('/:id', desactivarUsuario);
 
 export default router;

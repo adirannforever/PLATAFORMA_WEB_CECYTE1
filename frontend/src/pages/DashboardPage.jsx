@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { comunicadosService, calificacionesService, catalogosService, gruposService } from '../services/api';
+import { comunicadosService, calificacionesService, catalogosService, gruposService, materiasService } from '../services/api';
 import styles from './DashboardPage.module.css';
 
 const SALUDO = () => {
@@ -22,12 +22,10 @@ export default function DashboardPage() {
     if (!usuario?.rol) return;
 
     try {
-      // Comunicados (común para todos)
       const comRes = await comunicadosService.getAll();
       const listaComunicados = comRes?.data || [];
       setComunicados(listaComunicados.slice(0, 3));
 
-      // Estadísticas según rol
       if (usuario.rol === 'administrador') {
         const [alumnosRes, docentesRes, materiasRes, gruposRes] = await Promise.all([
           catalogosService.getAlumnos(),
@@ -43,20 +41,19 @@ export default function DashboardPage() {
           comunicados: listaComunicados.length,
         });
       } else if (usuario.rol === 'docente') {
-        // Obtener materias asignadas al docente
-        const materiasRes = await gruposService.getMateriasByDocente(usuario.id);
-        const materias = materiasRes?.materias || [];
+        // CORREGIDO: usar materiasService con filtro docente_id
+        const materiasRes = await materiasService.getAll({ docente_id: usuario.id });
+        const materias = materiasRes?.data || [];
         setStats({
           materias: materias.length,
-          grupos: new Set(materias.map(m => m.grupo_id)).size, // grupos distintos
+          grupos: new Set(materias.map(m => m.grupo_id)).size,
         });
       } else if (usuario.rol === 'alumno') {
-        // Obtener calificaciones y materias del alumno
         const califsRes = await calificacionesService.misCalificaciones();
         const calificaciones = califsRes?.calificaciones || [];
         setStats({
           calificaciones: calificaciones.length,
-          materias: calificaciones.length, // cada materia tiene al menos una calificación
+          materias: calificaciones.length,
         });
       }
     } catch (err) {
@@ -68,67 +65,24 @@ export default function DashboardPage() {
 
   useEffect(() => {
     cargar();
-
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         cargar();
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [usuario?.rol, location.pathname]);
 
-  if (!usuario) {
-    return <div className={styles.loading}>Verificando sesión...</div>;
-  }
-
-  if (cargando) {
-    return (
-      <div className={styles.page}>
-        <div className={styles.welcome}>
-          <div style={{ width: '100%' }}>
-            <div className={styles.skeletonTitle} style={{ width: '300px', height: '32px', marginBottom: '8px', background: '#e5e7eb', borderRadius: '6px' }} />
-            <div className={styles.skeletonDesc} style={{ width: '450px', height: '18px', background: '#e5e7eb', borderRadius: '4px' }} />
-          </div>
-        </div>
-
-        <div className={styles.statsGrid}>
-          <div className={styles.skeletonStatCard} style={{ height: '100px', background: '#e5e7eb', borderRadius: '12px' }} />
-          <div className={styles.skeletonStatCard} style={{ height: '100px', background: '#e5e7eb', borderRadius: '12px' }} />
-          <div className={styles.skeletonStatCard} style={{ height: '100px', background: '#e5e7eb', borderRadius: '12px' }} />
-          <div className={styles.skeletonStatCard} style={{ height: '100px', background: '#e5e7eb', borderRadius: '12px' }} />
-        </div>
-
-        <section className={styles.section}>
-          <div className={styles.sectionHeader}>
-            <div style={{ width: '200px', height: '24px', background: '#e5e7eb', borderRadius: '4px' }} />
-            <div style={{ width: '80px', height: '18px', background: '#e5e7eb', borderRadius: '4px' }} />
-          </div>
-
-          <div className={styles.comunicadosList}>
-            <div className={styles.skeletonCard} style={{ height: '90px', background: '#e5e7eb', borderRadius: '10px', marginBottom: '1rem' }} />
-            <div className={styles.skeletonCard} style={{ height: '90px', background: '#e5e7eb', borderRadius: '10px', marginBottom: '1rem' }} />
-            <div className={styles.skeletonCard} style={{ height: '90px', background: '#e5e7eb', borderRadius: '10px' }} />
-          </div>
-        </section>
-      </div>
-    );
-  }
+  if (!usuario) return <div className={styles.loading}>Verificando sesión...</div>;
+  if (cargando) return <div className={styles.skeletonLoading}>Cargando...</div>;
 
   return (
     <div className={styles.page}>
-      {/* Encabezado de bienvenida */}
       <div className={styles.welcome}>
         <div>
-          <h1 className={styles.welcomeTitle}>
-            {SALUDO()}, {usuario.nombre || 'Usuario'}
-          </h1>
-          <p className={styles.welcomeDesc}>
-            Bienvenido a la plataforma académica del CECyTE Plantel 1.
-          </p>
+          <h1 className={styles.welcomeTitle}>{SALUDO()}, {usuario.nombre || 'Usuario'}</h1>
+          <p className={styles.welcomeDesc}>Bienvenido a la plataforma académica del CECyTE Plantel 1.</p>
         </div>
         <div className={styles.welcomeBadge}>
           {usuario.rol === 'administrador' && 'Administrador'}
@@ -137,7 +91,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Tarjetas de estadísticas y accesos directos — según rol */}
       {usuario.rol === 'administrador' && (
         <div className={styles.statsGrid}>
           <StatCard label="Alumnos registrados" value={stats.alumnos} to="/usuarios" color="green" />
@@ -159,16 +112,15 @@ export default function DashboardPage() {
         <div className={styles.statsGrid}>
           <StatCard label="Materias cursando" value={stats.materias} to="/mis-calificaciones" color="green" />
           <StatCard label="Calificaciones registradas" value={stats.calificaciones} to="/mis-calificaciones" color="blue" />
+          <StatCard label="Mi Expediente" value="Ver" to={`/expediente/${usuario.id}`} color="gold" />
         </div>
       )}
 
-      {/* Comunicados recientes */}
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
           <h2 className={styles.sectionTitle}>Comunicados recientes</h2>
           <Link to="/comunicados" className={styles.verTodos}>Ver todos →</Link>
         </div>
-
         {comunicados.length === 0 ? (
           <div className={styles.empty}>No hay comunicados publicados aún.</div>
         ) : (
@@ -176,7 +128,6 @@ export default function DashboardPage() {
             {comunicados.map((c) => {
               const textoContenido = c?.contenido || '';
               const fechaSegura = c?.fecha_publicacion ? new Date(c.fecha_publicacion) : new Date();
-
               return (
                 <div key={c.id || Math.random()} className={styles.comunicadoCard}>
                   <div className={styles.comunicadoDot} />
@@ -186,14 +137,7 @@ export default function DashboardPage() {
                       {textoContenido.length > 120 ? textoContenido.slice(0, 120) + '...' : textoContenido}
                     </p>
                     <span className={styles.comunicadoMeta}>
-                      {!isNaN(fechaSegura)
-                        ? fechaSegura.toLocaleDateString('es-MX', {
-                            day: 'numeric',
-                            month: 'long',
-                            year: 'numeric',
-                          })
-                        : 'Fecha no disponible'}{' '}
-                      · {c.autor_nombre || ''} {c.autor_apellidos || ''}
+                      {!isNaN(fechaSegura) ? fechaSegura.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Fecha no disponible'} · {c.autor_nombre || ''} {c.autor_apellidos || ''}
                     </span>
                   </div>
                 </div>
@@ -215,7 +159,6 @@ function StatCard({ label, value, to, color }) {
     purple: { bg: 'var(--color-purple-light)', accent: 'var(--color-purple)' },
   };
   const c = colorMap[color] || colorMap.green;
-
   return (
     <Link to={to} className={styles.statCard} style={{ '--card-bg': c.bg, '--card-accent': c.accent }}>
       <span className={styles.statValue}>{value ?? '0'}</span>

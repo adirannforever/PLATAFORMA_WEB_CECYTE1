@@ -53,9 +53,7 @@ export default function CalificacionesPage() {
   const esAdmin = usuario.rol === 'administrador';
   const esDocente = usuario.rol === 'docente';
 
-  // ===== TODOS LOS HOOKS (SIEMPRE AL NIVEL SUPERIOR) =====
-
-  // Estados generales
+  // ===== TODOS LOS HOOKS =====
   const [datos, setDatos] = useState([]);
   const [periodos, setPeriodos] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -63,7 +61,6 @@ export default function CalificacionesPage() {
   const [exito, setExito] = useState('');
   const [toast, setToast] = useState('');
 
-  // Selector de grupos (para admin/docente)
   const [grupos, setGrupos] = useState([]);
   const [cargandoGrupos, setCargandoGrupos] = useState(false);
   const [filtros, setFiltros] = useState({
@@ -73,15 +70,12 @@ export default function CalificacionesPage() {
   });
   const [ciclos, setCiclos] = useState([]);
 
-  // Detalle de grupo (materias)
   const [materiasGrupo, setMateriasGrupo] = useState([]);
   const [cargandoMaterias, setCargandoMaterias] = useState(false);
   const [materiaExpandida, setMateriaExpandida] = useState(null);
 
-  // Búsqueda en tabla de calificaciones (para admin/docente)
   const [busquedaAlumno, setBusquedaAlumno] = useState('');
 
-  // Edición de calificaciones (para admin/docente)
   const [editando, setEditando] = useState(null);
   const [registrando, setRegistrando] = useState(null);
   const [valorNuevo, setValorNuevo] = useState('');
@@ -93,7 +87,7 @@ export default function CalificacionesPage() {
   const [guardandoColumna, setGuardandoColumna] = useState(false);
   const [camposVacios, setCamposVacios] = useState({});
 
-  // ===== useMemo para alumnosList (para admin/docente) =====
+  // ===== useMemo =====
   const porAlumno = useMemo(() => {
     const mapa = {};
     datos.forEach(row => {
@@ -130,8 +124,6 @@ export default function CalificacionesPage() {
   }, [porAlumno, busquedaAlumno]);
 
   // ===== EFECTOS =====
-
-  // Cargar ciclos (solo para admin/docente en vista de lista)
   useEffect(() => {
     if (esAlumno || materia_grupo_id || grupo_id) return;
     const cargarCiclos = async () => {
@@ -150,33 +142,33 @@ export default function CalificacionesPage() {
     cargarCiclos();
   }, [esAlumno, materia_grupo_id, grupo_id]);
 
-  // Cargar grupos con filtros (solo para admin/docente en vista de lista)
-  const cargarGrupos = useCallback(async () => {
-    if (esAlumno || materia_grupo_id || grupo_id) return;
-    setCargandoGrupos(true);
-    setError('');
-    try {
-      const params = {};
-      if (filtros.ciclo_id) params.ciclo_id = filtros.ciclo_id;
-      if (filtros.semestre) params.semestre = filtros.semestre;
-      if (filtros.turno_id) params.turno_id = filtros.turno_id;
+    const cargarGrupos = useCallback(async () => {
+      if (esAlumno || materia_grupo_id || grupo_id) return;
+      setCargandoGrupos(true);
+      setError('');
+      try {
+        const params = {};
+        // Solo admin envía ciclo_id
+        if (esAdmin && filtros.ciclo_id) params.ciclo_id = filtros.ciclo_id;
+        if (filtros.semestre) params.semestre = filtros.semestre;
+        if (filtros.turno_id) params.turno_id = filtros.turno_id;
+        if (esDocente) params.docente_id = usuario.id;
 
-      const res = await gruposService.getAll(params);
-      setGrupos(res.grupos || []);
-    } catch (e) {
-      console.error('Error cargando grupos:', e);
-      setError('Error al cargar los grupos.');
-    } finally {
-      setCargandoGrupos(false);
-    }
-  }, [filtros, esAlumno, materia_grupo_id, grupo_id]);
+        const res = await gruposService.getAll(params);
+        setGrupos(res.data || []); // <--- Cambio: res.grupos -> res.data
+      } catch (e) {
+        console.error('Error cargando grupos:', e);
+        setError('Error al cargar los grupos.');
+      } finally {
+        setCargandoGrupos(false);
+      }
+    }, [filtros, esAlumno, materia_grupo_id, grupo_id, esDocente, usuario.id, esAdmin]);
 
   useEffect(() => {
     if (esAlumno || materia_grupo_id || grupo_id) return;
     cargarGrupos();
   }, [cargarGrupos, esAlumno, materia_grupo_id, grupo_id]);
 
-  // Cargar materias del grupo (para vista de detalle de grupo)
   useEffect(() => {
     if (!grupo_id) return;
     const cargarMaterias = async () => {
@@ -196,7 +188,6 @@ export default function CalificacionesPage() {
     cargarMaterias();
   }, [grupo_id]);
 
-  // Cargar calificaciones (para admin/docente en vista de materia)
   const cargarCalificaciones = useCallback(async () => {
     if (!materia_grupo_id) return;
     setCargando(true);
@@ -224,7 +215,6 @@ export default function CalificacionesPage() {
     }
   }, [materia_grupo_id]);
 
-  // Cargar calificaciones del alumno
   const cargarMisCalificaciones = useCallback(async () => {
     setCargando(true);
     try {
@@ -239,7 +229,6 @@ export default function CalificacionesPage() {
     }
   }, []);
 
-  // Efecto principal para alumno
   useEffect(() => {
     if (esAlumno) {
       cargarMisCalificaciones();
@@ -251,7 +240,7 @@ export default function CalificacionesPage() {
     }
   }, [esAlumno, materia_grupo_id, cargarMisCalificaciones, cargarCalificaciones, cargarPeriodos]);
 
-  // ===== HANDLERS (compartidos) =====
+  // ===== HANDLERS =====
   const handleFiltroChange = (e) => {
     const { name, value } = e.target;
     setFiltros(prev => ({ ...prev, [name]: value }));
@@ -282,12 +271,15 @@ export default function CalificacionesPage() {
     setMateriaExpandida(materiaExpandida === id ? null : id);
   };
 
-  // ===== LÓGICA DE EDICIÓN (para admin/docente) =====
+  // ===== LÓGICA DE EDICIÓN =====
   const isParcialEditable = (parcial) => {
     if (esAlumno) return false;
     if (esAdmin) return true;
     const periodo = periodos.find(p => p.parcial === parcial);
-    if (!periodo) return false;
+    if (!periodo) {
+      // Si no hay períodos configurados, permitir edición para docentes (pruebas)
+      return esDocente;
+    }
     const hoy = new Date();
     const inicio = new Date(periodo.fecha_inicio);
     const fin = new Date(periodo.fecha_fin);
@@ -479,30 +471,21 @@ export default function CalificacionesPage() {
 
   const parcialesEditables = PARCIALES.filter(p => esAdmin || isParcialEditable(p));
 
-  // ============================================================
-  // ===== RENDERIZADO CONDICIONAL (DESPUÉS DE TODOS LOS HOOKS) =====
-  // ============================================================
-
-  // 1. VISTA DE ALUMNO (TABLA CON PROMEDIOS)
+  // ===== RENDERIZADO =====
   if (esAlumno) {
-    // Obtener información del grupo y ciclo desde el primer elemento de datos
     const primeraMateria = datos.length > 0 ? datos[0] : null;
     const grupoInfo = primeraMateria
       ? { grupo: primeraMateria.grupo, ciclo: primeraMateria.ciclo, semestre: primeraMateria.semestre }
       : { grupo: 'Sin grupo', ciclo: 'Sin ciclo', semestre: '' };
 
-    // Procesar materias y calcular promedios (convirtiendo a número)
     const materiasConPromedio = datos.map(m => {
-      // Convertir cada parcial a número, si es null/undefined queda null
       const p1 = m.parciales[1] !== null && m.parciales[1] !== undefined ? parseFloat(m.parciales[1]) : null;
       const p2 = m.parciales[2] !== null && m.parciales[2] !== undefined ? parseFloat(m.parciales[2]) : null;
       const p3 = m.parciales[3] !== null && m.parciales[3] !== undefined ? parseFloat(m.parciales[3]) : null;
-
       const valores = [p1, p2, p3].filter(v => v !== null && !isNaN(v));
       const promedio = valores.length > 0
         ? Math.round((valores.reduce((a, b) => a + b, 0) / valores.length) * 10) / 10
         : null;
-
       return {
         ...m,
         parciales: { 1: p1, 2: p2, 3: p3 },
@@ -510,11 +493,8 @@ export default function CalificacionesPage() {
       };
     });
 
-    // Calcular promedios por parcial y promedio de promedios
-    const totalMaterias = materiasConPromedio.length;
     let sumP1 = 0, sumP2 = 0, sumP3 = 0, countP1 = 0, countP2 = 0, countP3 = 0;
     let sumPromedios = 0, countPromedios = 0;
-
     materiasConPromedio.forEach(m => {
       if (m.parciales[1] !== null) { sumP1 += m.parciales[1]; countP1++; }
       if (m.parciales[2] !== null) { sumP2 += m.parciales[2]; countP2++; }
@@ -587,9 +567,7 @@ export default function CalificacionesPage() {
                       return (
                         <td key={p} className={styles.td} style={{ textAlign: 'center' }}>
                           {cal !== null && !isNaN(cal) ? (
-                            <span style={{ color: COLOR_CALIF(cal), fontWeight: 700 }}>
-                              {cal}
-                            </span>
+                            <span style={{ color: COLOR_CALIF(cal), fontWeight: 700 }}>{cal}</span>
                           ) : (
                             <span style={{ color: '#94a3b8' }}>—</span>
                           )}
@@ -598,17 +576,13 @@ export default function CalificacionesPage() {
                     })}
                     <td className={styles.td} style={{ textAlign: 'center', fontWeight: 700 }}>
                       {m.promedio !== null && !isNaN(m.promedio) ? (
-                        <span style={{ color: COLOR_CALIF(m.promedio) }}>
-                          {m.promedio.toFixed(1)}
-                        </span>
+                        <span style={{ color: COLOR_CALIF(m.promedio) }}>{m.promedio.toFixed(1)}</span>
                       ) : (
                         <span style={{ color: '#94a3b8' }}>—</span>
                       )}
                     </td>
                   </tr>
                 ))}
-
-                {/* FILA DE PROMEDIOS POR PARCIAL Y PROMEDIO GENERAL */}
                 <tr className={styles.tr} style={{ background: '#e6f0ea', fontWeight: 'bold' }}>
                   <td className={styles.td} style={{ fontWeight: 700, color: '#1A6B35' }}>Promedio</td>
                   <td className={styles.td} style={{ textAlign: 'center' }}>
@@ -632,7 +606,6 @@ export default function CalificacionesPage() {
     );
   }
 
-  // 2. VISTA DE DETALLE DE GRUPO (materias)
   if (grupo_id) {
     return (
       <div className={styles.page}>
@@ -690,7 +663,6 @@ export default function CalificacionesPage() {
     );
   }
 
-  // 3. VISTA DE DETALLE DE CALIFICACIONES DE UNA MATERIA (admin/docente)
   if (materia_grupo_id) {
     return (
       <div className={styles.page}>
@@ -708,7 +680,6 @@ export default function CalificacionesPage() {
           </div>
         </div>
 
-        {/* Búsqueda de alumnos */}
         <div className={styles.busquedaAlumnoContainer}>
           <input
             type="text"
@@ -897,7 +868,7 @@ export default function CalificacionesPage() {
     );
   }
 
-  // 4. VISTA PRINCIPAL: SELECCIONAR GRUPO (admin/docente)
+  // 4. VISTA PRINCIPAL (admin/docente)
   return (
     <div className={styles.page}>
       <div className={styles.pageHeader}>
@@ -918,13 +889,22 @@ export default function CalificacionesPage() {
               name="ciclo_id"
               value={filtros.ciclo_id}
               onChange={handleFiltroChange}
+              disabled={esDocente}
             >
-              <option value="">Todos</option>
-              {ciclos.map(c => (
-                <option key={c.id} value={c.id}>
-                  {c.nombre} {c.activo ? '(Activo)' : ''}
+              {esDocente ? (
+                <option value={filtros.ciclo_id}>
+                  {ciclos.find(c => c.id === parseInt(filtros.ciclo_id))?.nombre || 'Ciclo activo'}
                 </option>
-              ))}
+              ) : (
+                <>
+                  <option value="">Todos</option>
+                  {ciclos.map(c => (
+                    <option key={c.id} value={c.id}>
+                      {c.nombre} {c.activo ? '(Activo)' : ''}
+                    </option>
+                  ))}
+                </>
+              )}
             </select>
           </div>
 

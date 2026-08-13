@@ -91,10 +91,10 @@ export default function ReportesPage() {
         // Admin y docente: cargar grupos y alumnos
         const [gruposRes, alumnosRes] = await Promise.all([
           gruposService.getAll(),
-          usuariosService.getAll({ rol: 'alumno' }),
+          isAdmin ? usuariosService.getAll({ rol: 'alumno' }) : Promise.resolve({ usuarios: [] }),
         ]);
         setGrupos(gruposRes.data || []);
-        setAlumnos(alumnosRes.usuarios || []);
+        setAlumnos(alumnosRes?.usuarios || []);
       } catch (e) {
         console.error('Error cargando catálogos:', e);
         setError('No se pudieron cargar los datos');

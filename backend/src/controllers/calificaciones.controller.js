@@ -1,6 +1,5 @@
 import { query } from '../config/db.js';
 
-// Verificar si un docente es responsable de una materia_grupo
 const docenteOwnsMateriaGrupo = async (materia_grupo_id, docente_id) => {
   const result = await query(
     `SELECT id FROM materias_grupo WHERE id = $1 AND docente_id = $2 AND activa = TRUE`,
@@ -9,12 +8,10 @@ const docenteOwnsMateriaGrupo = async (materia_grupo_id, docente_id) => {
   return result.rows.length > 0;
 };
 
-// Obtener las calificaciones del alumno autenticado
 export const misCalificaciones = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // Obtener el alumno y su grupo actual
     const alumnoResult = await query(
       `SELECT a.id AS alumno_id, a.grupo_actual_id, a.semestre_actual
        FROM alumnos a
@@ -32,7 +29,6 @@ export const misCalificaciones = async (req, res) => {
       return res.status(400).json({ success: false, message: 'El alumno no tiene un grupo asignado' });
     }
 
-    // Obtener todas las materias del grupo
     const materiasResult = await query(
       `SELECT 
          mg.id AS materia_grupo_id,
@@ -56,7 +52,6 @@ export const misCalificaciones = async (req, res) => {
       return res.json({ success: true, calificaciones: [], materias: [] });
     }
 
-    // Obtener calificaciones del alumno en esas materias
     const califResult = await query(
       `SELECT 
          c.materia_grupo_id,
@@ -68,7 +63,6 @@ export const misCalificaciones = async (req, res) => {
       [alumno_id]
     );
 
-    // Mapear calificaciones por materia_grupo_id
     const califMap = {};
     califResult.rows.forEach(row => {
       if (!califMap[row.materia_grupo_id]) {
@@ -77,7 +71,6 @@ export const misCalificaciones = async (req, res) => {
       califMap[row.materia_grupo_id][row.parcial] = row.calificacion;
     });
 
-    // Construir respuesta con todas las materias y sus calificaciones (o null)
     const resultado = materias.map(m => {
       const califs = califMap[m.materia_grupo_id] || {};
       return {
@@ -101,7 +94,6 @@ export const misCalificaciones = async (req, res) => {
   }
 };
 
-// Obtener calificaciones de todos los alumnos en una materia_grupo específica
 export const calificacionesPorMateria = async (req, res) => {
   const { materia_grupo_id } = req.params;
 
@@ -142,7 +134,6 @@ export const calificacionesPorMateria = async (req, res) => {
   }
 };
 
-// Registrar una calificación para un alumno en una materia_grupo
 export const registrarCalificacion = async (req, res) => {
   const { alumno_id, materia_grupo_id, parcial, calificacion } = req.body;
 
@@ -172,7 +163,6 @@ export const registrarCalificacion = async (req, res) => {
       }
     }
 
-    // Obtener el ciclo_id de la materia_grupo
     const materiaInfo = await query(
       `SELECT ciclo_id FROM materias_grupo WHERE id = $1 AND activa = TRUE`,
       [materia_grupo_id]
@@ -182,16 +172,14 @@ export const registrarCalificacion = async (req, res) => {
     }
     const cicloId = materiaInfo.rows[0].ciclo_id;
 
-    // Verificar que el alumno existe en la tabla alumnos
     const alumnoCheck = await query('SELECT id FROM alumnos WHERE id = $1', [alumno_id]);
     if (!alumnoCheck.rows[0]) {
       return res.status(400).json({
         success: false,
-        message: 'El alumno no existe o no está registrado correctamente. Verifica que el usuario tenga rol de alumno.',
+        message: 'El alumno no existe o no está registrado correctamente.',
       });
     }
 
-    // Verificar que no exista duplicado
     const duplicado = await query(
       `SELECT id FROM calificaciones 
        WHERE alumno_id = $1 AND materia_grupo_id = $2 AND parcial = $3`,
@@ -200,7 +188,7 @@ export const registrarCalificacion = async (req, res) => {
     if (duplicado.rows.length > 0) {
       return res.status(409).json({
         success: false,
-        message: 'Ya existe una calificación para este parcial. Si deseas modificarla, edita la celda correspondiente.',
+        message: 'Ya existe una calificación para este parcial. Edita la celda correspondiente.',
       });
     }
 
@@ -223,7 +211,6 @@ export const registrarCalificacion = async (req, res) => {
   }
 };
 
-// Actualizar una calificación existente
 export const actualizarCalificacion = async (req, res) => {
   const { calificacion } = req.body;
   const { id } = req.params;
@@ -268,7 +255,6 @@ export const actualizarCalificacion = async (req, res) => {
   }
 };
 
-// Obtener períodos de evaluación para un ciclo (basado en materia_grupo_id)
 export const getPeriodosEvaluacion = async (req, res) => {
   const { materia_grupo_id } = req.params;
 

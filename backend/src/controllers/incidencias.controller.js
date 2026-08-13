@@ -1,10 +1,39 @@
 import { query } from '../config/db.js';
 
+
+const docenteTieneAccesoAlAlumno = async (docenteId, alumnoId) => {
+  const result = await query(
+    `SELECT 1 
+     FROM materias_grupo mg
+     JOIN alumnos a ON a.grupo_actual_id = mg.grupo_id
+     WHERE mg.docente_id = $1 AND a.id = $2 AND mg.activa = true
+     LIMIT 1`,
+    [docenteId, alumnoId]
+  );
+  return result.rows.length > 0;
+};
+
+
+const docenteTieneAccesoAIncidencia = async (docenteId, incidenciaId) => {
+  const result = await query(
+    `SELECT 1 
+     FROM incidencias i
+     JOIN alumnos a ON a.id = i.alumno_id
+     JOIN materias_grupo mg ON mg.grupo_id = a.grupo_actual_id
+     WHERE mg.docente_id = $1 AND i.id = $2 AND mg.activa = true
+     LIMIT 1`,
+    [docenteId, incidenciaId]
+  );
+  return result.rows.length > 0;
+};
+
 export const getIncidencias = async (req, res) => {
   try {
     const { alumno_id, tipo, subtipo, resuelta, fecha_desde, fecha_hasta, grupo_letra, page = 1, limit = 10 } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const limitNum = parseInt(limit);
+    const userRole = req.user.rol;
+    const userId = req.user.id;
 
     let sql = `
       SELECT 
@@ -34,6 +63,16 @@ export const getIncidencias = async (req, res) => {
     `;
     const params = [];
     const conditions = [];
+
+    
+    if (userRole === 'docente') {
+      conditions.push(`a.grupo_actual_id IN (
+        SELECT DISTINCT mg.grupo_id 
+        FROM materias_grupo mg 
+        WHERE mg.docente_id = $${params.length + 1} AND mg.activa = true
+      )`);
+      params.push(userId);
+    }
 
     if (alumno_id) {
       conditions.push(`i.alumno_id = $${params.length + 1}`);
@@ -97,6 +136,19 @@ export const getIncidencias = async (req, res) => {
 export const getIncidenciasByAlumno = async (req, res) => {
   try {
     const { alumno_id } = req.params;
+    const userRole = req.user.rol;
+    const userId = req.user.id;
+
+    
+    if (userRole === 'docente') {
+      const hasAccess = await docenteTieneAccesoAlAlumno(userId, alumno_id);
+      if (!hasAccess) {
+        return res.status(403).json({ success: false, message: 'Acceso denegado' });
+      }
+    } else if (userRole !== 'administrador') {
+      return res.status(403).json({ success: false, message: 'Acceso denegado' });
+    }
+
     const result = await query(
       `SELECT 
         i.id, i.tipo, i.subtipo, i.descripcion, i.fecha, i.resuelta, i.resolucion,
@@ -121,6 +173,25 @@ export const crearIncidencia = async (req, res) => {
     return res.status(400).json({ success: false, message: 'Alumno, tipo y descripción son requeridos' });
   }
   try {
+    const userRole = req.user.rol;
+    const userId = req.user.id;
+
+    
+    const alumnoCheck = await query('SELECT id, grupo_actual_id FROM alumnos WHERE id = $1', [alumno_id]);
+    if (!alumnoCheck.rows[0]) {
+      return res.status(404).json({ success: false, message: 'Alumno no encontrado' });
+    }
+
+    
+    if (userRole === 'docente') {
+      const hasAccess = await docenteTieneAccesoAlAlumno(userId, alumno_id);
+      if (!hasAccess) {
+        return res.status(403).json({ success: false, message: 'No tienes acceso a este alumno' });
+      }
+    } else if (userRole !== 'administrador') {
+      return res.status(403).json({ success: false, message: 'Acceso denegado' });
+    }
+
     const tiposValidos = ['conducta','academica','asistencia','citatorio_tutor','felicitacion','otro'];
     if (!tiposValidos.includes(tipo)) {
       return res.status(400).json({ success: false, message: 'Tipo inválido' });
@@ -128,7 +199,7 @@ export const crearIncidencia = async (req, res) => {
     const result = await query(
       `INSERT INTO incidencias (alumno_id, ciclo_id, tipo, subtipo, descripcion, registrado_por, fecha)
        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [alumno_id, ciclo_id || null, tipo, subtipo || null, descripcion, req.user.id, fecha || new Date().toISOString().split('T')[0]]
+      [alumno_id, ciclo_id || null, tipo, subtipo || null, descripcion, userId, fecha || new Date().toISOString().split('T')[0]]
     );
     return res.status(201).json({ success: true, data: result.rows[0] });
   } catch (err) {
@@ -141,9 +212,25 @@ export const actualizarIncidencia = async (req, res) => {
   const { id } = req.params;
   const { tipo, subtipo, descripcion, fecha } = req.body;
   try {
-    if (req.user.rol !== 'administrador') {
+    const userRole = req.user.rol;
+    const userId = req.user.id;
+
+    
+    const incidencia = await query('SELECT alumno_id FROM incidencias WHERE id = $1', [id]);
+    if (!incidencia.rows[0]) {
+      return res.status(404).json({ success: false, message: 'Incidencia no encontrada' });
+    }
+
+    
+    if (userRole === 'docente') {
+      const hasAccess = await docenteTieneAccesoAlAlumno(userId, incidencia.rows[0].alumno_id);
+      if (!hasAccess) {
+        return res.status(403).json({ success: false, message: 'No tienes acceso a esta incidencia' });
+      }
+    } else if (userRole !== 'administrador') {
       return res.status(403).json({ success: false, message: 'Acceso denegado' });
     }
+
     const fields = [];
     const values = [];
     let idx = 1;
@@ -174,9 +261,25 @@ export const resolverIncidencia = async (req, res) => {
     return res.status(400).json({ success: false, message: 'La resolución es requerida' });
   }
   try {
-    if (req.user.rol !== 'administrador') {
+    const userRole = req.user.rol;
+    const userId = req.user.id;
+
+    
+    const incidencia = await query('SELECT alumno_id FROM incidencias WHERE id = $1', [id]);
+    if (!incidencia.rows[0]) {
+      return res.status(404).json({ success: false, message: 'Incidencia no encontrada' });
+    }
+
+    
+    if (userRole === 'docente') {
+      const hasAccess = await docenteTieneAccesoAlAlumno(userId, incidencia.rows[0].alumno_id);
+      if (!hasAccess) {
+        return res.status(403).json({ success: false, message: 'No tienes acceso a esta incidencia' });
+      }
+    } else if (userRole !== 'administrador') {
       return res.status(403).json({ success: false, message: 'Acceso denegado' });
     }
+
     const result = await query(
       `UPDATE incidencias SET resuelta = TRUE, resolucion = $1 WHERE id = $2 RETURNING *`,
       [resolucion, id]
@@ -194,6 +297,7 @@ export const resolverIncidencia = async (req, res) => {
 export const eliminarIncidencia = async (req, res) => {
   const { id } = req.params;
   try {
+    
     if (req.user.rol !== 'administrador') {
       return res.status(403).json({ success: false, message: 'Acceso denegado' });
     }

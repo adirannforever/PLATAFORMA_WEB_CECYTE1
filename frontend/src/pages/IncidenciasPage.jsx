@@ -134,26 +134,56 @@ export default function IncidenciasPage() {
     setConfirmModal({ open: false, message: '', onConfirm: null });
   };
 
+  // Cargar catálogos según rol
   useEffect(() => {
     const cargarCatalogos = async () => {
       try {
-        const [alumnosRes, gruposRes, espRes, ciclosRes] = await Promise.all([
-          usuariosService.getAll({ rol: 'alumno' }),
+        // Catálogos comunes
+        const [gruposRes, espRes, ciclosRes] = await Promise.all([
           catalogosService.getGrupos(),
           catalogosService.getEspecialidades(),
           catalogosService.getCiclos(),
         ]);
-        setAlumnos(alumnosRes.usuarios || []);
         setGrupos(gruposRes.data || []);
         setEspecialidades(espRes.data || []);
         setCiclos(ciclosRes.data || []);
+
+        // Cargar alumnos según rol (con manejo de error 403)
+        if (esAdmin) {
+          try {
+            const res = await usuariosService.getAll({ rol: 'alumno' });
+            setAlumnos(res.usuarios || []);
+          } catch (err) {
+            if (err.response?.status === 403) {
+              console.warn('No se pueden cargar todos los alumnos (403).');
+              setAlumnos([]);
+            } else {
+              throw err;
+            }
+          }
+        } else if (esDocente) {
+          // Intentar cargar alumnos del docente (puede fallar si backend no soporta docente_id)
+          try {
+            const res = await usuariosService.getAll({ rol: 'alumno', docente_id: usuario.id });
+            setAlumnos(res.usuarios || []);
+          } catch (err) {
+            if (err.response?.status === 403) {
+              console.warn('El docente no tiene permiso para listar alumnos. Se cargarán mediante búsqueda.');
+              setAlumnos([]);
+            } else {
+              throw err;
+            }
+          }
+        }
       } catch (e) {
         console.error('Error cargando catálogos:', e);
+        setError('No se pudieron cargar los datos necesarios. Algunas funcionalidades pueden estar limitadas.');
       }
     };
     cargarCatalogos();
-  }, []);
+  }, [esAdmin, esDocente, usuario.id]);
 
+  // Cargar incidencias con filtros según rol
   const cargarIncidencias = useCallback(async () => {
     setCargando(true);
     setError('');
@@ -170,6 +200,7 @@ export default function IncidenciasPage() {
       if (filtroFechaHasta) params.fecha_hasta = filtroFechaHasta;
       if (busqueda) params.search = busqueda;
       if (filtroGrupo) params.grupo_letra = filtroGrupo;
+      if (esDocente) params.docente_id = usuario.id;
 
       const res = await incidenciasService.getAll(params);
       setIncidencias(res.data || []);
@@ -177,7 +208,11 @@ export default function IncidenciasPage() {
       setTotalPaginas(res.pagination?.pages || 1);
     } catch (e) {
       console.error('Error cargando incidencias:', e);
-      setError('No se pudieron cargar las incidencias.');
+      if (e.response?.status === 403) {
+        setError('No tienes permiso para ver incidencias. Contacta al administrador.');
+      } else {
+        setError('No se pudieron cargar las incidencias.');
+      }
     } finally {
       setCargando(false);
     }
@@ -191,12 +226,15 @@ export default function IncidenciasPage() {
     filtroFechaHasta,
     busqueda,
     filtroGrupo,
+    esDocente,
+    usuario.id,
   ]);
 
   useEffect(() => {
     cargarIncidencias();
   }, [cargarIncidencias]);
 
+  // Búsqueda de alumnos (para modal) - con filtro por docente si corresponde
   const buscarAlumnos = useCallback(async () => {
     setBuscandoAlumnos(true);
     try {
@@ -205,14 +243,19 @@ export default function IncidenciasPage() {
       if (filtroGrupo) params.grupo_letra = filtroGrupo;
       if (filtroEspecialidad) params.especialidad_id = filtroEspecialidad;
       if (filtroSemestre) params.semestre = filtroSemestre;
+      if (esDocente) params.docente_id = usuario.id;
+
       const res = await usuariosService.getAll(params);
       setAlumnosFiltrados(res.usuarios || []);
     } catch (e) {
       console.error('Error buscando alumnos:', e);
+      if (e.response?.status === 403) {
+        setError('No tienes permiso para buscar alumnos.');
+      }
     } finally {
       setBuscandoAlumnos(false);
     }
-  }, [busquedaAlumno, filtroGrupo, filtroEspecialidad, filtroSemestre]);
+  }, [busquedaAlumno, filtroGrupo, filtroEspecialidad, filtroSemestre, esDocente, usuario.id]);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -373,7 +416,6 @@ export default function IncidenciasPage() {
       <div className={styles.pageHeader}>
         <div>
           <h1 className={styles.title}>Incidencias</h1>
-          <p className={styles.subtitle}>{totalRegistros} registro(s)</p>
         </div>
         {(esAdmin || esDocente) && (
           <button className={styles.btnPrimary} onClick={handleAbrirCrear}>
@@ -406,6 +448,7 @@ export default function IncidenciasPage() {
                 className={styles.select}
                 value={filtroAlumno}
                 onChange={(e) => setFiltroAlumno(e.target.value)}
+                disabled={!esAdmin} // Solo admin puede filtrar por alumno (docente ya tiene filtro por sus alumnos)
               >
                 <option value="">Todos</option>
                 {alumnos.map((a) => (

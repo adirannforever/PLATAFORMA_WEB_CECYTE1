@@ -1,42 +1,69 @@
 import { query } from '../config/db.js';
 
-// Obtener grupos con filtros
 export const getGrupos = async (req, res) => {
   try {
-    const { ciclo_id, semestre, especialidad_id, turno_id } = req.query;
+    const { ciclo_id, semestre, turno_id, docente_id } = req.query;
+    console.log(' getGrupos - Parámetros recibidos:', req.query);
 
     let sql = `
-      SELECT g.id, g.nombre, g.semestre, g.letra,
-             c.id AS ciclo_id, c.nombre AS ciclo_nombre,
-             e.id AS especialidad_id, e.nombre AS especialidad_nombre,
-             t.id AS turno_id, t.nombre AS turno_nombre,
-             u.id AS tutor_id, u.nombre AS tutor_nombre, u.apellidos AS tutor_apellidos,
-             g.activo
+      SELECT g.id, g.nombre, g.semestre, g.letra, g.activo,
+             c.id AS ciclo_id, c.nombre AS ciclo,
+             e.id AS especialidad_id, e.nombre AS especialidad, e.clave AS especialidad_clave,
+             t.id AS turno_id, t.nombre AS turno,
+             u.id AS tutor_id, u.nombre AS tutor_nombre, u.apellidos AS tutor_apellidos
       FROM grupos g
-      JOIN ciclos_escolares c ON g.ciclo_id = c.id
-      JOIN especialidades e ON g.especialidad_id = e.id
-      JOIN turnos t ON g.turno_id = t.id
-      LEFT JOIN usuarios u ON g.tutor_id = u.id
+      JOIN ciclos_escolares c ON c.id = g.ciclo_id
+      JOIN especialidades e ON e.id = g.especialidad_id
+      JOIN turnos t ON t.id = g.turno_id
+      LEFT JOIN usuarios u ON u.id = g.tutor_id
       WHERE g.activo = TRUE
     `;
     const params = [];
 
+    // Si es docente y no se envía ciclo_id, filtrar por el ciclo activo automáticamente
+    if (!ciclo_id && req.user?.rol === 'docente') {
+      const cicloActivo = await query(
+        'SELECT id FROM ciclos_escolares WHERE activo = TRUE LIMIT 1'
+      );
+      if (cicloActivo.rows.length > 0) {
+        const cicloId = cicloActivo.rows[0].id;
+        params.push(cicloId);
+        sql += ` AND g.ciclo_id = $${params.length}`;
+        console.log(` Ciclo activo: ${cicloId}`);
+      }
+    }
+
     if (ciclo_id) { params.push(ciclo_id); sql += ` AND g.ciclo_id = $${params.length}`; }
     if (semestre) { params.push(semestre); sql += ` AND g.semestre = $${params.length}`; }
-    if (especialidad_id) { params.push(especialidad_id); sql += ` AND g.especialidad_id = $${params.length}`; }
     if (turno_id) { params.push(turno_id); sql += ` AND g.turno_id = $${params.length}`; }
 
-    sql += ` ORDER BY g.semestre, g.letra, t.nombre`;
+    // FILTRO POR DOCENTE
+    if (docente_id) {
+      const docenteId = parseInt(docente_id);
+      params.push(docenteId);
+      sql += ` AND g.id IN (
+        SELECT DISTINCT mg.grupo_id 
+        FROM materias_grupo mg 
+        WHERE mg.docente_id = $${params.length} 
+        AND mg.activa = TRUE
+      )`;
+    }
+
+    sql += ' ORDER BY g.semestre, g.letra, t.nombre';
+
+    console.log(' SQL final:', sql);
+    console.log(' Params:', params);
 
     const result = await query(sql, params);
-    return res.json({ success: true, grupos: result.rows });
+    console.log(` Resultados: ${result.rows.length} grupos`);
+
+    return res.json({ success: true, data: result.rows });
   } catch (err) {
     console.error('Error en getGrupos:', err);
     return res.status(500).json({ success: false, message: 'Error interno.' });
   }
 };
 
-// Obtener un grupo por ID (con detalles)
 export const getGrupoById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -65,7 +92,6 @@ export const getGrupoById = async (req, res) => {
   }
 };
 
-// Obtener materias de un grupo
 export const getMateriasDeGrupo = async (req, res) => {
   try {
     const { id } = req.params;
@@ -90,65 +116,56 @@ export const getMateriasDeGrupo = async (req, res) => {
 export const getMaterias = async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await query(
-      `SELECT 
-        mg.id,
-        mg.grupo_id,
-        mg.materia_catalogo_id,
-        mg.docente_id,
+    const userRole = req.user.rol;
+    const userId = req.user.id;
+
+    const grupoCheck = await query('SELECT id FROM grupos WHERE id = $1', [id]);
+    if (!grupoCheck.rows[0]) {
+      return res.status(404).json({ success: false, message: 'Grupo no encontrado' });
+    }
+
+    let sql = `
+      SELECT 
+        mg.id, 
         mc.nombre AS materia_nombre,
-        mc.clave AS clave,
-        mc.semestre,
-        mc.tipo,
+        mc.clave,
         mc.horas_semana,
         u.nombre AS docente_nombre,
         u.apellidos AS docente_apellidos
       FROM materias_grupo mg
       JOIN materias_catalogo mc ON mc.id = mg.materia_catalogo_id
       LEFT JOIN usuarios u ON u.id = mg.docente_id
-      WHERE mg.grupo_id = $1 AND mg.activa = TRUE`,
-      [id]
-    );
+      WHERE mg.grupo_id = $1 AND mg.activa = true
+    `;
+    const params = [id];
 
-    // Formatear respuesta para que coincida con lo que espera el frontend
-    const materias = result.rows.map(row => ({
-      id: row.id,
-      materia_grupo_id: row.id,
-      materia_nombre: row.materia_nombre,
-      nombre: row.materia_nombre,
-      clave: row.clave,
-      semestre: row.semestre,
-      tipo: row.tipo,
-      horas_semana: row.horas_semana,
-      docente_id: row.docente_id,
-      docente_nombre: row.docente_nombre,
-      docente_apellidos: row.docente_apellidos,
-      apellidos: row.docente_apellidos,
-    }));
+    if (userRole === 'docente') {
+      sql += ` AND mg.docente_id = $2`;
+      params.push(userId);
+    }
 
-    return res.json({
-      success: true,
-      materias, //  El frontend espera 'materias'
-    });
-  } catch (err) {
-    console.error('Error en getMaterias:', err);
+    sql += ' ORDER BY mc.nombre';
+
+    const result = await query(sql, params);
+
+    if (userRole === 'docente' && result.rows.length === 0) {
+      return res.json({
+        success: true,
+        materias: [],
+        message: 'No tienes materias asignadas en este grupo.'
+      });
+    }
+
+    return res.json({ success: true, materias: result.rows });
+  } catch (error) {
+    console.error('Error en getMaterias:', error);
     return res.status(500).json({ success: false, message: 'Error interno' });
   }
 };
 
 export const crearGrupo = async (req, res) => {
   const { ciclo_id, especialidad_id, turno_id, semestre, letra, tutor_id } = req.body;
-  const tutorYaAsignado = async (tutor_id, ciclo_id, grupo_id_excluir = null) => {
-  let sql = `
-    SELECT id FROM grupos 
-    WHERE tutor_id = $1 AND ciclo_id = $2 AND id != COALESCE($3, 0)
-  `;
-  const params = [tutor_id, ciclo_id, grupo_id_excluir || 0];
-  const result = await query(sql, params);
-  return result.rows.length > 0;
-        };
 
-  // Validaciones básicas
   if (!ciclo_id || !especialidad_id || !turno_id || !semestre || !letra) {
     return res.status(400).json({
       success: false,
@@ -165,7 +182,6 @@ export const crearGrupo = async (req, res) => {
   }
 
   try {
-    // Verificar que no exista duplicado (mismo ciclo, semestre, letra, turno)
     const existe = await query(
       `SELECT id FROM grupos 
        WHERE ciclo_id = $1 AND semestre = $2 AND letra = $3 AND turno_id = $4`,
@@ -196,19 +212,16 @@ export const crearGrupo = async (req, res) => {
   }
 };
 
-// Obtener alumnos de un grupo con su promedio global
 export const getAlumnosDeGrupo = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Obtener el ciclo_id del grupo
     const grupoInfo = await query('SELECT ciclo_id FROM grupos WHERE id = $1', [id]);
     if (!grupoInfo.rows[0]) {
       return res.status(404).json({ success: false, message: 'Grupo no encontrado.' });
     }
     const cicloId = grupoInfo.rows[0].ciclo_id;
 
-    // Obtener alumnos desde historial_grupos_alumno
     const alumnosResult = await query(
       `SELECT a.id AS alumno_id, u.id AS usuario_id, u.nombre, u.apellidos,
               a.matricula, h.semestre
@@ -220,7 +233,6 @@ export const getAlumnosDeGrupo = async (req, res) => {
       [id, cicloId]
     );
 
-    // Calcular promedio global para cada alumno (todas sus calificaciones ordinarias)
     const alumnosConPromedio = [];
     for (const alumno of alumnosResult.rows) {
       const calificaciones = await query(
@@ -251,17 +263,7 @@ export const getAlumnosDeGrupo = async (req, res) => {
 export const actualizarGrupo = async (req, res) => {
   const { id } = req.params;
   const { ciclo_id, especialidad_id, turno_id, semestre, letra, tutor_id, activo } = req.body;
-  const tutorYaAsignado = async (tutor_id, ciclo_id, grupo_id_excluir = null) => {
-  let sql = `
-    SELECT id FROM grupos 
-    WHERE tutor_id = $1 AND ciclo_id = $2 AND id != COALESCE($3, 0)
-  `;
-  const params = [tutor_id, ciclo_id, grupo_id_excluir || 0];
-  const result = await query(sql, params);
-  return result.rows.length > 0;
-    };
 
-  // Validaciones básicas
   if (!ciclo_id && !especialidad_id && !turno_id && !semestre && !letra && tutor_id === undefined && activo === undefined) {
     return res.status(400).json({
       success: false,
@@ -269,30 +271,25 @@ export const actualizarGrupo = async (req, res) => {
     });
   }
 
-  // Validar semestre si viene
   if (semestre !== undefined && (semestre < 1 || semestre > 6)) {
     return res.status(400).json({ success: false, message: 'Semestre debe ser 1-6.' });
   }
 
-  // Validar letra si viene
   if (letra !== undefined && !['A','B','C','D'].includes(letra.toUpperCase())) {
     return res.status(400).json({ success: false, message: 'Letra debe ser A, B, C o D.' });
   }
 
   try {
-    // Verificar que el grupo existe
     const grupoActual = await query('SELECT * FROM grupos WHERE id = $1', [id]);
     if (!grupoActual.rows[0]) {
       return res.status(404).json({ success: false, message: 'Grupo no encontrado.' });
     }
 
-    // Si se actualiza combinación que podría causar duplicado, verificar
     const nuevoCiclo = ciclo_id || grupoActual.rows[0].ciclo_id;
     const nuevoSemestre = semestre !== undefined ? semestre : grupoActual.rows[0].semestre;
     const nuevaLetra = letra ? letra.toUpperCase() : grupoActual.rows[0].letra;
     const nuevoTurno = turno_id || grupoActual.rows[0].turno_id;
 
-    // Verificar duplicado (excluyendo el propio grupo)
     const duplicado = await query(
       `SELECT id FROM grupos 
        WHERE ciclo_id = $1 AND semestre = $2 AND letra = $3 AND turno_id = $4 AND id != $5`,
@@ -304,18 +301,7 @@ export const actualizarGrupo = async (req, res) => {
         message: 'Ya existe otro grupo con esa combinación de ciclo, semestre, letra y turno.'
       });
     }
-    // Validar que el tutor no esté ya asignado a otro grupo en el mismo ciclo
-    if (tutor_id) {
-        const yaAsignado = await tutorYaAsignado(tutor_id, ciclo_id);
-        if (yaAsignado) {
-            return res.status(400).json({
-            success: false,
-            message: 'Este tutor ya está asignado a otro grupo en el mismo ciclo escolar.'
-            });
-        }
-        }
 
-    // Construir SET dinámico
     const fields = [];
     const values = [];
     let idx = 1;
@@ -327,20 +313,7 @@ export const actualizarGrupo = async (req, res) => {
     if (letra !== undefined) { fields.push(`letra = $${idx++}`); values.push(letra.toUpperCase()); }
     if (tutor_id !== undefined) { fields.push(`tutor_id = $${idx++}`); values.push(tutor_id || null); }
     if (activo !== undefined) { fields.push(`activo = $${idx++}`); values.push(activo); }
-    if (tutor_id !== undefined || ciclo_id !== undefined) {
-    const tutorIdFinal = tutor_id !== undefined ? tutor_id : grupoActual.tutor_id;
-    const cicloIdFinal = ciclo_id !== undefined ? ciclo_id : grupoActual.ciclo_id;
-  
-  if (tutorIdFinal) {
-            const yaAsignado = await tutorYaAsignado(tutorIdFinal, cicloIdFinal, id);
-            if (yaAsignado) {
-            return res.status(400).json({
-                success: false,
-                message: 'Este tutor ya está asignado a otro grupo en el mismo ciclo escolar.'
-            });
-            }
-        }
-        }
+
     values.push(id);
     const sql = `UPDATE grupos SET ${fields.join(', ')} WHERE id = $${idx} RETURNING *`;
 
@@ -355,6 +328,7 @@ export const actualizarGrupo = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Error interno al actualizar grupo.' });
   }
 };
+
 export const asignarMaterias = async (req, res) => {
   const { id } = req.params;
   const { materias_ids } = req.body;
@@ -385,7 +359,7 @@ export const asignarMaterias = async (req, res) => {
       if (existente.rows.length === 0) {
         await query(
           `INSERT INTO materias_grupo (grupo_id, materia_catalogo_id, docente_id, ciclo_id, activa)
-           VALUES ($1, $2, NULL, $3, TRUE)`, //  docente_id = NULL
+           VALUES ($1, $2, NULL, $3, TRUE)`,
           [id, materia_id, ciclo_id]
         );
         asignadas++;

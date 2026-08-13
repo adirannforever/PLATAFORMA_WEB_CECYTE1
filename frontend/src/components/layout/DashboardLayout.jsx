@@ -59,6 +59,14 @@ const ROUTE_NAMES = {
   '/servicio-social': 'Servicio Social',
   '/expediente': 'Expediente',
   '/configuracion-academica': 'Configuración Académica',
+  // Nuevas rutas para Mis Clases (docente)
+  '/mis-clases': 'Mis Clases',
+  '/mis-clases/grupo': 'Grupo',
+  '/mis-clases/grupo/materias': 'Materias',
+  '/mis-clases/grupo/asistencias': 'Asistencias',
+  '/mis-clases/grupo/calificaciones': 'Calificaciones',
+  '/mis-clases/grupo/incidencias': 'Incidencias',
+  '/mis-clases/materia': 'Calificaciones',
 };
 
 export default function DashboardLayout() {
@@ -84,14 +92,7 @@ export default function DashboardLayout() {
   const groupedItems = getMenuItems(usuario?.rol);
   const categoriesWithItems = categoryOrder.filter((cat) => groupedItems[cat]?.length > 0);
 
-  // Badge dinámico (por ahora sin datos reales)
-  // Cuando tengas un endpoint que cuente incidencias pendientes,
-  // puedes reemplazar este bloque con una llamada real.
   const badgeCounts = useMemo(() => {
-    // Ejemplo: si tuvieras un servicio de incidencias:
-    // const res = await incidenciasService.getPendientesCount();
-    // return { incidencias: res.count };
-    // Por ahora, sin badge.
     return {};
   }, [usuario]);
 
@@ -180,7 +181,6 @@ export default function DashboardLayout() {
                 >
                   {items.map((item) => {
                     let badge = null;
-                    // Solo mostrar badge si realmente hay datos
                     if (item.badge === 'notificaciones' && badgeCounts.incidencias) {
                       badge = <span className={styles.navBadge}>{badgeCounts.incidencias}</span>;
                     }

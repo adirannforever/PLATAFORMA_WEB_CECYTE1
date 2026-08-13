@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { verifyToken, requireRole } from '../middlewares/auth.js';
+import { verifyToken } from '../middlewares/auth.js';
 import {
   getIncidencias,
   getIncidenciasByAlumno,
@@ -11,13 +11,13 @@ import {
 
 const router = Router();
 
-router.use(verifyToken);
 
-router.get('/', requireRole('administrador'), getIncidencias);
-router.get('/alumno/:alumno_id', requireRole('administrador', 'docente'), getIncidenciasByAlumno);
-router.post('/', requireRole('administrador'), crearIncidencia);
-router.put('/:id', requireRole('administrador'), actualizarIncidencia);
-router.patch('/:id/resolver', requireRole('administrador'), resolverIncidencia);
-router.delete('/:id', requireRole('administrador'), eliminarIncidencia);
+router.use(verifyToken);
+router.get('/', getIncidencias);
+router.get('/alumno/:alumno_id', getIncidenciasByAlumno);
+router.post('/', crearIncidencia);
+router.put('/:id', actualizarIncidencia);
+router.patch('/:id/resolver', resolverIncidencia);
+router.delete('/:id', eliminarIncidencia);
 
 export default router;

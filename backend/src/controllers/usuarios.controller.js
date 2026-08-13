@@ -12,8 +12,12 @@ export const getUsuarios = async (req, res) => {
       especialidad_id,
       turno_id,
       grupo_id,
-      grupo_letra, 
+      grupo_letra,
+      docente_id,
     } = req.query;
+
+    const userRole = req.user.rol;
+    const userId = req.user.id;
 
     let sql = `
       SELECT 
@@ -40,6 +44,17 @@ export const getUsuarios = async (req, res) => {
     const params = [];
     const conditions = [];
 
+    // Si es docente y está pidiendo alumnos, filtrar por sus grupos
+    if (userRole === 'docente' && rol === 'alumno') {
+      const docenteId = docente_id || userId;
+      conditions.push(`a.grupo_actual_id IN (
+        SELECT DISTINCT mg.grupo_id 
+        FROM materias_grupo mg 
+        WHERE mg.docente_id = $${params.length + 1} AND mg.activa = true
+      )`);
+      params.push(docenteId);
+    }
+
     if (rol) {
       conditions.push(`u.rol = $${params.length + 1}`);
       params.push(rol);
@@ -55,7 +70,6 @@ export const getUsuarios = async (req, res) => {
       conditions.push(`u.activo = $${params.length + 1}`);
       params.push(activo === 'true');
     }
-
 
     if (semestre) {
       conditions.push(`a.semestre_actual = $${params.length + 1}`);

@@ -523,7 +523,7 @@ export const titulacionService = {
 
 
 export const gruposService = {
-  getAll: async (filtros = {}) => {
+    getAll: async (filtros = {}) => {
     const params = new URLSearchParams(filtros).toString();
     const response = await api.get(`/grupos?${params}`);
     return response.data;
@@ -552,6 +552,10 @@ export const gruposService = {
     const response = await api.post(`/grupos/${id}/materias`, { materias_ids });
     return response.data;
   },
+  getMateriasByDocente: async (docenteId) => {
+    const response = await api.get(`/grupos/docente/${docenteId}/materias`);
+    return response.data;
+},
 };
 
 export const tutoriasService = {

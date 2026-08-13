@@ -1,3 +1,4 @@
+// src/App.jsx
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 
@@ -21,9 +22,10 @@ import ServicioSocialPage from './pages/ServicioSocialPage';
 import TitulacionPage from './pages/TitulacionPage';
 import ConfiguracionAcademicaPage from './pages/ConfiguracionAcademicaPage';
 import IncidenciasPage from './pages/IncidenciasPage';
-// import AuditoriaPage from './pages/AuditoriaPage';
 import ReportesPage from './pages/ReportesPage';
 import HorariosPage from './pages/HorariosPage';
+import MisClasesPage from './pages/MisClasesPage';
+import MisClasesDetallePage from './pages/MisClasesDetallePage';
 
 const RutaProtegida = ({ children, rolesPermitidos }) => {
   const { usuario, cargando } = useAuth();
@@ -73,6 +75,7 @@ export default function App() {
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="comunicados" element={<ComunicadosPage />} />
 
+        {/* ===== ALUMNO ===== */}
         <Route
           path="mis-calificaciones"
           element={
@@ -82,6 +85,33 @@ export default function App() {
           }
         />
 
+        {/* ===== DOCENTE ===== */}
+        <Route
+          path="mis-clases"
+          element={
+            <RutaProtegida rolesPermitidos={['docente']}>
+              <MisClasesPage />
+            </RutaProtegida>
+          }
+        />
+        <Route
+          path="mis-clases/grupo/:grupoId/*"
+          element={
+            <RutaProtegida rolesPermitidos={['docente']}>
+              <MisClasesDetallePage />
+            </RutaProtegida>
+          }
+        />
+        <Route
+          path="mis-clases/materia/:materia_grupo_id"
+          element={
+            <RutaProtegida rolesPermitidos={['docente']}>
+              <CalificacionesPage />
+            </RutaProtegida>
+          }
+        />
+
+        {/* ===== ADMIN + DOCENTE (módulos tradicionales) ===== */}
         <Route
           path="grupos"
           element={
@@ -98,7 +128,6 @@ export default function App() {
             </RutaProtegida>
           }
         />
-
         <Route
           path="calificaciones"
           element={
@@ -229,14 +258,6 @@ export default function App() {
             </RutaProtegida>
           }
         />
-        {/* <Route
-          path="auditoria"
-          element={
-            <RutaProtegida rolesPermitidos={['administrador']}>
-              <AuditoriaPage />
-            </RutaProtegida>
-          }
-        /> */}
 
         <Route
           path="materias"
