@@ -1,15 +1,12 @@
 import {
-  generarBoletaPDF,
-  generarConstanciaPDF,
-  generarListadoAlumnosExcel,
-  generarEstadisticasExcel,
-  generarExcelAsistenciasClase as generarExcelAsistenciasClaseService,
+  generarBoletaPDFService,
+  generarConstanciaPDFService,
+  generarListadoAlumnosExcelService,
+  generarEstadisticasExcelService,
+  generarExcelAsistenciasClaseService,
 } from '../services/reportes.service.js';
 import { query } from '../config/db.js';
 
-// ============================================================
-// VERIFICAR PERMISOS DE ALUMNO
-// ============================================================
 async function verificarPermisosAlumno(req, alumno_id) {
   const userId = req.user.id;
   const userRole = req.user.rol;
@@ -47,13 +44,14 @@ async function verificarPermisosAlumno(req, alumno_id) {
 }
 
 // ============================================================
-// GENERAR BOLETA (PDF)
+// GENERAR BOLETA (PDF) - CON FILTROS DE PARCIALES Y PERÍODO
 // ============================================================
 export const generarBoleta = async (req, res) => {
   try {
-    const { alumno_id, ciclo_id } = req.query;
+    const { alumno_id, ciclo_id, parciales, periodo } = req.query;
     let alumnoIdFinal;
 
+    // Si es alumno, obtener su ID desde la tabla alumnos
     if (req.user.rol === 'alumno') {
       const result = await query(
         'SELECT id FROM alumnos WHERE usuario_id = $1',
@@ -64,6 +62,7 @@ export const generarBoleta = async (req, res) => {
       }
       alumnoIdFinal = result.rows[0].id;
     } else {
+      // Admin o docente: usar el alumno_id del query
       if (!alumno_id || !ciclo_id) {
         return res.status(400).json({ success: false, message: 'Se requiere alumno_id y ciclo_id' });
       }
@@ -78,10 +77,38 @@ export const generarBoleta = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Se requiere ciclo_id' });
     }
 
-    const pdfBuffer = await generarBoletaPDF(alumnoIdFinal, parseInt(ciclo_id));
+    // ===== CONSTRUIR FILTROS =====
+    const filtros = {};
+
+    // Procesar parciales (vienen como "1,2,3" o "1" o "2,3")
+    if (parciales) {
+      filtros.parciales = parciales.split(',').map(Number).filter(p => [1, 2, 3].includes(p));
+    } else {
+      filtros.parciales = [1, 2, 3]; // Por defecto todos
+    }
+
+    if (periodo) {
+      filtros.periodo = periodo;
+    }
+
+    // ===== GENERAR PDF =====
+    const pdfBuffer = await generarBoletaPDFService(
+      alumnoIdFinal,
+      parseInt(ciclo_id),
+      filtros
+    );
+
+    // Obtener nombre del alumno para el nombre del archivo
+    const alumnoRes = await query(
+      'SELECT u.nombre, u.apellidos FROM alumnos a JOIN usuarios u ON u.id = a.usuario_id WHERE a.id = $1',
+      [alumnoIdFinal]
+    );
+    const nombreArchivo = alumnoRes.rows[0]
+      ? `boleta_${alumnoRes.rows[0].apellidos}_${alumnoRes.rows[0].nombre}.pdf`
+      : `boleta_${alumnoIdFinal}.pdf`;
 
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=boleta_${alumnoIdFinal}.pdf`);
+    res.setHeader('Content-Disposition', `attachment; filename=${nombreArchivo}`);
     res.send(pdfBuffer);
   } catch (err) {
     console.error('Error generando boleta:', err);
@@ -90,11 +117,13 @@ export const generarBoleta = async (req, res) => {
 };
 
 // ============================================================
-// GENERAR CONSTANCIA (PDF)
+// GENERAR CONSTANCIA (PDF) - CON TIPO DE CONSTANCIA
 // ============================================================
 export const generarConstancia = async (req, res) => {
   try {
+    const { alumno_id, tipo_constancia } = req.query;
     let alumnoIdFinal;
+
     if (req.user.rol === 'alumno') {
       const result = await query(
         'SELECT id FROM alumnos WHERE usuario_id = $1',
@@ -105,7 +134,6 @@ export const generarConstancia = async (req, res) => {
       }
       alumnoIdFinal = result.rows[0].id;
     } else {
-      const { alumno_id } = req.query;
       if (!alumno_id) {
         return res.status(400).json({ success: false, message: 'Se requiere alumno_id' });
       }
@@ -116,10 +144,23 @@ export const generarConstancia = async (req, res) => {
       }
     }
 
-    const pdfBuffer = await generarConstanciaPDF(alumnoIdFinal);
+    // ===== TIPO DE CONSTANCIA =====
+    const tipo = tipo_constancia || 'estudios';
+
+    // ===== GENERAR PDF =====
+    const pdfBuffer = await generarConstanciaPDFService(alumnoIdFinal, tipo);
+
+    // Obtener nombre del alumno para el nombre del archivo
+    const alumnoRes = await query(
+      'SELECT u.nombre, u.apellidos FROM alumnos a JOIN usuarios u ON u.id = a.usuario_id WHERE a.id = $1',
+      [alumnoIdFinal]
+    );
+    const nombreArchivo = alumnoRes.rows[0]
+      ? `constancia_${alumnoRes.rows[0].apellidos}_${alumnoRes.rows[0].nombre}.pdf`
+      : `constancia_${alumnoIdFinal}.pdf`;
 
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=constancia_${alumnoIdFinal}.pdf`);
+    res.setHeader('Content-Disposition', `attachment; filename=${nombreArchivo}`);
     res.send(pdfBuffer);
   } catch (err) {
     console.error('Error generando constancia:', err);
@@ -138,6 +179,7 @@ export const generarListadoAlumnos = async (req, res) => {
 
     const filtros = req.query;
 
+    // Si es docente, filtrar solo sus grupos
     if (req.user.rol === 'docente') {
       const gruposRes = await query(
         'SELECT DISTINCT grupo_id FROM materias_grupo WHERE docente_id = $1 AND activa = TRUE',
@@ -147,17 +189,20 @@ export const generarListadoAlumnos = async (req, res) => {
       if (ids.length > 0) {
         filtros.grupo_ids = ids;
       } else {
-        const emptyBuffer = await generarListadoAlumnosExcel({ ...filtros, grupo_ids: [-1] });
+        // Si no tiene grupos, devolver Excel vacío
+        const emptyBuffer = await generarListadoAlumnosExcelService({ ...filtros, grupo_ids: [-1] });
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.setHeader('Content-Disposition', 'attachment; filename=listado_alumnos.xlsx');
+        res.setHeader('Content-Disposition', 'attachment; filename=listado_alumnos_vacio.xlsx');
         return res.send(emptyBuffer);
       }
     }
 
-    const excelBuffer = await generarListadoAlumnosExcel(filtros);
+    // Generar Excel
+    const excelBuffer = await generarListadoAlumnosExcelService(filtros);
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename=listado_alumnos.xlsx');
+    const timestamp = new Date().toISOString().slice(0, 10);
+    res.setHeader('Content-Disposition', `attachment; filename=listado_alumnos_${timestamp}.xlsx`);
     res.send(excelBuffer);
   } catch (err) {
     console.error('Error generando listado:', err);
@@ -179,10 +224,14 @@ export const generarEstadisticas = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Se requiere ciclo_id' });
     }
 
-    const excelBuffer = await generarEstadisticasExcel(parseInt(ciclo_id), grupo_id ? parseInt(grupo_id) : null);
+    const excelBuffer = await generarEstadisticasExcelService(
+      parseInt(ciclo_id),
+      grupo_id ? parseInt(grupo_id) : null
+    );
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename=estadisticas.xlsx');
+    const timestamp = new Date().toISOString().slice(0, 10);
+    res.setHeader('Content-Disposition', `attachment; filename=estadisticas_${timestamp}.xlsx`);
     res.send(excelBuffer);
   } catch (err) {
     console.error('Error generando estadísticas:', err);
@@ -196,17 +245,33 @@ export const generarEstadisticas = async (req, res) => {
 export const generarExcelAsistenciasClase = async (req, res) => {
   try {
     const { materia_grupo_id, fecha } = req.query;
+
     if (!materia_grupo_id || !fecha) {
       return res.status(400).json({ success: false, message: 'Se requiere materia_grupo_id y fecha' });
     }
 
+    // Alumnos no pueden exportar asistencias
     if (req.user.rol === 'alumno') {
       return res.status(403).json({ success: false, message: 'No autorizado' });
     }
 
-    const buffer = await generarExcelAsistenciasClaseService(parseInt(materia_grupo_id), fecha);
+    // Si es docente, verificar que la materia le pertenezca
+    if (req.user.rol === 'docente') {
+      const checkRes = await query(
+        'SELECT id FROM materias_grupo WHERE id = $1 AND docente_id = $2 AND activa = TRUE',
+        [parseInt(materia_grupo_id), req.user.id]
+      );
+      if (checkRes.rows.length === 0) {
+        return res.status(403).json({ success: false, message: 'No tienes permisos sobre esta materia' });
+      }
+    }
 
-    const filename = `asistencias_${materia_grupo_id}_${fecha}.xlsx`;
+    const buffer = await generarExcelAsistenciasClaseService(
+      parseInt(materia_grupo_id),
+      fecha
+    );
+
+    const filename = `asistencias_materia_${materia_grupo_id}_${fecha}.xlsx`;
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename=${filename}`);

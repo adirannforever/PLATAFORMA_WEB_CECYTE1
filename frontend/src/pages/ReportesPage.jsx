@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
 import { reportesService, catalogosService, usuariosService, gruposService } from '../services/api';
-import { FileText, Download, Users, BarChart3, CheckCircle, Search, X, Eye, Printer } from 'lucide-react';
+import { downloadExcel, downloadPDF } from '../utils/downloadHelper';
+import { FileText, Download, Users, BarChart3, CheckCircle, Search, X, Eye, Printer, Calendar, Filter } from 'lucide-react';
 import styles from './ReportesPage.module.css';
 
 export default function ReportesPage() {
@@ -13,7 +14,7 @@ export default function ReportesPage() {
   const [error, setError] = useState('');
   const [exito, setExito] = useState('');
 
-  // Visor PDF
+  
   const [visorPdf, setVisorPdf] = useState({
     open: false,
     blob: null,
@@ -21,7 +22,11 @@ export default function ReportesPage() {
     tipo: '',
   });
 
-  // Catálogos
+  
+  const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
+  const [nuevaTab, setNuevaTab] = useState(null);
+
+  
   const [ciclos, setCiclos] = useState([]);
   const [grupos, setGrupos] = useState([]);
   const [especialidades, setEspecialidades] = useState([]);
@@ -29,7 +34,7 @@ export default function ReportesPage() {
   const [alumnoId, setAlumnoId] = useState('');
   const [cicloId, setCicloId] = useState('');
 
-  // Búsqueda de alumnos (para admin/docente)
+  
   const [busquedaAlumno, setBusquedaAlumno] = useState('');
   const [filtroGrupoAlumno, setFiltroGrupoAlumno] = useState('');
   const [filtroEspecialidadAlumno, setFiltroEspecialidadAlumno] = useState('');
@@ -37,13 +42,22 @@ export default function ReportesPage() {
   const [alumnosFiltrados, setAlumnosFiltrados] = useState([]);
   const [buscandoAlumnos, setBuscandoAlumnos] = useState(false);
 
-  // Filtros listado
+  
+  const [filtroParcial, setFiltroParcial] = useState([]);
+  const [filtroTipoConstancia, setFiltroTipoConstancia] = useState('estudios');
+  const [filtroIncluirParciales, setFiltroIncluirParciales] = useState({
+    1: true,
+    2: true,
+    3: true,
+  });
+
+  
   const [filtroGrupo, setFiltroGrupo] = useState('');
   const [filtroEspecialidad, setFiltroEspecialidad] = useState('');
   const [filtroSemestre, setFiltroSemestre] = useState('');
   const [filtroEstatus, setFiltroEstatus] = useState('');
 
-  // Filtros estadísticas
+  
   const [estadisticasCicloId, setEstadisticasCicloId] = useState('');
   const [estadisticasGrupoId, setEstadisticasGrupoId] = useState('');
 
@@ -52,11 +66,10 @@ export default function ReportesPage() {
     return [...new Set(letras)].sort();
   }, [grupos]);
 
-  // ===== Cargar catálogos según rol =====
+  
   useEffect(() => {
     const cargarCatalogos = async () => {
       try {
-        // Siempre cargar ciclos y especialidades
         const [ciclosRes, espRes] = await Promise.all([
           catalogosService.getCiclos(),
           catalogosService.getEspecialidades(),
@@ -69,7 +82,6 @@ export default function ReportesPage() {
           setEstadisticasCicloId(String(activo.id));
         }
 
-        // Alumno: no necesita llamar a APIs de grupos/usuarios
         if (isAlumno) {
           const alumnoData = {
             id: usuario.id,
@@ -82,13 +94,10 @@ export default function ReportesPage() {
             especialidad_nombre: usuario.especialidad_nombre || '',
           };
           setAlumnos([alumnoData]);
-          // No establecemos alumnoId porque no lo usaremos en las peticiones (el backend lo obtiene)
-          // setAlumnoId(String(alumnoData.alumno_id || alumnoData.id));
           setBusquedaAlumno(`${alumnoData.apellidos}, ${alumnoData.nombre} (${alumnoData.matricula})`);
           return;
         }
 
-        // Admin y docente: cargar grupos y alumnos
         const [gruposRes, alumnosRes] = await Promise.all([
           gruposService.getAll(),
           isAdmin ? usuariosService.getAll({ rol: 'alumno' }) : Promise.resolve({ usuarios: [] }),
@@ -103,7 +112,7 @@ export default function ReportesPage() {
     cargarCatalogos();
   }, [isAdmin, isDocente, isAlumno, usuario]);
 
-  // ===== Buscar alumnos (para admin/docente) =====
+  
   const buscarAlumnos = useCallback(async () => {
     if (isAlumno) return;
     setBuscandoAlumnos(true);
@@ -140,6 +149,42 @@ export default function ReportesPage() {
     setAlumnosFiltrados([]);
   };
 
+  const limpiarBusquedaAlumno = () => {
+    setBusquedaAlumno('');
+    setAlumnoId('');
+    setFiltroGrupoAlumno('');
+    setFiltroEspecialidadAlumno('');
+    setFiltroSemestreAlumno('');
+    setAlumnosFiltrados([]);
+  };
+
+  
+  const handleTabChange = (tabId) => {
+    if (alumnoId && tabId !== tabActiva) {
+      setNuevaTab(tabId);
+      setMostrarConfirmacion(true);
+    } else {
+      setTabActiva(tabId);
+      
+      if (!alumnoId) {
+        limpiarBusquedaAlumno();
+      }
+    }
+  };
+
+  const confirmarCambioTab = () => {
+    limpiarBusquedaAlumno();
+    setTabActiva(nuevaTab);
+    setMostrarConfirmacion(false);
+    setNuevaTab(null);
+  };
+
+  const cancelarCambioTab = () => {
+    setMostrarConfirmacion(false);
+    setNuevaTab(null);
+  };
+
+  
   const generarNombreArchivo = (tipo, params) => {
     const now = new Date();
     const timestamp =
@@ -160,7 +205,6 @@ export default function ReportesPage() {
         nombreAlumno = match[1].trim().replace(/\s+/g, '_').replace(/,/g, '');
       }
     } else if (isAlumno && ['boleta', 'constancia'].includes(tipo)) {
-      // Para alumno, usar su nombre del usuario
       nombreAlumno = `${usuario.apellidos}_${usuario.nombre}`.replace(/\s+/g, '_').replace(/,/g, '');
     }
 
@@ -171,17 +215,29 @@ export default function ReportesPage() {
     return `${tipo}_${timestamp}.${ext}`;
   };
 
+  
   const handleGenerar = async (tipo, params) => {
     setCargando(true);
     setError('');
     try {
       let blob;
-      // Construir parámetros según el tipo y rol
       let requestParams = { ...params };
 
-      // Si es alumno, eliminar alumno_id para que el backend lo obtenga
+      
       if (isAlumno && (tipo === 'boleta' || tipo === 'constancia')) {
         delete requestParams.alumno_id;
+      }
+
+      
+      if (tipo === 'boleta') {
+        const parcialesActivos = Object.keys(filtroIncluirParciales).filter(k => filtroIncluirParciales[k]);
+        if (parcialesActivos.length > 0 && parcialesActivos.length < 3) {
+          requestParams.parciales = parcialesActivos.join(',');
+        }
+      }
+
+      if (tipo === 'constancia') {
+        if (filtroTipoConstancia) requestParams.tipo_constancia = filtroTipoConstancia;
       }
 
       switch (tipo) {
@@ -213,14 +269,11 @@ export default function ReportesPage() {
         setExito(`Reporte generado: ${filename}`);
         setTimeout(() => setExito(''), 4000);
       } else {
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
+        if (tipo === 'listado' || tipo === 'estadisticas') {
+          downloadExcel(blob, filename.replace(/\.[^.]+$/, ''));
+        } else {
+          downloadPDF(blob, filename.replace(/\.[^.]+$/, ''));
+        }
         setExito(`Reporte descargado: ${filename}`);
         setTimeout(() => setExito(''), 4000);
       }
@@ -231,16 +284,10 @@ export default function ReportesPage() {
     }
   };
 
+  
   const descargarDesdeVisor = () => {
     if (!visorPdf.blob) return;
-    const url = window.URL.createObjectURL(visorPdf.blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = visorPdf.filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
+    downloadPDF(visorPdf.blob, visorPdf.filename.replace(/\.[^.]+$/, ''));
   };
 
   const imprimirDesdeVisor = () => {
@@ -260,16 +307,7 @@ export default function ReportesPage() {
     setVisorPdf({ open: false, blob: null, filename: '', tipo: '' });
   };
 
-  const limpiarBusquedaAlumno = () => {
-    setBusquedaAlumno('');
-    setAlumnoId('');
-    setFiltroGrupoAlumno('');
-    setFiltroEspecialidadAlumno('');
-    setFiltroSemestreAlumno('');
-    setAlumnosFiltrados([]);
-  };
-
-  // ===== Tabs según rol =====
+  
   const tabs = useMemo(() => {
     const allTabs = [
       { id: 'boleta', label: 'Boleta', icon: <FileText size={16} /> },
@@ -284,7 +322,6 @@ export default function ReportesPage() {
     return allTabs;
   }, [isAdmin, isDocente]);
 
-  // Cambiar tab automáticamente si la actual no está disponible
   useEffect(() => {
     const tabIds = tabs.map(t => t.id);
     if (!tabIds.includes(tabActiva)) {
@@ -292,10 +329,13 @@ export default function ReportesPage() {
     }
   }, [tabs, tabActiva]);
 
-  // ===== Renderizado de tabs =====
+  
+  
+  
   const renderBoleta = () => (
     <div className={styles.tabContent}>
       <div className={styles.reportCard}>
+        {/* Buscador de alumno (igual que antes) */}
         <div className={styles.field}>
           <label className={styles.label}>
             {isAlumno ? 'Alumno' : 'Buscar alumno'} <span className={styles.required}>*</span>
@@ -306,6 +346,7 @@ export default function ReportesPage() {
             </div>
           ) : (
             <div className={styles.alumnoSearchContainer}>
+              {/* ... código de búsqueda (igual que antes) ... */}
               <div className={styles.searchWrapper}>
                 <Search size={16} className={styles.searchIcon} />
                 <input
@@ -388,6 +429,7 @@ export default function ReportesPage() {
           )}
         </div>
 
+        {/* Ciclo (igual que antes) */}
         <div className={styles.field}>
           <label className={styles.label}>Ciclo escolar <span className={styles.required}>*</span></label>
           <select
@@ -404,12 +446,43 @@ export default function ReportesPage() {
           </select>
         </div>
 
+        {/* ===== FILTROS AVANZADOS (BOLETA) ===== */}
+        <div className={styles.filtrosAvanzados}>
+          <div className={styles.filtrosGridAvanzado}>
+            <div className={styles.field}>
+              <label className={styles.label}>Incluir parciales</label>
+              <div className={styles.checkboxGroup}>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={filtroIncluirParciales[1]}
+                    onChange={(e) => setFiltroIncluirParciales({ ...filtroIncluirParciales, 1: e.target.checked })}
+                  /> Parcial 1
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={filtroIncluirParciales[2]}
+                    onChange={(e) => setFiltroIncluirParciales({ ...filtroIncluirParciales, 2: e.target.checked })}
+                  /> Parcial 2
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={filtroIncluirParciales[3]}
+                    onChange={(e) => setFiltroIncluirParciales({ ...filtroIncluirParciales, 3: e.target.checked })}
+                  /> Parcial 3
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className={styles.actions}>
           <button
             className={styles.btnPrimary}
             onClick={() => {
               const params = { ciclo_id: cicloId };
-              // Si no es alumno, incluir alumno_id
               if (!isAlumno && alumnoId) {
                 params.alumno_id = alumnoId;
               }
@@ -429,9 +502,13 @@ export default function ReportesPage() {
     </div>
   );
 
+  
+  
+  
   const renderConstancia = () => (
     <div className={styles.tabContent}>
       <div className={styles.reportCard}>
+        {/* Buscador de alumno (igual que boleta) */}
         <div className={styles.field}>
           <label className={styles.label}>
             {isAlumno ? 'Alumno' : 'Buscar alumno'} <span className={styles.required}>*</span>
@@ -442,6 +519,7 @@ export default function ReportesPage() {
             </div>
           ) : (
             <div className={styles.alumnoSearchContainer}>
+              {/* ... mismo código de búsqueda que en boleta ... */}
               <div className={styles.searchWrapper}>
                 <Search size={16} className={styles.searchIcon} />
                 <input
@@ -522,6 +600,25 @@ export default function ReportesPage() {
               )}
             </div>
           )}
+        </div>
+
+        {/* ===== FILTROS AVANZADOS (CONSTANCIA) ===== */}
+        <div className={styles.filtrosAvanzados}>
+          <div className={styles.filtrosGridAvanzado}>
+            <div className={styles.field}>
+              <label className={styles.label}>Tipo de constancia</label>
+              <select
+                className={styles.select}
+                value={filtroTipoConstancia}
+                onChange={(e) => setFiltroTipoConstancia(e.target.value)}
+              >
+                <option value="estudios">Estudios</option>
+                <option value="conducta">Buena conducta</option>
+                <option value="beca">Para beca</option>
+                <option value="trabajo">Para trabajo</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         <div className={styles.actions}>
@@ -548,6 +645,9 @@ export default function ReportesPage() {
     </div>
   );
 
+  
+  
+  
   const renderListado = () => {
     if (!isAdmin && !isDocente) return null;
     return (
@@ -635,6 +735,9 @@ export default function ReportesPage() {
     );
   };
 
+  
+  
+  
   const renderEstadisticas = () => {
     if (!isAdmin) return null;
     return (
@@ -693,6 +796,9 @@ export default function ReportesPage() {
     );
   };
 
+  
+  
+  
   return (
     <div className={styles.page}>
       {error && <div className={styles.errorMsg}>{error}</div>}
@@ -716,7 +822,7 @@ export default function ReportesPage() {
           <button
             key={tab.id}
             className={`${styles.tab} ${tabActiva === tab.id ? styles.tabActive : ''}`}
-            onClick={() => setTabActiva(tab.id)}
+            onClick={() => handleTabChange(tab.id)}
           >
             {tab.icon}
             {tab.label}
@@ -731,7 +837,27 @@ export default function ReportesPage() {
         {tabActiva === 'estadisticas' && renderEstadisticas()}
       </div>
 
-      {/* Visor PDF */}
+      {/* ===== MODAL DE CONFIRMACIÓN ===== */}
+      {mostrarConfirmacion && (
+        <div className={styles.modalOverlay} onClick={cancelarCambioTab}>
+          <div className={styles.confirmModal} onClick={(e) => e.stopPropagation()}>
+            <h3 className={styles.confirmTitle}>¿Cambiar de sección?</h3>
+            <p className={styles.confirmText}>
+              El alumno seleccionado se perderá. ¿Deseas continuar?
+            </p>
+            <div className={styles.confirmActions}>
+              <button className={styles.btnSecondary} onClick={cancelarCambioTab}>
+                Cancelar
+              </button>
+              <button className={styles.btnPrimary} onClick={confirmarCambioTab}>
+                Aceptar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== VISOR PDF ===== */}
       {visorPdf.open && visorPdf.blob && (
         <div className={styles.modalOverlay} onClick={cerrarVisor}>
           <div className={styles.visorModal} onClick={(e) => e.stopPropagation()}>

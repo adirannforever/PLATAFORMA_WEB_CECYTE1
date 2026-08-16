@@ -3,14 +3,15 @@ import { verifyToken, requireRole } from '../middlewares/auth.js';
 import {
   getConfiguracion,
   actualizarConfiguracion,
-  getSemestreActual,
   listarHorarios,
-  contarHorariosFaltantes,
   solicitarUploadHorario,
-  actualizarHorario,
-  uploadMultipleHorarios,
   solicitarDescarga,
   eliminarHorario,
+  actualizarHorario,
+  uploadMultipleHorarios,
+  contarHorariosFaltantes,
+  getSemestreActual,
+  generarPlantillaHorario, 
 } from '../controllers/horarios.controller.js';
  
 const router = Router();
@@ -29,5 +30,6 @@ router.post('/upload/batch', requireRole('administrador'), uploadMultipleHorario
 router.get('/contar-faltantes', requireRole('administrador'), contarHorariosFaltantes);
 router.get('/configuracion', requireRole('administrador'), getConfiguracion);
 router.put('/configuracion', requireRole('administrador'), actualizarConfiguracion);
+router.get('/plantilla', generarPlantillaHorario);
 
 export default router;

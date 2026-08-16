@@ -1,5 +1,6 @@
 import { query } from '../config/db.js';
 import { generateUploadUrl, generateDownloadUrl } from '../services/s3.service.js';
+import { generarPlantillaHorarioDOCX } from '../utils/docxGenerator.js';
 
 // ============================================================
 // CONFIGURACIÓN (solo admin)
@@ -113,7 +114,6 @@ export const listarHorarios = async (req, res) => {
 
     // ---------- VALIDACIÓN DE PERMISOS SEGÚN ROL ----------
     if (userRole === 'alumno') {
-      // Obtener el grupo actual del alumno
       const alumnoRes = await query(
         'SELECT grupo_actual_id FROM alumnos WHERE usuario_id = $1',
         [userId]
@@ -125,22 +125,17 @@ export const listarHorarios = async (req, res) => {
         });
       }
       const grupoAlumno = alumnoRes.rows[0].grupo_actual_id;
-      // Si el alumno envió un grupo_id en la query, debe coincidir con el suyo
       if (grupo_id && parseInt(grupo_id) !== grupoAlumno) {
         return res.status(403).json({
           success: false,
           message: 'No puedes ver horarios de otro grupo.',
         });
       }
-      // Forzar el grupo del alumno
       grupo_id = grupoAlumno;
-      // Los alumnos no pueden filtrar por docente
       docente_id = null;
     }
 
     if (userRole === 'docente') {
-      // Un docente solo puede ver horarios de los grupos donde imparte clase
-      // Si el docente envía un grupo_id, debe verificar que tenga materia en ese grupo
       if (grupo_id) {
         const check = await query(
           'SELECT 1 FROM materias_grupo WHERE grupo_id = $1 AND docente_id = $2 AND activa = true LIMIT 1',
@@ -153,11 +148,8 @@ export const listarHorarios = async (req, res) => {
           });
         }
       }
-      // Forzar que solo vea sus grupos
       docente_id = userId;
     }
-
-    // Si es admin, no se restringe (puede ver todo, pero los filtros que envíe se respetan)
 
     // ---------- CONSTRUCCIÓN DE LA CONSULTA ----------
     let sql = `
@@ -186,7 +178,6 @@ export const listarHorarios = async (req, res) => {
     const params = [];
     let paramIndex = 1;
 
-    // Filtros básicos (comunes a todos)
     if (ciclo_id) {
       sql += ` AND ha.ciclo_id = $${paramIndex}`;
       params.push(ciclo_id);
@@ -222,15 +213,11 @@ export const listarHorarios = async (req, res) => {
       params.push(tipo);
       paramIndex++;
     }
-
-    // Filtro por grupo (ya validado por rol)
     if (grupo_id) {
       sql += ` AND ha.grupo_id = $${paramIndex}`;
       params.push(grupo_id);
       paramIndex++;
     }
-
-    // Filtro por docente (para docentes y administradores que quieran filtrar)
     if (docente_id) {
       sql += ` AND ha.grupo_id IN (
         SELECT DISTINCT mg.grupo_id 
@@ -252,7 +239,7 @@ export const listarHorarios = async (req, res) => {
 };
 
 // ============================================================
-// CONTADOR DE FALTANTES (solo admin)
+// CONTADOR DE FALTANTES (solo admin - ya no se usa en frontend pero se mantiene)
 // ============================================================
 
 export const contarHorariosFaltantes = async (req, res) => {
@@ -518,11 +505,6 @@ export const solicitarDescarga = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Key es requerida' });
     }
 
-    // Opcional: verificar que el usuario tenga permiso para descargar este archivo
-    // Para simplificar, cualquier usuario autenticado puede descargar cualquier horario
-    // Si se requiere mayor control, aquí se podría consultar la tabla horario_archivos
-    // y validar que el usuario tenga acceso según su rol.
-
     const url = await generateDownloadUrl(key);
 
     return res.json({
@@ -538,6 +520,9 @@ export const solicitarDescarga = async (req, res) => {
   }
 };
 
+// ============================================================
+// ELIMINAR HORARIO (solo admin)
+// ============================================================
 
 export const eliminarHorario = async (req, res) => {
   const { id } = req.params;
@@ -554,5 +539,145 @@ export const eliminarHorario = async (req, res) => {
   } catch (err) {
     console.error('Error en eliminarHorario:', err);
     return res.status(500).json({ success: false, message: 'Error interno' });
+  }
+};
+
+// ============================================================
+// GENERAR PLANTILLA DOCX (CORREGIDA)
+// ============================================================
+
+export const generarPlantillaHorario = async (req, res) => {
+  try {
+    if (req.user.rol !== 'administrador') {
+      return res.status(403).json({
+        success: false,
+        message: 'Acceso denegado.',
+      });
+    }
+
+    const { tipo, grupo_id, semestre, ciclo_id, turno_id, letra } = req.query;
+
+    // Validar campos obligatorios según tipo
+    if (!turno_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Faltan datos. Se requiere: turno_id.',
+      });
+    }
+
+    // Si es tipo "grupo", validar grupo_id y también semestre/ciclo
+    if (tipo === 'grupo') {
+      if (!grupo_id) {
+        return res.status(400).json({
+          success: false,
+          message: 'Para tipo "grupo" se requiere grupo_id.',
+        });
+      }
+      if (!semestre || !ciclo_id) {
+        return res.status(400).json({
+          success: false,
+          message: 'Para tipo "grupo" se requiere semestre y ciclo_id.',
+        });
+      }
+    }
+
+    const esVespertino = parseInt(turno_id) === 2;
+    let periodos = [];
+
+    if (esVespertino) {
+      periodos = [
+        { inicio: '12:00', fin: '12:50', receso: false },
+        { inicio: '12:50', fin: '13:40', receso: false },
+        { inicio: '13:40', fin: '14:30', receso: false },
+        { inicio: '14:30', fin: '15:00', receso: true },
+        { inicio: '15:00', fin: '15:50', receso: false },
+        { inicio: '15:50', fin: '16:40', receso: false },
+        { inicio: '16:40', fin: '17:30', receso: false },
+        { inicio: '17:30', fin: '18:20', receso: false },
+        { inicio: '18:20', fin: '19:10', receso: false },
+      ];
+    } else {
+      periodos = [
+        { inicio: '07:00', fin: '07:50', receso: false },
+        { inicio: '07:50', fin: '08:40', receso: false },
+        { inicio: '08:40', fin: '09:30', receso: false },
+        { inicio: '09:30', fin: '10:00', receso: true },
+        { inicio: '10:00', fin: '10:50', receso: false },
+        { inicio: '10:50', fin: '11:40', receso: false },
+        { inicio: '11:40', fin: '12:30', receso: false },
+        { inicio: '12:30', fin: '13:20', receso: false },
+        { inicio: '13:20', fin: '14:10', receso: false },
+      ];
+    }
+
+    let nombre = '';
+    let cicloNombre = '';
+    let semestreFinal = semestre || '1';
+    let cicloFinal = ciclo_id || 'General';
+
+    // Si hay grupo_id, obtener datos del grupo
+    if (grupo_id) {
+      const grupoRes = await query(
+        `SELECT g.id, g.nombre, g.semestre, g.letra,
+                e.nombre AS especialidad_nombre,
+                t.nombre AS turno_nombre,
+                c.nombre AS ciclo_nombre
+         FROM grupos g
+         LEFT JOIN especialidades e ON e.id = g.especialidad_id
+         LEFT JOIN turnos t ON t.id = g.turno_id
+         LEFT JOIN ciclos_escolares c ON c.id = g.ciclo_id
+         WHERE g.id = $1`,
+        [grupo_id]
+      );
+
+      if (grupoRes.rows.length === 0) {
+        return res.status(404).json({ success: false, message: 'Grupo no encontrado.' });
+      }
+
+      const grupo = grupoRes.rows[0];
+      nombre = grupo.nombre;
+      cicloNombre = grupo.ciclo_nombre || 'Sin ciclo';
+      semestreFinal = grupo.semestre || semestre || '1';
+    } else {
+      // Si no hay grupo, usar nombres genéricos según tipo
+      const tipoNombres = {
+        maestro: 'Maestro',
+        laboratorio: 'Laboratorio',
+      };
+      nombre = tipoNombres[tipo] || tipo;
+      cicloNombre = 'General';
+      semestreFinal = semestre || '1';
+    }
+
+    const data = {
+      tipo: tipo || 'grupo',
+      nombre: nombre,
+      semestre: semestreFinal,
+      ciclo: cicloNombre,
+      especialidad: 'General',
+      turno: esVespertino ? 'Vespertino' : 'Matutino',
+      letra: letra || '',
+      dias: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'],
+      periodos: periodos,
+    };
+
+    const buffer = await generarPlantillaHorarioDOCX(data);
+
+    const nombreSeguro = nombre.replace(/[^a-zA-Z0-9]/g, '_');
+    const cicloSeguro = cicloNombre.replace(/[^a-zA-Z0-9]/g, '_');
+    const turnoSeguro = esVespertino ? 'Vespertino' : 'Matutino';
+    const letraSegura = letra ? `_${letra}` : '';
+    const filename = `Horario_${nombreSeguro}${letraSegura}_${cicloSeguro}_${turnoSeguro}.docx`;
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
+    res.send(buffer);
+  } catch (err) {
+    console.error('Error generando plantilla DOCX:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno.',
+      error: err.message,
+    });
   }
 };

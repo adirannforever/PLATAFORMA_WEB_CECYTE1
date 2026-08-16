@@ -396,6 +396,13 @@ export const horariosService = {
     const response = await api.post('/horarios/upload/batch', { horarios });
     return response.data;
   },
+  descargarPlantilla: async (params) => {
+    const response = await api.get('/horarios/plantilla', {
+      params,
+      responseType: 'blob'
+    });
+    return response; 
+  },
 };
 
 

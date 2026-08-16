@@ -16,12 +16,10 @@ export default function HorariosPage() {
   const { usuario } = useAuth();
   const { isAdmin, isDocente, isAlumno } = usePermissions();
 
-  // ===== ESTADOS BÁSICOS =====
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
   const [exito, setExito] = useState('');
 
-  // ===== ADMIN: estados completos =====
   const [tabActiva, setTabActiva] = useState('grupos');
   const [ciclos, setCiclos] = useState([]);
   const [especialidades, setEspecialidades] = useState([]);
@@ -42,9 +40,7 @@ export default function HorariosPage() {
   });
 
   const [archivosSubidos, setArchivosSubidos] = useState([]);
-  const [contadorFaltantes, setContadorFaltantes] = useState({ total: 0, subidos: 0, faltantes: 0, porcentaje: 0 });
 
-  // ===== ADMIN: modales =====
   const [modalUploadOpen, setModalUploadOpen] = useState(false);
   const [uploadForm, setUploadForm] = useState({
     nombre: '',
@@ -91,12 +87,23 @@ export default function HorariosPage() {
 
   const [confirmModal, setConfirmModal] = useState({ open: false, message: '', onConfirm: null });
 
-  // ===== ESTADOS PARA VISTA DE DOCENTE/ALUMNO =====
+  // ===== MODAL PARA PLANTILLA =====
+  const [modalPlantillaOpen, setModalPlantillaOpen] = useState(false);
+  const [plantillaForm, setPlantillaForm] = useState({
+    tipo: 'grupo',
+    semestre: '',
+    ciclo_id: '',
+    turno_id: '',
+    letra: '',
+    especialidad_id: '',
+  });
+  const [plantillaGrupoEncontrado, setPlantillaGrupoEncontrado] = useState(null);
+  const [generandoPlantilla, setGenerandoPlantilla] = useState(false);
+
   const [horariosUsuario, setHorariosUsuario] = useState([]);
   const [cargandoUsuario, setCargandoUsuario] = useState(false);
   const [errorUsuario, setErrorUsuario] = useState('');
 
-  // ===== SOLO ADMIN: cargar datos =====
   useEffect(() => {
     if (!isAdmin) return;
 
@@ -142,7 +149,6 @@ export default function HorariosPage() {
     cargarCatalogos();
   }, [isAdmin]);
 
-  // ===== HELPERS DE ESPECIALIDAD -> LETRA (solo admin) =====
   const getLetrasPorEspecialidad = useCallback((especialidadId) => {
     if (!especialidadId) return ['A', 'B', 'C', 'D'];
     const especialidad = especialidades.find(e => e.id === parseInt(especialidadId));
@@ -164,7 +170,6 @@ export default function HorariosPage() {
     return '';
   }, [especialidades]);
 
-  // ===== BUSCAR GRUPO (solo admin) =====
   const buscarGrupo = (semestre, letra, turno_id, ciclo_id) => {
     if (!semestre || !letra || !turno_id || !ciclo_id) return null;
     return grupos.find(
@@ -175,7 +180,6 @@ export default function HorariosPage() {
     ) || null;
   };
 
-  // ===== EFECTOS DE AUTOSELECCIÓN (solo admin) =====
   useEffect(() => {
     if (!isAdmin) return;
     const letras = getLetrasPorEspecialidad(uploadForm.especialidad_id);
@@ -212,7 +216,22 @@ export default function HorariosPage() {
     }
   }, [editForm.especialidad_id, getLetrasPorEspecialidad, getLetraDefault, isAdmin]);
 
-  // ===== EFECTOS PARA BUSCAR GRUPO (solo admin) =====
+  // Efecto para buscar grupo en plantilla (solo si tipo === 'grupo')
+  useEffect(() => {
+    if (!isAdmin) return;
+    if (plantillaForm.tipo === 'grupo') {
+      const grupo = buscarGrupo(
+        plantillaForm.semestre,
+        plantillaForm.letra,
+        plantillaForm.turno_id,
+        plantillaForm.ciclo_id
+      );
+      setPlantillaGrupoEncontrado(grupo);
+    } else {
+      setPlantillaGrupoEncontrado(null);
+    }
+  }, [plantillaForm.semestre, plantillaForm.letra, plantillaForm.turno_id, plantillaForm.ciclo_id, plantillaForm.tipo, grupos, isAdmin]);
+
   useEffect(() => {
     if (!isAdmin) return;
     const grupo = buscarGrupo(
@@ -246,7 +265,6 @@ export default function HorariosPage() {
     setEditGrupoEncontrado(grupo);
   }, [editForm.semestre, editForm.letra, editForm.turno_id, editForm.ciclo_id, grupos, isAdmin]);
 
-  // ===== CARGAR HORARIOS (solo admin) =====
   const cargarHorarios = useCallback(async () => {
     if (!isAdmin) return;
     setCargando(true);
@@ -277,27 +295,12 @@ export default function HorariosPage() {
     }
   }, [filtros, tabActiva, isAdmin]);
 
-  const cargarContadorFaltantes = useCallback(async () => {
-    if (!isAdmin) return;
-    if (!filtros.ciclo_id || !filtros.semestre) return;
-    try {
-      const res = await horariosService.contarFaltantes(filtros.ciclo_id, filtros.semestre);
-      if (res.success) {
-        setContadorFaltantes(res.data);
-      }
-    } catch (e) {
-      console.error('Error cargando contador:', e);
-    }
-  }, [filtros.ciclo_id, filtros.semestre, isAdmin]);
-
   useEffect(() => {
     if (isAdmin) {
       cargarHorarios();
-      cargarContadorFaltantes();
     }
-  }, [cargarHorarios, cargarContadorFaltantes, isAdmin]);
+  }, [cargarHorarios, isAdmin]);
 
-  // ===== CARGAR HORARIOS PARA DOCENTE/ALUMNO =====
   useEffect(() => {
     if (isAdmin) return;
 
@@ -310,7 +313,6 @@ export default function HorariosPage() {
         if (isDocente) {
           params.docente_id = usuario.id;
         } else if (isAlumno) {
-          // Obtener el grupo actual del alumno desde el backend
           const res = await catalogosService.getAlumnoByUsuario(usuario.id);
           const alumnoData = res.data;
           if (alumnoData && alumnoData.grupo_id) {
@@ -338,7 +340,6 @@ export default function HorariosPage() {
     cargarHorariosUsuario();
   }, [isAdmin, isDocente, isAlumno, usuario.id]);
 
-  // ===== HANDLERS (solo admin) =====
   const abrirModalUpload = () => {
     if (!isAdmin) return;
     setUploadForm({
@@ -422,7 +423,6 @@ export default function HorariosPage() {
       setExito('Horario subido correctamente');
       setModalUploadOpen(false);
       cargarHorarios();
-      cargarContadorFaltantes();
       setTimeout(() => setExito(''), 5000);
     } catch (err) {
       console.error('Error:', err);
@@ -480,7 +480,6 @@ export default function HorariosPage() {
         setExito('Horario actualizado correctamente');
         setModalEditOpen(false);
         cargarHorarios();
-        cargarContadorFaltantes();
         setTimeout(() => setExito(''), 5000);
       } else {
         setError(res.message || 'Error al actualizar');
@@ -492,7 +491,6 @@ export default function HorariosPage() {
     }
   };
 
-  // ===== HANDLE ELIMINAR (mejorado) =====
   const handleEliminar = (id, nombre) => {
     if (!isAdmin) return;
     const idNumerico = Number(id);
@@ -502,14 +500,13 @@ export default function HorariosPage() {
     }
     setConfirmModal({
       open: true,
-      message: `¿Eliminar el horario "${nombre}"? Esta acción no se puede deshacer.`,
+      message: `Eliminar el horario "${nombre}"? Esta acción no se puede deshacer.`,
       onConfirm: async () => {
         try {
           const res = await horariosService.eliminar(idNumerico);
           if (res.success) {
             setExito('Horario eliminado correctamente');
             cargarHorarios();
-            cargarContadorFaltantes();
             setTimeout(() => setExito(''), 5000);
           } else {
             const msg = res.message || 'Error al eliminar (respuesta sin éxito)';
@@ -517,9 +514,8 @@ export default function HorariosPage() {
             console.error('Error al eliminar horario (res.success=false):', res);
           }
         } catch (err) {
-          // Captura el error completo y muestra el mensaje más específico
           const errorMsg = err.response?.data?.message || err.message || 'Error al eliminar';
-          setError(` ${errorMsg}`);
+          setError(`${errorMsg}`);
           console.error('Error al eliminar horario:', err);
           if (err.response) {
             console.error('Detalles del error (response):', err.response.data);
@@ -602,7 +598,7 @@ export default function HorariosPage() {
     if (!isAdmin) return;
     setConfirmModal({
       open: true,
-      message: '¿Eliminar este elemento de la lista?',
+      message: 'Eliminar este elemento de la lista?',
       onConfirm: () => {
         setBatchItems(prev => prev.filter(item => item._tempId !== tempId));
         setConfirmModal({ open: false, message: '', onConfirm: null });
@@ -661,7 +657,6 @@ export default function HorariosPage() {
 
       setModalBatchOpen(false);
       cargarHorarios();
-      cargarContadorFaltantes();
       setTimeout(() => setExito(''), 5000);
     } catch (err) {
       setError(err.message || 'Error al guardar batch');
@@ -692,7 +687,102 @@ export default function HorariosPage() {
     }
   };
 
-  // ===== RENDER MODAL DE CONFIRMACIÓN =====
+  // ===== ABRIR MODAL DE PLANTILLA =====
+  const abrirModalPlantilla = () => {
+    if (!isAdmin) return;
+    setPlantillaForm({
+      tipo: tabActiva === 'grupos' ? 'grupo' : tabActiva === 'maestros' ? 'maestro' : 'laboratorio',
+      semestre: '',
+      ciclo_id: '',
+      turno_id: '',
+      letra: '',
+      especialidad_id: '',
+    });
+    setPlantillaGrupoEncontrado(null);
+    setModalPlantillaOpen(true);
+    setError('');
+  };
+
+  // ===== GENERAR PLANTILLA DESDE EL MODAL =====
+  const handleGenerarPlantilla = async () => {
+    // Validaciones según tipo
+    if (!plantillaForm.turno_id) {
+      setError('Turno es requerido');
+      return;
+    }
+
+    // Si es tipo 'grupo', validar campos adicionales
+    if (plantillaForm.tipo === 'grupo') {
+      if (!plantillaForm.semestre || !plantillaForm.ciclo_id) {
+        setError('Para "Grupo" se requiere semestre y ciclo');
+        return;
+      }
+      if (!plantillaForm.letra) {
+        setError('Para "Grupo" se requiere letra');
+        return;
+      }
+      if (!plantillaGrupoEncontrado) {
+        setError('No existe un grupo con esa combinación');
+        return;
+      }
+    }
+
+    setGenerandoPlantilla(true);
+    setError('');
+    try {
+      const params = {
+        tipo: plantillaForm.tipo,
+        turno_id: plantillaForm.turno_id,
+      };
+
+      // Para grupo, enviar semestre, ciclo, letra y grupo_id
+      if (plantillaForm.tipo === 'grupo') {
+        params.semestre = plantillaForm.semestre;
+        params.ciclo_id = plantillaForm.ciclo_id;
+        params.letra = plantillaForm.letra;
+        if (plantillaGrupoEncontrado) {
+          params.grupo_id = plantillaGrupoEncontrado.id;
+        }
+      } else {
+        // Para maestro/laboratorio, letra es opcional (se envía si está)
+        if (plantillaForm.letra) {
+          params.letra = plantillaForm.letra;
+        }
+      }
+
+      const response = await horariosService.descargarPlantilla(params);
+      const blob = response.data;
+
+      // Extraer nombre del header Content-Disposition
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = 'plantilla_horario.docx';
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (match && match[1]) {
+          filename = match[1].replace(/['"]/g, '');
+        }
+      }
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      setExito(`Plantilla descargada: ${filename}`);
+      setModalPlantillaOpen(false);
+      setTimeout(() => setExito(''), 4000);
+    } catch (err) {
+      console.error('Error generando plantilla:', err);
+      setError(err.message || 'Error al generar plantilla');
+    } finally {
+      setGenerandoPlantilla(false);
+    }
+  };
+
   const renderConfirmModal = () => {
     if (!confirmModal.open) return null;
     return (
@@ -720,7 +810,6 @@ export default function HorariosPage() {
     );
   };
 
-  // ===== RENDER MODAL DE SUBIDA INDIVIDUAL =====
   const renderUploadModal = () => {
     if (!modalUploadOpen || !isAdmin) return null;
     return (
@@ -866,7 +955,6 @@ export default function HorariosPage() {
     );
   };
 
-  // ===== RENDER MODAL DE EDICIÓN =====
   const renderEditModal = () => {
     if (!modalEditOpen || !isAdmin) return null;
     return (
@@ -999,7 +1087,6 @@ export default function HorariosPage() {
     );
   };
 
-  // ===== RENDER MODAL DE SUBIDA MASIVA =====
   const renderBatchModal = () => {
     if (!modalBatchOpen || !isAdmin) return null;
     return (
@@ -1186,7 +1273,133 @@ export default function HorariosPage() {
     );
   };
 
-  // ===== RENDER FILTROS (solo admin) =====
+  // ===== RENDER MODAL DE PLANTILLA (CORREGIDO) =====
+  const renderPlantillaModal = () => {
+    if (!modalPlantillaOpen || !isAdmin) return null;
+    const esGrupo = plantillaForm.tipo === 'grupo';
+    const grupoStatusVisible = esGrupo && plantillaForm.semestre && plantillaForm.letra && plantillaForm.turno_id && plantillaForm.ciclo_id;
+
+    return (
+      <div className={styles.modalOverlay} onClick={() => setModalPlantillaOpen(false)}>
+        <div className={styles.modal} onClick={e => e.stopPropagation()}>
+          <div className={styles.modalHeader}>
+            <h3 className={styles.modalTitle}>Generar plantilla de horario</h3>
+            <button className={styles.modalClose} onClick={() => setModalPlantillaOpen(false)}>
+              <X size={18} />
+            </button>
+          </div>
+          {error && <div className={styles.errorMsg}>{error}</div>}
+          <div className={styles.form}>
+            <div className={styles.row2}>
+              <div className={styles.field}>
+                <label className={styles.label}>Tipo *</label>
+                <select
+                  className={styles.select}
+                  value={plantillaForm.tipo}
+                  onChange={e => {
+                    setPlantillaForm({ ...plantillaForm, tipo: e.target.value });
+                    setPlantillaGrupoEncontrado(null);
+                  }}
+                >
+                  <option value="grupo">Grupo</option>
+                  <option value="maestro">Maestro</option>
+                  <option value="laboratorio">Laboratorio</option>
+                </select>
+              </div>
+              {esGrupo && (
+                <div className={styles.field}>
+                  <label className={styles.label}>Semestre *</label>
+                  <select
+                    className={styles.select}
+                    value={plantillaForm.semestre}
+                    onChange={e => setPlantillaForm({ ...plantillaForm, semestre: e.target.value })}
+                  >
+                    <option value="">Seleccionar...</option>
+                    {[1,2,3,4,5,6].map(s => (
+                      <option key={s} value={s}>{s}°</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* Siempre mostrar campo Letra (opcional para maestro/laboratorio) */}
+            <div className={styles.field}>
+              <label className={styles.label}>
+                Letra {esGrupo ? '*' : '(opcional)'}
+              </label>
+              <select
+                className={styles.select}
+                value={plantillaForm.letra}
+                onChange={e => setPlantillaForm({ ...plantillaForm, letra: e.target.value })}
+              >
+                <option value="">Seleccionar...</option>
+                {getLetrasPorEspecialidad(plantillaForm.especialidad_id).map(l => (
+                  <option key={l} value={l}>{l}</option>
+                ))}
+              </select>
+            </div>
+
+            {esGrupo && (
+              <div className={styles.field}>
+                <label className={styles.label}>Ciclo *</label>
+                <select
+                  className={styles.select}
+                  value={plantillaForm.ciclo_id}
+                  onChange={e => setPlantillaForm({ ...plantillaForm, ciclo_id: e.target.value })}
+                >
+                  <option value="">Seleccionar ciclo...</option>
+                  {ciclos.map(c => (
+                    <option key={c.id} value={c.id}>{c.nombre}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className={styles.field}>
+              <label className={styles.label}>Turno *</label>
+              <select
+                className={styles.select}
+                value={plantillaForm.turno_id}
+                onChange={e => setPlantillaForm({ ...plantillaForm, turno_id: e.target.value })}
+              >
+                <option value="">Seleccionar turno...</option>
+                {turnos.map(t => (
+                  <option key={t.id} value={t.id}>{t.nombre}</option>
+                ))}
+              </select>
+            </div>
+
+            {grupoStatusVisible && (
+              <div className={styles.grupoStatus}>
+                {plantillaGrupoEncontrado ? (
+                  <span className={styles.grupoOk}> Grupo encontrado: {plantillaGrupoEncontrado.nombre}</span>
+                ) : (
+                  <span className={styles.grupoError}> No existe un grupo con esa combinación</span>
+                )}
+              </div>
+            )}
+
+            <div className={styles.modalActions}>
+              <button className={styles.btnSecondary} onClick={() => setModalPlantillaOpen(false)}>Cancelar</button>
+              <button
+                className={styles.btnPrimary}
+                onClick={handleGenerarPlantilla}
+                disabled={
+                  generandoPlantilla ||
+                  !plantillaForm.turno_id ||
+                  (esGrupo && (!plantillaForm.semestre || !plantillaForm.ciclo_id || !plantillaForm.letra || !plantillaGrupoEncontrado))
+                }
+              >
+                {generandoPlantilla ? 'Generando...' : 'Generar plantilla'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderFiltros = () => {
     if (!isAdmin) return null;
     return (
@@ -1279,31 +1492,6 @@ export default function HorariosPage() {
     );
   };
 
-  // ===== CONTADOR DE HORARIOS FALTANTES =====
-  const renderContador = () => {
-    if (!isAdmin) return null;
-    if (!filtros.ciclo_id || !filtros.semestre) return null;
-    const { total, subidos, faltantes, porcentaje } = contadorFaltantes;
-    return (
-      <div className={styles.contadorContainer}>
-        <div className={styles.contadorInfo}>
-          <span className={styles.contadorTotal}>Total: {total} grupos</span>
-          <span className={styles.contadorSubidos}>Subidos: {subidos}</span>
-          <span className={faltantes > 0 ? styles.contadorFaltantes : styles.contadorCompleto}>
-            {faltantes > 0 ? `Faltan: ${faltantes}` : ' Completo'}
-          </span>
-        </div>
-        <div className={styles.contadorBarra}>
-          <div
-            className={styles.contadorBarraFill}
-            style={{ width: `${porcentaje}%`, backgroundColor: porcentaje === 100 ? '#1A6B35' : '#F37238' }}
-          />
-        </div>
-        <span className={styles.contadorPorcentaje}>{porcentaje}%</span>
-      </div>
-    );
-  };
-
   // ===== VISTA PARA DOCENTES Y ALUMNOS =====
   if (!isAdmin) {
     return (
@@ -1380,13 +1568,16 @@ export default function HorariosPage() {
           <p className={styles.subtitle}>Gestión de horarios para grupos, maestros y laboratorios</p>
         </div>
         <div className={styles.headerActions}>
+          <button className={styles.btnSecondary} onClick={abrirModalPlantilla}>
+            <FileText size={16} /> Descargar plantilla
+          </button>
           <button className={styles.btnPrimary} onClick={abrirModalUpload}>
             <Upload size={16} /> Subir horario
           </button>
           <button className={styles.btnSecondary} onClick={abrirModalBatch}>
             <Plus size={16} /> Subida masiva
           </button>
-          <button className={styles.btnSecondary} onClick={() => { cargarHorarios(); cargarContadorFaltantes(); }}>
+          <button className={styles.btnSecondary} onClick={cargarHorarios}>
             <RefreshCw size={16} /> Actualizar
           </button>
         </div>
@@ -1414,7 +1605,6 @@ export default function HorariosPage() {
       </div>
 
       {renderFiltros()}
-      {renderContador()}
 
       <div className={styles.horariosSection}>
         <h3 className={styles.sectionTitle}>Horarios subidos ({archivosSubidos.length})</h3>
@@ -1478,6 +1668,7 @@ export default function HorariosPage() {
       {renderUploadModal()}
       {renderEditModal()}
       {renderBatchModal()}
+      {renderPlantillaModal()}
       {renderConfirmModal()}
     </div>
   );

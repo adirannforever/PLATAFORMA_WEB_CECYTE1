@@ -306,22 +306,6 @@ CREATE TABLE expediente_documentos (
 );
 
 
-CREATE TABLE aspirantes (
-  id                  SERIAL PRIMARY KEY,
-  folio               VARCHAR(30) NOT NULL UNIQUE,
-  nombre              VARCHAR(100) NOT NULL,
-  apellidos           VARCHAR(150) NOT NULL,
-  curp                VARCHAR(18) NOT NULL UNIQUE,
-  email               VARCHAR(255) NOT NULL UNIQUE,
-  telefono            VARCHAR(20),
-  especialidad_id     INTEGER NOT NULL REFERENCES especialidades(id),
-  turno_preferido_id  INTEGER NOT NULL REFERENCES turnos(id),
-  ciclo_id            INTEGER NOT NULL REFERENCES ciclos_escolares(id),
-  estatus             VARCHAR(30) NOT NULL DEFAULT 'registrado' CHECK (estatus IN ('registrado','documentos_pendientes','ficha_pagada','examen_aprobado','aceptado','rechazado','inscrito')),
-  fecha_registro      TIMESTAMPTZ DEFAULT NOW()
-);
-
-
 CREATE TABLE servicio_social_practicas (
   id                  SERIAL PRIMARY KEY,
   alumno_id           INTEGER NOT NULL REFERENCES alumnos(id),
@@ -426,10 +410,6 @@ CREATE TABLE auditoria_logs (
 
 
 
-
-
-CREATE INDEX idx_aspirantes_curp ON aspirantes(curp);
-CREATE INDEX idx_aspirantes_ciclo ON aspirantes(ciclo_id);
 CREATE INDEX idx_horario_archivos_ciclo ON horario_archivos(ciclo_id);
 CREATE INDEX idx_horario_archivos_semestre ON horario_archivos(semestre);
 CREATE INDEX idx_horario_archivos_grupo ON horario_archivos(grupo_id);
