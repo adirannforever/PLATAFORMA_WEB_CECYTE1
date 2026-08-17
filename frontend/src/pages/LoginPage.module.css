@@ -1,4 +1,3 @@
-/* Contenedor Principal */
 .page {
   display: flex;
   flex-direction: column;
@@ -9,9 +8,7 @@
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-/* ----------------------------------------------------
-   PANEL LATERAL / HEADER EN MÓVIL
----------------------------------------------------- */
+
 .panel {
   background: linear-gradient(135deg, #0d5c2e 0%, #083b1d 100%);
   color: #ffffff;
@@ -20,7 +17,78 @@
   flex-direction: column;
   align-items: center;
   position: relative;
+  overflow: hidden;
 }
+
+
+.panel::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: 
+    radial-gradient(circle at 20% 40%, rgba(255,255,255,0.08) 0%, transparent 30%),
+    radial-gradient(circle at 70% 60%, rgba(255,255,255,0.06) 0%, transparent 25%),
+    radial-gradient(circle at 10% 80%, rgba(255,255,255,0.04) 0%, transparent 35%);
+  background-size: 300% 100%;
+  animation: waveMove 12s ease-in-out infinite alternate;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes waveMove {
+  0% {
+    background-position: 0% 0%;
+    transform: scale(1) rotate(0deg);
+  }
+  33% {
+    background-position: 30% 20%;
+    transform: scale(1.05) rotate(2deg);
+  }
+  66% {
+    background-position: 70% 60%;
+    transform: scale(1.1) rotate(-1deg);
+  }
+  100% {
+    background-position: 100% 100%;
+    transform: scale(1.05) rotate(1deg);
+  }
+}
+
+
+.panel::after {
+  content: '';
+  position: absolute;
+  top: -30%;
+  left: -30%;
+  width: 160%;
+  height: 160%;
+  background: 
+    radial-gradient(circle at 20% 80%, rgba(255,255,255,0.12) 0%, transparent 40%),
+    radial-gradient(circle at 80% 20%, rgba(255,255,255,0.08) 0%, transparent 35%);
+  background-size: 850% 850%;
+  animation: waveMove2 15s ease-in-out infinite alternate;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes waveMove2 {
+  0% {
+    background-position: 0% 0%;
+    transform: scale(1) rotate(0deg);
+  }
+  50% {
+    background-position: 50% 50%;
+    transform: scale(1.15) rotate(3deg);
+  }
+  100% {
+    background-position: 100% 100%;
+    transform: scale(1.05) rotate(-2deg);
+  }
+}
+
 
 .returnBtn {
   align-self: flex-start;
@@ -37,6 +105,7 @@
   cursor: pointer;
   transition: background-color 0.2s ease, transform 0.1s ease;
   backdrop-filter: blur(4px);
+  z-index: 1;
 }
 
 .returnBtn:hover {
@@ -54,7 +123,9 @@
   text-align: center;
   margin-top: 10px;
   width: 100%;
+  z-index: 1;
 }
+
 
 .logoImg {
   width: 140px;
@@ -62,6 +133,7 @@
   object-fit: contain;
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
   transition: width 0.3s ease, height 0.3s ease;
+ 
 }
 
 .panelTitle {
@@ -80,9 +152,7 @@
   opacity: 0.9;
 }
 
-/* ----------------------------------------------------
-   SECCIÓN FORMULARIO
----------------------------------------------------- */
+
 .formSide {
   flex: 1;
   display: flex;
@@ -103,6 +173,19 @@
   box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
   border: 1px solid #e2e8f0;
   box-sizing: border-box;
+ 
+  animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .formHeader {
@@ -122,7 +205,7 @@
   margin-top: 4px;
 }
 
-/* Alerta de Error */
+
 .errorMsg {
   display: flex;
   align-items: center;
@@ -135,9 +218,18 @@
   font-size: 0.85rem;
   margin-bottom: 20px;
   line-height: 1.3;
+  animation: shake 0.4s ease-in-out;
 }
 
-/* Formulario e Inputs */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(3px); }
+}
+
+
 .form {
   display: flex;
   flex-direction: column;
@@ -157,7 +249,7 @@
   color: #334155;
 }
 
-/* Tamaño de fuente a 16px previene el zoom automático molesto en iPhone/iOS al hacer foco */
+
 .input {
   width: 100%;
   height: 46px;
@@ -168,14 +260,14 @@
   font-size: 1rem;
   color: #0f172a;
   outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, background-color 0.25s ease;
   box-sizing: border-box;
 }
 
 .input:focus {
   border-color: #0d5c2e;
   background-color: #ffffff;
-  box-shadow: 0 0 0 3px rgba(13, 92, 46, 0.15);
+  box-shadow: 0 0 0 3px rgba(13, 92, 46, 0.08);
 }
 
 .passwordWrapper {
@@ -196,7 +288,7 @@
   border: none;
   cursor: pointer;
   padding: 6px;
-  color: #64748b;
+  color: #94a3b8;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -208,7 +300,7 @@
   color: #0f172a;
 }
 
-/* Botón Submit */
+
 .submitBtn {
   width: 100%;
   height: 48px;
@@ -220,14 +312,16 @@
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.2s ease, transform 0.1s ease;
+  transition: background-color 0.3s ease, transform 0.15s ease, box-shadow 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .submitBtn:hover:not(:disabled) {
-  background-color: #083b1d;
+  background-color: #0a4a24;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(13, 92, 46, 0.2);
 }
 
 .submitBtn:active:not(:disabled) {
@@ -260,6 +354,12 @@
   color: #64748b;
   text-align: center;
   line-height: 1.4;
+  animation: fadeIn 1s ease 0.5s both;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .footer {
@@ -270,9 +370,7 @@
   line-height: 1.3;
 }
 
-/* ----------------------------------------------------
-   RESPONSIVO PARA PANTALLAS MEDIANAS Y GRANDES (DESKTOP)
----------------------------------------------------- */
+
 @media (min-width: 768px) {
   .page {
     flex-direction: row;
