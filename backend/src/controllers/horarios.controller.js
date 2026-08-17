@@ -2,9 +2,6 @@ import { query } from '../config/db.js';
 import { generateUploadUrl, generateDownloadUrl } from '../services/s3.service.js';
 import { generarPlantillaHorarioDOCX } from '../utils/docxGenerator.js';
 
-// ============================================================
-// CONFIGURACIÓN (solo admin)
-// ============================================================
 
 export const getConfiguracion = async (req, res) => {
   try {
@@ -80,20 +77,12 @@ export const actualizarConfiguracion = async (req, res) => {
   }
 };
 
-// ============================================================
-// UTILIDADES (públicas)
-// ============================================================
-
 export const getSemestreActual = (req, res) => {
   const hoy = new Date();
   const mes = hoy.getMonth() + 1;
   const semestres = (mes >= 1 && mes <= 6) ? [2, 4, 6] : [1, 3, 5];
   return res.json({ success: true, data: { semestres } });
 };
-
-// ============================================================
-// LISTAR HORARIOS (con permisos por rol)
-// ============================================================
 
 export const listarHorarios = async (req, res) => {
   try {
@@ -112,7 +101,6 @@ export const listarHorarios = async (req, res) => {
       docente_id,
     } = req.query;
 
-    // ---------- VALIDACIÓN DE PERMISOS SEGÚN ROL ----------
     if (userRole === 'alumno') {
       const alumnoRes = await query(
         'SELECT grupo_actual_id FROM alumnos WHERE usuario_id = $1',
@@ -150,8 +138,6 @@ export const listarHorarios = async (req, res) => {
       }
       docente_id = userId;
     }
-
-    // ---------- CONSTRUCCIÓN DE LA CONSULTA ----------
     let sql = `
       SELECT 
         ha.id,
@@ -238,9 +224,9 @@ export const listarHorarios = async (req, res) => {
   }
 };
 
-// ============================================================
-// CONTADOR DE FALTANTES (solo admin - ya no se usa en frontend pero se mantiene)
-// ============================================================
+
+
+
 
 export const contarHorariosFaltantes = async (req, res) => {
   try {
@@ -283,10 +269,6 @@ export const contarHorariosFaltantes = async (req, res) => {
   }
 };
 
-// ============================================================
-// SUBIR HORARIO (solo admin)
-// ============================================================
-
 export const solicitarUploadHorario = async (req, res) => {
   try {
     if (req.user.rol !== 'administrador') {
@@ -303,8 +285,10 @@ export const solicitarUploadHorario = async (req, res) => {
       turno_id,
       tipo_horario,
       descripcion,
+      letra, 
     } = req.body;
 
+    
     if (!nombre || !tipo || !grupo_id || !semestre || !ciclo_id || !turno_id) {
       return res.status(400).json({
         success: false,
@@ -324,12 +308,22 @@ export const solicitarUploadHorario = async (req, res) => {
     const tiposHorarioValidos = ['grupo', 'maestro', 'laboratorio'];
     const tipoHorarioFinal = tiposHorarioValidos.includes(tipo_horario) ? tipo_horario : 'grupo';
 
+    
+    let letraFinal = letra;
+    if (!letraFinal && grupo_id) {
+      const grupoRes = await query('SELECT letra FROM grupos WHERE id = $1', [grupo_id]);
+      if (grupoRes.rows.length > 0) {
+        letraFinal = grupoRes.rows[0].letra;
+      }
+    }
+
     const { url, key } = await generateUploadUrl(nombre, tipo);
 
+    
     await query(
       `INSERT INTO horario_archivos 
-       (nombre, key, tipo, grupo_id, semestre, ciclo_id, especialidad_id, turno_id, tipo_horario, descripcion, subido_por, fecha)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())`,
+       (nombre, key, tipo, grupo_id, semestre, ciclo_id, especialidad_id, turno_id, tipo_horario, descripcion, subido_por, fecha, letra)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), $12)`,
       [
         nombre,
         key,
@@ -342,6 +336,7 @@ export const solicitarUploadHorario = async (req, res) => {
         tipoHorarioFinal,
         descripcion || null,
         req.user.id,
+        letraFinal, 
       ]
     );
 
@@ -359,9 +354,9 @@ export const solicitarUploadHorario = async (req, res) => {
   }
 };
 
-// ============================================================
-// ACTUALIZAR METADATOS DE HORARIO (solo admin)
-// ============================================================
+
+
+
 
 export const actualizarHorario = async (req, res) => {
   const { id } = req.params;
@@ -411,9 +406,9 @@ export const actualizarHorario = async (req, res) => {
   }
 };
 
-// ============================================================
-// SUBIDA MASIVA (solo admin)
-// ============================================================
+
+
+
 
 export const uploadMultipleHorarios = async (req, res) => {
   try {
@@ -494,9 +489,9 @@ export const uploadMultipleHorarios = async (req, res) => {
   }
 };
 
-// ============================================================
-// SOLICITAR DESCARGA (autenticado)
-// ============================================================
+
+
+
 
 export const solicitarDescarga = async (req, res) => {
   try {
@@ -520,9 +515,9 @@ export const solicitarDescarga = async (req, res) => {
   }
 };
 
-// ============================================================
-// ELIMINAR HORARIO (solo admin)
-// ============================================================
+
+
+
 
 export const eliminarHorario = async (req, res) => {
   const { id } = req.params;
@@ -542,9 +537,9 @@ export const eliminarHorario = async (req, res) => {
   }
 };
 
-// ============================================================
-// GENERAR PLANTILLA DOCX (CORREGIDA)
-// ============================================================
+
+
+
 
 export const generarPlantillaHorario = async (req, res) => {
   try {
@@ -557,7 +552,7 @@ export const generarPlantillaHorario = async (req, res) => {
 
     const { tipo, grupo_id, semestre, ciclo_id, turno_id, letra } = req.query;
 
-    // Validar campos obligatorios según tipo
+    
     if (!turno_id) {
       return res.status(400).json({
         success: false,
@@ -565,7 +560,7 @@ export const generarPlantillaHorario = async (req, res) => {
       });
     }
 
-    // Si es tipo "grupo", validar grupo_id y también semestre/ciclo
+    
     if (tipo === 'grupo') {
       if (!grupo_id) {
         return res.status(400).json({
@@ -615,7 +610,7 @@ export const generarPlantillaHorario = async (req, res) => {
     let semestreFinal = semestre || '1';
     let cicloFinal = ciclo_id || 'General';
 
-    // Si hay grupo_id, obtener datos del grupo
+    
     if (grupo_id) {
       const grupoRes = await query(
         `SELECT g.id, g.nombre, g.semestre, g.letra,
@@ -639,7 +634,7 @@ export const generarPlantillaHorario = async (req, res) => {
       cicloNombre = grupo.ciclo_nombre || 'Sin ciclo';
       semestreFinal = grupo.semestre || semestre || '1';
     } else {
-      // Si no hay grupo, usar nombres genéricos según tipo
+      
       const tipoNombres = {
         maestro: 'Maestro',
         laboratorio: 'Laboratorio',
