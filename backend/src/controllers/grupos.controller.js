@@ -3,8 +3,6 @@ import { query } from '../config/db.js';
 export const getGrupos = async (req, res) => {
   try {
     const { ciclo_id, semestre, turno_id, docente_id } = req.query;
-    console.log(' getGrupos - Parámetros recibidos:', req.query);
-
     let sql = `
       SELECT g.id, g.nombre, g.semestre, g.letra, g.activo,
              c.id AS ciclo_id, c.nombre AS ciclo,
@@ -29,7 +27,6 @@ export const getGrupos = async (req, res) => {
         const cicloId = cicloActivo.rows[0].id;
         params.push(cicloId);
         sql += ` AND g.ciclo_id = $${params.length}`;
-        console.log(` Ciclo activo: ${cicloId}`);
       }
     }
 
@@ -51,11 +48,7 @@ export const getGrupos = async (req, res) => {
 
     sql += ' ORDER BY g.semestre, g.letra, t.nombre';
 
-    console.log(' SQL final:', sql);
-    console.log(' Params:', params);
-
     const result = await query(sql, params);
-    console.log(` Resultados: ${result.rows.length} grupos`);
 
     return res.json({ success: true, data: result.rows });
   } catch (err) {
