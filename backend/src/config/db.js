@@ -5,15 +5,19 @@ dotenv.config();
 
 const { Pool } = pg;
 
-const pool = new Pool({
+// Neon (Cloud) usa SSL; local (Docker) no. Se decide por la cadena de conexión.
+const poolConfig = {
   connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false
-  },
   connectionTimeoutMillis: 10000,
   idleTimeoutMillis: 30000,
   max: 10,
-});
+};
+
+if (process.env.DATABASE_URL?.includes('sslmode=require') || process.env.DATABASE_URL?.includes('sslmode=verify-full')) {
+  poolConfig.ssl = { rejectUnauthorized: false };
+}
+
+const pool = new Pool(poolConfig);
 
 pool.connect((err, client, release) => {
   if (err) {
