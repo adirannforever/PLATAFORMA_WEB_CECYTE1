@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import styles from './LoginPage.module.css';
 import logoCecyte from '../assets/logo_cecyte.png';
+import { INSTITUCION } from '../config/institucion';
 import { Eye, EyeOff, Loader2, ArrowLeft } from 'lucide-react';
 
 export default function LoginPage() {
@@ -49,7 +50,7 @@ export default function LoginPage() {
             alt="Logo CECyTE" 
             className={styles.logoImg} 
           />
-          <h1 className={styles.panelTitle}>CECyTE Plantel 1</h1>
+          <h1 className={styles.panelTitle}>{INSTITUCION.nombre}</h1>
           <p className={styles.panelDesc}>
             Plataforma Web Académica y de Gestión Institucional
           </p>
@@ -136,7 +137,7 @@ export default function LoginPage() {
         </div>
 
         <footer className={styles.footer}>
-           {new Date().getFullYear()} CECyTE Tabasco Plantel 1 · Todos los derechos reservados
+           {new Date().getFullYear()} {INSTITUCION.nombre} · Todos los derechos reservados
         </footer>
       </div>
     </div>

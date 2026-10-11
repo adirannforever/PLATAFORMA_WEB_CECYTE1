@@ -3,6 +3,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import { query } from './config/db.js';
+import { INSTITUCION } from './config/institucion.js';
 import { crearCiclosFuturos } from './utils/ciclos.js';
 import '../scripts/scheduler.js';
 
@@ -65,7 +66,7 @@ app.get('/health', async (req, res) => {
     res.json({
       status: 'OK',
       version: '3.0.0',
-      platform: 'CECyTE Plantel 1',
+      platform: INSTITUCION.nombre,
       timestamp: new Date().toISOString(),
       database: 'ok',
       redis: redisOk === 'PONG' ? 'ok' : 'error',

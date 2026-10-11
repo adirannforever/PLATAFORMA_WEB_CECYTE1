@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
 import { comunicadosService, catalogosService } from '../services/api';
+import { INSTITUCION } from '../config/institucion';
 import Skeleton from '../components/Skeleton';
 import styles from './ComunicadosPage.module.css';
 import { Plus } from 'lucide-react';
@@ -83,7 +84,7 @@ export default function ComunicadosPage() {
       <div className={styles.pageHeader}>
         <div>
           <h1 className={styles.title}>Comunicados Institucionales</h1>
-          <p className={styles.subtitle}>Avisos y noticias del CECyTE Plantel 1</p>
+          <p className={styles.subtitle}>Avisos y noticias del {INSTITUCION.nombre}</p>
         </div>
         {isAdmin && (
           <button className={styles.btnPrimary} onClick={() => setModalAbierto(true)}>

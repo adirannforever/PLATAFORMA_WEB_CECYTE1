@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import { INSTITUCION } from '../config/institucion';
 import {
   Menu,
   X,
@@ -32,7 +33,7 @@ const slidesData = [
     id: 1,
     img: 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&w=1200&q=80',
     title: 'Excelencia Académica y Tecnológica',
-    subtitle: 'CECyTE Plantel 1 · Poblado Aquiles Serdán, Macuspana',
+    subtitle: `${INSTITUCION.nombre} · ${INSTITUCION.sede}`,
     badge: 'Orgullo Lince',
   },
   {
@@ -278,8 +279,8 @@ export default function LandingPage() {
               loading="lazy"
             />
             <div className={styles.headerTitles}>
-              <h1>CECyTE Plantel 1</h1>
-              <span>Macuspana, Tabasco · Aquiles Serdán</span>
+              <h1>{INSTITUCION.nombre}</h1>
+              <span>{INSTITUCION.ciudad}, {INSTITUCION.estado} · Aquiles Serdán</span>
             </div>
           </div>
           <div className={styles.headerAction}>
@@ -440,7 +441,7 @@ export default function LandingPage() {
       {/* ===== Generalidades ===== */}
       <section id="generalidades" className={styles.generalitiesSection}>
         <div className={styles.sectionHeader}>
-          <h2>¿Por qué estudiar en el CECyTE Plantel 1?</h2>
+          <h2>¿Por qué estudiar en el {INSTITUCION.nombre}?</h2>
           <p>Comprometidos con el desarrollo integral de la juventud tabasqueña.</p>
         </div>
 
@@ -529,7 +530,7 @@ export default function LandingPage() {
 
       {/* ===== Footer ===== */}
       <footer className={styles.mainFooter}>
-        <p>&copy; {new Date().getFullYear()} CECyTE Plantel 1 — Todos los derechos reservados.</p>
+        <p>&copy; {new Date().getFullYear()} {INSTITUCION.nombre} — Todos los derechos reservados.</p>
         <button
           className={styles.scrollTopBtn}
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}

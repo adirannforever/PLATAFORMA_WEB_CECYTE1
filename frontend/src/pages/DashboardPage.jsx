@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { comunicadosService, calificacionesService, catalogosService, gruposService, materiasService } from '../services/api';
+import { INSTITUCION } from '../config/institucion';
 import styles from './DashboardPage.module.css';
 
 const SALUDO = () => {
@@ -82,7 +83,7 @@ export default function DashboardPage() {
       <div className={styles.welcome}>
         <div>
           <h1 className={styles.welcomeTitle}>{SALUDO()}, {usuario.nombre || 'Usuario'}</h1>
-          <p className={styles.welcomeDesc}>Bienvenido a la plataforma académica del CECyTE Plantel 1.</p>
+          <p className={styles.welcomeDesc}>Bienvenido a la plataforma académica del {INSTITUCION.nombre}.</p>
         </div>
         <div className={styles.welcomeBadge}>
           {usuario.rol === 'administrador' && 'Administrador'}

@@ -3,6 +3,7 @@ import PDFDocument from 'pdfkit';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { INSTITUCION, INSTITUCION_HEADER } from '../config/institucion.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -54,7 +55,7 @@ export const generarBoletaPDF = async (alumnoData, materias, promedioGeneral, pr
   
   doc.y = 55;
   doc.fontSize(16).font('Helvetica-Bold').fillColor('black').text('BOLETA DE CALIFICACIONES', { align: 'center' });
-  doc.fontSize(10).font('Helvetica').fillColor('#333333').text('CECyTE Plantel 1 - Poblado Aquiles Serdán, Macuspana', { align: 'center' });
+  doc.fontSize(10).font('Helvetica').fillColor('#333333').text(INSTITUCION_HEADER, { align: 'center' });
   
   doc.moveDown(1);
   doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#1A6B35').lineWidth(1.5).stroke();
@@ -239,12 +240,12 @@ export const generarConstanciaPDF = async (alumnoData, tipo = 'estudios', becaDa
   
   doc.fontSize(12).font('Helvetica').fillColor('#333333'); 
   const textosIntro = {
-    estudios: 'La Dirección del CECyTE Plantel 1 hace constar que:',
-    conducta: 'La Dirección del CECyTE Plantel 1 certifica la buena conducta de:',
-    beca: 'La Dirección del CECyTE Plantel 1 expide la presente constancia de beca a:',
-    trabajo: 'La Dirección del CECyTE Plantel 1 expide la presente constancia de trabajo a:',
-    servicio_social: 'La Dirección del CECyTE Plantel 1 certifica que el siguiente alumno ha cumplido con el Servicio Social:',
-    practicas: 'La Dirección del CECyTE Plantel 1 certifica que el siguiente alumno ha realizado Prácticas Profesionales:',
+    estudios: `La Dirección del ${INSTITUCION.nombre} hace constar que:`,
+    conducta: `La Dirección del ${INSTITUCION.nombre} certifica la buena conducta de:`,
+    beca: `La Dirección del ${INSTITUCION.nombre} expide la presente constancia de beca a:`,
+    trabajo: `La Dirección del ${INSTITUCION.nombre} expide la presente constancia de trabajo a:`,
+    servicio_social: `La Dirección del ${INSTITUCION.nombre} certifica que el siguiente alumno ha cumplido con el Servicio Social:`,
+    practicas: `La Dirección del ${INSTITUCION.nombre} certifica que el siguiente alumno ha realizado Prácticas Profesionales:`,
   };
   doc.text(textosIntro[tipo] || textosIntro.estudios, { align: 'center' });
   doc.moveDown(2);
@@ -311,7 +312,7 @@ export const generarConstanciaPDF = async (alumnoData, tipo = 'estudios', becaDa
   );
   
   doc.y = 750;
-  doc.fontSize(8).fillColor('#94a3b8').text('Este documento es un comprobante interno del CECyTE Plantel 1 y está sujeto a verificación en el sistema académico.', { align: 'center' });
+  doc.fontSize(8).fillColor('#94a3b8').text(`Este documento es un comprobante interno del ${INSTITUCION.nombre} y está sujeto a verificación en el sistema académico.`, { align: 'center' });
 
   doc.end();
   return new Promise(resolve => {

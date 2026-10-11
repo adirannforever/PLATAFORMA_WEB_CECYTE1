@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { getMenuItems, categoryOrder, CATEGORIES } from '../../config/menuItems';
+import { INSTITUCION } from '../../config/institucion';
 import { usePermissions } from '../../hooks/usePermissions';
 import styles from './DashboardLayout.module.css';
 import logoCecyte from '../../assets/logo_cecyte.png';
@@ -231,7 +232,7 @@ export default function DashboardLayout() {
           </button>
           <div className={styles.headerBrand}>
             <LogoCECyTE />
-            <span className={styles.headerTitle}>CECyTE Plantel 1</span>
+            <span className={styles.headerTitle}>{INSTITUCION.nombre}</span>
           </div>
           <div className={styles.headerUser}>
             <span>{usuario?.nombre}</span>
