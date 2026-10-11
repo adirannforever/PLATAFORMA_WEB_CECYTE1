@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
 import { horariosService, catalogosService, usuariosService } from '../services/api';
+import { semestresDesdeGrupos } from '../config/academicos';
 import { 
   Settings, Users, User, FlaskConical, RefreshCw, 
   Download, FileText, Upload, Edit2, Trash2, X, 
@@ -845,7 +846,7 @@ export default function HorariosPage() {
                   onChange={e => setUploadForm({ ...uploadForm, semestre: e.target.value })}
                 >
                   <option value="">Seleccionar...</option>
-                  {[1,2,3,4,5,6].map(s => (
+                  {semestresDesdeGrupos(grupos).map(s => (
                     <option key={s} value={s}>{s}°</option>
                   ))}
                 </select>
@@ -977,7 +978,7 @@ export default function HorariosPage() {
                   onChange={e => setEditForm({ ...editForm, semestre: e.target.value })}
                 >
                   <option value="">Seleccionar...</option>
-                  {[1,2,3,4,5,6].map(s => (
+                  {semestresDesdeGrupos(grupos).map(s => (
                     <option key={s} value={s}>{s}°</option>
                   ))}
                 </select>
@@ -1109,7 +1110,7 @@ export default function HorariosPage() {
                   onChange={e => setBatchForm({ ...batchForm, semestre: e.target.value })}
                 >
                   <option value="">Seleccionar...</option>
-                  {[1,2,3,4,5,6].map(s => (
+                  {semestresDesdeGrupos(grupos).map(s => (
                     <option key={s} value={s}>{s}°</option>
                   ))}
                 </select>
@@ -1315,7 +1316,7 @@ export default function HorariosPage() {
                     onChange={e => setPlantillaForm({ ...plantillaForm, semestre: e.target.value })}
                   >
                     <option value="">Seleccionar...</option>
-                    {[1,2,3,4,5,6].map(s => (
+                    {semestresDesdeGrupos(grupos).map(s => (
                       <option key={s} value={s}>{s}°</option>
                     ))}
                   </select>
@@ -1448,7 +1449,7 @@ export default function HorariosPage() {
               onChange={e => setFiltros({ ...filtros, semestre: e.target.value })}
             >
               <option value="">Todos</option>
-              {[1,2,3,4,5,6].map(s => (
+              {semestresDesdeGrupos(grupos).map(s => (
                 <option key={s} value={s}>{s}°</option>
               ))}
             </select>
