@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
 import { reportesService, catalogosService, usuariosService, gruposService } from '../services/api';
+import { semestresDesdeGrupos } from '../config/academicos';
 import { downloadExcel, downloadPDF } from '../utils/downloadHelper';
 import { FileText, Download, Users, BarChart3, CheckCircle, Search, X, Eye, Printer, Calendar, Filter } from 'lucide-react';
 import styles from './ReportesPage.module.css';
@@ -389,7 +390,7 @@ export default function ReportesPage() {
                   onChange={(e) => setFiltroSemestreAlumno(e.target.value)}
                 >
                   <option value="">Todos los semestres</option>
-                  {[1,2,3,4,5,6].map((s) => (
+                  {semestresDesdeGrupos(grupos).map((s) => (
                     <option key={s} value={s}>{s}°</option>
                   ))}
                 </select>
@@ -562,7 +563,7 @@ export default function ReportesPage() {
                   onChange={(e) => setFiltroSemestreAlumno(e.target.value)}
                 >
                   <option value="">Todos los semestres</option>
-                  {[1,2,3,4,5,6].map((s) => (
+                  {semestresDesdeGrupos(grupos).map((s) => (
                     <option key={s} value={s}>{s}°</option>
                   ))}
                 </select>
@@ -688,7 +689,7 @@ export default function ReportesPage() {
                 onChange={(e) => setFiltroSemestre(e.target.value)}
               >
                 <option value="">Todos</option>
-                {[1,2,3,4,5,6].map((s) => (
+                {semestresDesdeGrupos(grupos).map((s) => (
                   <option key={s} value={s}>{s}°</option>
                 ))}
               </select>
