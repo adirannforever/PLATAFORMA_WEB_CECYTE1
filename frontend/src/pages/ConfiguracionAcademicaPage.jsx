@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { SEMESTRES_FALLBACK } from '../config/academicos';
 import {
   ciclosService,
   periodosService,
@@ -398,7 +399,7 @@ export default function ConfiguracionAcademicaPage() {
     }
     let semestres = [];
     if (rango_todos) {
-      semestres = [1, 2, 3, 4, 5, 6];
+      semestres = [...SEMESTRES_FALLBACK];
     } else {
       const desde = parseInt(semestre_desde);
       const hasta = parseInt(semestre_hasta);
@@ -537,7 +538,7 @@ export default function ConfiguracionAcademicaPage() {
                   onChange={(e) => setFiltroSemestrePeriodo(e.target.value)}
                 >
                   <option value="">Todos</option>
-                  {[1,2,3,4,5,6].map(s => <option key={s} value={s}>{s}°</option>)}
+                  {SEMESTRES_FALLBACK.map(s => <option key={s} value={s}>{s}°</option>)}
                 </select>
               </div>
               <div className={styles.filtroPeriodo}>
@@ -696,7 +697,7 @@ export default function ConfiguracionAcademicaPage() {
                     onChange={(e) => setFiltroSemMateria(e.target.value)}
                   >
                     <option value="">Todos</option>
-                    {[1,2,3,4,5,6].map(s => <option key={s} value={s}>{s}°</option>)}
+                    {SEMESTRES_FALLBACK.map(s => <option key={s} value={s}>{s}°</option>)}
                   </select>
                 </div>
                 <button className={styles.btnLimpiar} onClick={() => { setFiltroEspMateria(''); setFiltroSemMateria(''); }}>
@@ -761,7 +762,7 @@ export default function ConfiguracionAcademicaPage() {
     } else if (modalTipo === 'periodo_escolar') {
       titulo = modalEditando ? 'Editar período escolar' : 'Nuevo período escolar';
       campos = [
-        { name: 'semestre', label: 'Semestre', type: 'select', options: [1,2,3,4,5,6], required: true },
+        { name: 'semestre', label: 'Semestre', type: 'select', options: SEMESTRES_FALLBACK, required: true },
         { name: 'tipo', label: 'Tipo', type: 'select', options: TIPO_PERIODO_OPCIONES.map(t => ({ value: t, label: TIPO_ETIQUETA[t] })), required: true },
         { name: 'fecha_inicio', label: 'Fecha inicio', type: 'date', required: true },
         { name: 'fecha_fin', label: 'Fecha fin', type: 'date', required: true },
@@ -787,7 +788,7 @@ export default function ConfiguracionAcademicaPage() {
       campos = [
         { name: 'nombre', label: 'Nombre', type: 'text', required: true },
         { name: 'clave', label: 'Clave', type: 'text' },
-        { name: 'semestre', label: 'Semestre', type: 'select', options: [1,2,3,4,5,6], required: true },
+        { name: 'semestre', label: 'Semestre', type: 'select', options: SEMESTRES_FALLBACK, required: true },
         { name: 'tipo', label: 'Tipo', type: 'select', options: ['troncal_general','troncal_especialidad','modulo'], required: true },
         { name: 'especialidad_id', label: 'Especialidad', type: 'select', options: especialidades.map(e => ({ value: e.id, label: e.nombre })), allowEmpty: true },
         { name: 'horas_semana', label: 'Horas semana', type: 'number' },
