@@ -1,0 +1,36 @@
+# ── Stack local de desarrollo (Fase 1 + testing) ──────────────────────────
+# postgres://cecyte:cecyte123@localhost:5432/cecyte
+# redis://localhost:6379
+# mailpit (smtp 1025, ui 8025)
+#
+# Levantar:   docker compose up -d
+# Detener:    docker compose down
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: cecyte
+      POSTGRES_PASSWORD: cecyte123
+      POSTGRES_DB: cecyte
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6379:6379'
+    restart: unless-stopped
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    ports:
+      - '1025:1025'   # SMTP
+      - '8025:8025'   # UI web
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  mailpit_data:
