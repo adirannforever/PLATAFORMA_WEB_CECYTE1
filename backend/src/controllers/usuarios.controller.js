@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { query } from '../config/db.js';
+import { query, withTransaction } from '../config/db.js';
 
 export const getUsuarios = async (req, res) => {
   try {
@@ -46,14 +46,20 @@ export const getUsuarios = async (req, res) => {
     const conditions = [];
 
     
-    if (userRole === 'docente' && rol === 'alumno') {
-      const docenteId = docente_id || userId;
+    if (userRole === 'docente') {
+      if (rol !== 'alumno') {
+        return res.status(403).json({
+          success: false,
+          message: 'Los docentes solo pueden consultar alumnos de sus grupos.',
+        });
+      }
+
       conditions.push(`a.grupo_actual_id IN (
         SELECT DISTINCT mg.grupo_id 
         FROM materias_grupo mg 
         WHERE mg.docente_id = $${params.length + 1} AND mg.activa = true
       )`);
-      params.push(docenteId);
+      params.push(userId);
     }
 
     if (rol) {
@@ -162,32 +168,31 @@ export const crearUsuario = async (req, res) => {
   }
 
   try {
-    await query('BEGIN');
-
-    const hash = await bcrypt.hash(password, 12);
-
-    const result = await query(
-      `INSERT INTO usuarios (nombre, apellidos, email, password_hash, rol)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, nombre, apellidos, email, rol`,
-      [nombre.trim(), apellidos.trim(), email.toLowerCase().trim(), hash, rol]
-    );
-
-    const nuevoUsuario = result.rows[0];
-
-    if (rol === 'alumno') {
-      const matriculaFinal =
-        matricula && matricula.trim() !== ''
-          ? matricula.trim()
-          : `A${String(nuevoUsuario.id).padStart(4, '0')}`;
-
-      await query(
-        `INSERT INTO alumnos (usuario_id, matricula, estatus) VALUES ($1, $2, 'activo')`,
-        [nuevoUsuario.id, matriculaFinal]
+    const nuevoUsuario = await withTransaction(async (client) => {
+      const hash = await bcrypt.hash(password, 12);
+      const result = await client.query(
+        `INSERT INTO usuarios (nombre, apellidos, email, password_hash, rol)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING id, nombre, apellidos, email, rol`,
+        [nombre.trim(), apellidos.trim(), email.toLowerCase().trim(), hash, rol]
       );
-    }
 
-    await query('COMMIT');
+      const usuarioCreado = result.rows[0];
+
+      if (rol === 'alumno') {
+        const matriculaFinal =
+          matricula && matricula.trim() !== ''
+            ? matricula.trim()
+            : `A${String(usuarioCreado.id).padStart(4, '0')}`;
+
+        await client.query(
+          `INSERT INTO alumnos (usuario_id, matricula, estatus) VALUES ($1, $2, 'activo')`,
+          [usuarioCreado.id, matriculaFinal]
+        );
+      }
+
+      return usuarioCreado;
+    });
 
     return res.status(201).json({
       success: true,
@@ -195,7 +200,6 @@ export const crearUsuario = async (req, res) => {
       usuario: nuevoUsuario,
     });
   } catch (err) {
-    await query('ROLLBACK');
     if (err.code === '23505') {
       return res.status(409).json({
         success: false,

@@ -9,6 +9,46 @@ CREATE TABLE turnos (
 );
 
 
+CREATE TABLE edificios (
+  id     SERIAL PRIMARY KEY,
+  clave  VARCHAR(10) NOT NULL UNIQUE,
+  nombre VARCHAR(80) NOT NULL,
+  tipo   VARCHAR(30) NOT NULL
+);
+
+
+CREATE TABLE aulas (
+  id          SERIAL PRIMARY KEY,
+  edificio_id INTEGER NOT NULL REFERENCES edificios(id) ON DELETE CASCADE,
+  nombre      VARCHAR(40) NOT NULL,
+  tipo        VARCHAR(30) NOT NULL,
+  capacidad   SMALLINT,
+  activa      BOOLEAN DEFAULT TRUE
+);
+
+
+CREATE TABLE periodos_dia (
+  id          SERIAL PRIMARY KEY,
+  turno_id    INTEGER NOT NULL REFERENCES turnos(id) ON DELETE CASCADE,
+  numero      SMALLINT NOT NULL,
+  hora_inicio TIME NOT NULL,
+  hora_fin    TIME NOT NULL,
+  UNIQUE(turno_id, numero)
+);
+
+
+CREATE TABLE configuracion_horarios (
+  id                      SERIAL PRIMARY KEY,
+  duracion_bloque_minutos INTEGER NOT NULL DEFAULT 50,
+  hora_inicio_turno       TIME NOT NULL DEFAULT '07:00:00',
+  hora_fin_turno          TIME NOT NULL DEFAULT '13:00:00',
+  receso_inicio           TIME NOT NULL DEFAULT '09:30:00',
+  receso_fin              TIME NOT NULL DEFAULT '10:00:00',
+  receso_bloqueado        BOOLEAN DEFAULT FALSE,
+  dias_semana             TEXT[] DEFAULT ARRAY['Lunes','Martes','Miércoles','Jueves','Viernes']
+);
+
+
 CREATE TABLE especialidades (
   id          SERIAL PRIMARY KEY,
   clave       VARCHAR(10)  NOT NULL UNIQUE,
@@ -87,6 +127,7 @@ CREATE TABLE grupos (
                    ) STORED,
   tutor_id         INTEGER REFERENCES usuarios(id),
   activo           BOOLEAN DEFAULT TRUE,
+  horario_config   JSONB,
   UNIQUE(ciclo_id, semestre, letra, turno_id)
 );
 
@@ -120,6 +161,24 @@ CREATE TABLE alumnos (
   candidato_constancia BOOLEAN DEFAULT FALSE,
   fecha_ingreso        DATE,
   generacion           VARCHAR(10)
+);
+
+
+CREATE TABLE aspirantes (
+  id                 SERIAL PRIMARY KEY,
+  folio              VARCHAR(30) NOT NULL UNIQUE,
+  nombre             VARCHAR(100) NOT NULL,
+  apellidos          VARCHAR(150) NOT NULL,
+  curp               VARCHAR(18) NOT NULL UNIQUE,
+  email              VARCHAR(255) NOT NULL UNIQUE,
+  telefono           VARCHAR(20),
+  especialidad_id    INTEGER NOT NULL REFERENCES especialidades(id),
+  turno_preferido_id INTEGER NOT NULL REFERENCES turnos(id),
+  ciclo_id           INTEGER NOT NULL REFERENCES ciclos_escolares(id),
+  estatus            VARCHAR(30) NOT NULL DEFAULT 'registrado' CHECK (
+                       estatus IN ('registrado','documentos_pendientes','ficha_pagada','examen_aprobado','aceptado','rechazado','inscrito')
+                     ),
+  fecha_registro     TIMESTAMPTZ DEFAULT NOW()
 );
 
 
@@ -235,12 +294,62 @@ CREATE TABLE horario_archivos (
   letra            CHAR(1) CHECK (letra IN ('A','B','C','D')),
   especialidad_id  INTEGER REFERENCES especialidades(id),
   turno_id         INTEGER REFERENCES turnos(id),
-  tipo_horario     VARCHAR(20) NOT NULL DEFAULT 'grupo' CHECK (tipo_horario IN ('grupo','maestro','laboratorio')),
+  tipo_horario     VARCHAR(20) NOT NULL DEFAULT 'alumnos' CHECK (tipo_horario IN ('alumnos','grupo','docente','maestro','laboratorio')),
   docente_id       INTEGER REFERENCES usuarios(id),
+  laboratorio_id   INTEGER REFERENCES aulas(id),
   tipo             VARCHAR(100),
   descripcion      TEXT,
   grupo_id         INTEGER REFERENCES grupos(id)
 );
+
+
+CREATE TABLE horario_grupos (
+  id               SERIAL PRIMARY KEY,
+  grupo_id         INTEGER NOT NULL REFERENCES grupos(id) ON DELETE CASCADE,
+  materia_grupo_id INTEGER NOT NULL REFERENCES materias_grupo(id) ON DELETE CASCADE,
+  dia_semana       TEXT NOT NULL,
+  hora_inicio      TIME NOT NULL,
+  hora_fin         TIME NOT NULL,
+  creado_por       INTEGER REFERENCES usuarios(id),
+  fecha_creacion   TIMESTAMPTZ DEFAULT NOW()
+);
+
+
+CREATE TABLE horario_maestros (
+  id               SERIAL PRIMARY KEY,
+  docente_id       INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  materia_grupo_id INTEGER NOT NULL REFERENCES materias_grupo(id) ON DELETE CASCADE,
+  dia_semana       TEXT NOT NULL,
+  hora_inicio      TIME NOT NULL,
+  hora_fin         TIME NOT NULL,
+  es_automatico    BOOLEAN DEFAULT TRUE,
+  creado_por       INTEGER REFERENCES usuarios(id),
+  fecha_creacion   TIMESTAMPTZ DEFAULT NOW()
+);
+
+
+CREATE TABLE horario_laboratorios (
+  id               SERIAL PRIMARY KEY,
+  laboratorio_id   INTEGER NOT NULL REFERENCES aulas(id) ON DELETE CASCADE,
+  materia_grupo_id INTEGER NOT NULL REFERENCES materias_grupo(id) ON DELETE CASCADE,
+  dia_semana       TEXT NOT NULL,
+  hora_inicio      TIME NOT NULL,
+  hora_fin         TIME NOT NULL,
+  es_automatico    BOOLEAN DEFAULT TRUE,
+  creado_por       INTEGER REFERENCES usuarios(id),
+  fecha_creacion   TIMESTAMPTZ DEFAULT NOW()
+);
+
+
+CREATE TABLE horarios (
+  id               SERIAL PRIMARY KEY,
+  materia_grupo_id INTEGER NOT NULL REFERENCES materias_grupo(id) ON DELETE CASCADE,
+  aula_id          INTEGER REFERENCES aulas(id) ON DELETE SET NULL,
+  dia_semana       SMALLINT NOT NULL,
+  periodo_id       INTEGER NOT NULL REFERENCES periodos_dia(id),
+  ciclo_id         INTEGER NOT NULL REFERENCES ciclos_escolares(id) ON DELETE CASCADE
+);
+
 
 
 CREATE TABLE tutorias (
@@ -448,4 +557,7 @@ CREATE INDEX idx_auditoria_calif ON auditoria_calificaciones(calificacion_id);
 CREATE INDEX idx_auditoria_usuario ON auditoria_logs(usuario_id);
 CREATE INDEX idx_auditoria_fecha_log ON auditoria_logs(fecha DESC);
 CREATE INDEX idx_auditoria_tabla ON auditoria_logs(tabla_afectada);
+CREATE INDEX idx_aspirantes_curp ON aspirantes(curp);
+CREATE INDEX idx_aspirantes_ciclo ON aspirantes(ciclo_id);
+CREATE INDEX idx_aspirantes_estatus ON aspirantes(estatus);
 

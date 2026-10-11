@@ -1,6 +1,6 @@
 {
   "name": "cecyte-platform",
-  "version": "1.0.0",
+  "version": "3.0.0",
   "description": "Plataforma Web Educativa CECyTE Plantel 1",
   "private": true,
   "scripts": {

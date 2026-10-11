@@ -1,8 +1,5 @@
-import { query } from '../config/db.js';
-
-
-
-
+import { query, withTransaction } from '../config/db.js';
+import { calcularCondicionAcademica } from './calificaciones.controller.js';
 
 const verificarPeriodoActivo = async (ciclo_id, semestre, tipo_inscripcion) => {
   const hoy = new Date();
@@ -11,7 +8,7 @@ const verificarPeriodoActivo = async (ciclo_id, semestre, tipo_inscripcion) => {
   const periodoRes = await query(
     `SELECT tipo, fecha_inicio, fecha_fin
      FROM periodos_escolares
-     WHERE ciclo_id = $1 AND semestre = $2 AND tipo = $3 AND activo = TRUE
+     WHERE ciclo_id = $1 AND (semestre = $2 OR semestre IS NULL) AND tipo = $3 AND activo = TRUE
      ORDER BY fecha_inicio`,
     [ciclo_id, semestre, tipo_inscripcion]
   );
@@ -27,7 +24,7 @@ const verificarPeriodoActivo = async (ciclo_id, semestre, tipo_inscripcion) => {
   const inicio = new Date(periodo.fecha_inicio);
   const fin = new Date(periodo.fecha_fin);
   inicio.setHours(0, 0, 0, 0);
-  fin.setHours(0, 0, 0, 0);
+  fin.setHours(23, 59, 59, 999);
 
   if (hoy < inicio) {
     return {
@@ -66,10 +63,6 @@ const verificarDocumentosObligatorios = async (alumno_id, etapa) => {
   };
 };
 
-
-
-
-
 export const getAlumnosDisponibles = async (req, res) => {
   try {
     const cicloActivo = await query(
@@ -85,10 +78,10 @@ export const getAlumnosDisponibles = async (req, res) => {
     const cicloId = cicloActivo.rows[0].id;
 
     const result = await query(
-      `SELECT u.id, u.nombre, u.apellidos, u.email, a.matricula
+      `SELECT u.id, u.nombre, u.apellidos, u.email, a.matricula, a.id as alumno_id, a.semestre_actual, a.estatus
        FROM usuarios u
        JOIN alumnos a ON a.usuario_id = u.id
-       WHERE u.rol = 'alumno' AND u.activo = TRUE AND a.estatus = 'activo'
+       WHERE u.rol = 'alumno' AND u.activo = TRUE
          AND a.id NOT IN (
            SELECT alumno_id FROM historial_grupos_alumno
            WHERE ciclo_id = $1 AND activo = TRUE
@@ -102,10 +95,6 @@ export const getAlumnosDisponibles = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Error interno.' });
   }
 };
-
-
-
-
 
 export const getGruposDisponibles = async (req, res) => {
   try {
@@ -123,7 +112,7 @@ export const getGruposDisponibles = async (req, res) => {
 
     const result = await query(
       `SELECT g.id, g.nombre, g.semestre, g.letra,
-              e.nombre AS especialidad, t.nombre AS turno,
+              e.nombre AS especialidad, e.clave AS especialidad_clave, t.nombre AS turno,
               (SELECT COUNT(*) FROM historial_grupos_alumno WHERE grupo_id = g.id AND activo = TRUE) AS alumnos_actuales
        FROM grupos g
        JOIN especialidades e ON g.especialidad_id = e.id
@@ -139,14 +128,9 @@ export const getGruposDisponibles = async (req, res) => {
   }
 };
 
-
-
-
-
 export const inscribirAlumno = async (req, res) => {
   const { alumno_id, grupo_id } = req.body;
 
-  
   if (!alumno_id || !grupo_id) {
     return res.status(400).json({
       success: false,
@@ -155,7 +139,10 @@ export const inscribirAlumno = async (req, res) => {
     });
   }
 
-  if (isNaN(alumno_id) || isNaN(grupo_id) || parseInt(alumno_id) <= 0 || parseInt(grupo_id) <= 0) {
+  const parsedAlumnoId = parseInt(alumno_id, 10);
+  const parsedGrupoId = parseInt(grupo_id, 10);
+
+  if (isNaN(parsedAlumnoId) || isNaN(parsedGrupoId) || parsedAlumnoId <= 0 || parsedGrupoId <= 0) {
     return res.status(400).json({
       success: false,
       message: 'Los IDs deben ser números válidos.',
@@ -164,13 +151,12 @@ export const inscribirAlumno = async (req, res) => {
   }
 
   try {
-    
     const alumnoCheck = await query(
       `SELECT u.id AS usuario_id, u.activo, a.id AS alumno_id, a.estatus
        FROM usuarios u
        JOIN alumnos a ON a.usuario_id = u.id
        WHERE u.id = $1 AND u.rol = 'alumno'`,
-      [alumno_id]
+      [parsedAlumnoId]
     );
     if (!alumnoCheck.rows[0]) {
       return res.status(404).json({
@@ -186,12 +172,11 @@ export const inscribirAlumno = async (req, res) => {
         code: 'ALUMNO_INACTIVO'
       });
     }
-    const alumnoId = alumnoCheck.rows[0].alumno_id;
+    const realAlumnoId = alumnoCheck.rows[0].alumno_id;
 
-    
     const grupoRes = await query(
       `SELECT id, ciclo_id, semestre FROM grupos WHERE id = $1 AND activo = TRUE`,
-      [grupo_id]
+      [parsedGrupoId]
     );
     if (!grupoRes.rows[0]) {
       return res.status(404).json({
@@ -202,24 +187,22 @@ export const inscribirAlumno = async (req, res) => {
     }
     const { ciclo_id, semestre } = grupoRes.rows[0];
 
-    
     const existe = await query(
       `SELECT id FROM historial_grupos_alumno
        WHERE alumno_id = $1 AND ciclo_id = $2 AND activo = TRUE`,
-      [alumnoId, ciclo_id]
+      [realAlumnoId, ciclo_id]
     );
     if (existe.rows.length > 0) {
       return res.status(409).json({
         success: false,
-        message: 'Este alumno ya está inscrito en un grupo en el ciclo actual. Debes darlo de baja primero.',
+        message: 'Este alumno ya está inscrito en un grupo en el ciclo actual.',
         code: 'ALUMNO_YA_INSCRITO'
       });
     }
 
-    
     const tieneHistorial = await query(
       `SELECT id FROM historial_grupos_alumno WHERE alumno_id = $1`,
-      [alumnoId]
+      [realAlumnoId]
     );
     const tipoEsperado = tieneHistorial.rows.length > 0 ? 'reinscripcion' : 'inscripcion_nuevo_ingreso';
 
@@ -232,15 +215,12 @@ export const inscribirAlumno = async (req, res) => {
           code: 'PERIODO_INACTIVO'
         });
       }
-    } else {
-      console.log(`Admin inscribiendo fuera de período (${tipoEsperado})`);
     }
 
-    
     const etapa = tipoEsperado === 'reinscripcion' ? 'reinscripcion' : 'inscripcion';
-    const docsPendientes = await verificarDocumentosObligatorios(alumnoId, etapa);
+    const docsPendientes = await verificarDocumentosObligatorios(realAlumnoId, etapa);
 
-    if (docsPendientes.total > 0) {
+    if (docsPendientes.total > 0 && req.user.rol !== 'administrador') {
       return res.status(400).json({
         success: false,
         message: `Faltan ${docsPendientes.total} documento(s) obligatorio(s) para ${etapa === 'reinscripcion' ? 'Reinscripción' : 'Inscripción'}.`,
@@ -249,62 +229,368 @@ export const inscribirAlumno = async (req, res) => {
       });
     }
 
-    
-    await query(
-      'UPDATE alumnos SET grupo_actual_id = $1, semestre_actual = $2 WHERE id = $3',
-      [grupo_id, semestre, alumnoId]
-    );
+    const resultadoInscripcion = await withTransaction(async (client) => {
+      await client.query(
+        'UPDATE alumnos SET grupo_actual_id = $1, semestre_actual = $2 WHERE id = $3',
+        [parsedGrupoId, semestre, realAlumnoId]
+      );
 
-    
-    const result = await query(
-      `INSERT INTO historial_grupos_alumno (alumno_id, grupo_id, ciclo_id, semestre, activo)
-       VALUES ($1, $2, $3, $4, TRUE)
-       RETURNING *`,
-      [alumnoId, grupo_id, ciclo_id, semestre]
-    );
+      const histRes = await client.query(
+        `INSERT INTO historial_grupos_alumno (alumno_id, grupo_id, ciclo_id, semestre, activo)
+         VALUES ($1, $2, $3, $4, TRUE)
+         RETURNING *`,
+        [realAlumnoId, parsedGrupoId, ciclo_id, semestre]
+      );
 
-    
-    await query(
-      `INSERT INTO auditoria_inscripciones (alumno_id, grupo_id, tipo, usuario_id, observaciones)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [alumnoId, grupo_id, tipoEsperado, req.user.id, `Inscripción en grupo ${grupo_id} (semestre ${semestre})`]
-    );
+      await client.query(
+        `INSERT INTO auditoria_inscripciones (alumno_id, grupo_id, tipo, usuario_id, observaciones)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [realAlumnoId, parsedGrupoId, tipoEsperado, req.user.id, `Inscripción manual en grupo ${parsedGrupoId} (semestre ${semestre})`]
+      );
+
+      return histRes.rows[0];
+    });
 
     return res.status(201).json({
       success: true,
       message: `Alumno ${tipoEsperado === 'reinscripcion' ? 'reinscrito' : 'inscrito'} correctamente al grupo.`,
-      inscripcion: result.rows[0]
+      inscripcion: resultadoInscripcion
     });
 
   } catch (err) {
     console.error('Error en inscribirAlumno:', err);
-
-    if (err.code === '23503') {
-      return res.status(400).json({
-        success: false,
-        message: 'Uno de los IDs proporcionados no es válido (alumno o grupo no existen).',
-        code: 'FK_ERROR'
-      });
-    }
-    if (err.code === '23505') {
-      return res.status(409).json({
-        success: false,
-        message: 'El alumno ya está inscrito en este grupo (duplicado).',
-        code: 'DUPLICADO'
-      });
-    }
-
     return res.status(500).json({
       success: false,
-      message: 'Error interno al inscribir al alumno. Intenta de nuevo más tarde.',
+      message: 'Error interno al inscribir al alumno.',
       code: 'DB_ERROR'
     });
   }
 };
 
+// ============================================================
+// PIPELINE DE REINSCRIPCIÓN DIGITAL (Cédula de Reinscripción)
+// ============================================================
 
+export const getEstatusReinscripcion = async (req, res) => {
+  try {
+    let alumnoId;
 
+    if (req.user.rol === 'alumno') {
+      const alumnoRes = await query('SELECT id FROM alumnos WHERE usuario_id = $1', [req.user.id]);
+      if (!alumnoRes.rows[0]) {
+        return res.status(404).json({ success: false, message: 'Perfil de alumno no encontrado.' });
+      }
+      alumnoId = alumnoRes.rows[0].id;
+    } else {
+      alumnoId = parseInt(req.query.alumno_id, 10);
+      if (!alumnoId) {
+        return res.status(400).json({ success: false, message: 'alumno_id es requerido para consulta administrativa.' });
+      }
+    }
 
+    const cicloActivoRes = await query('SELECT * FROM ciclos_escolares WHERE activo = TRUE LIMIT 1');
+    if (!cicloActivoRes.rows[0]) {
+      return res.status(400).json({ success: false, message: 'No hay un ciclo escolar activo actualmente.' });
+    }
+    const cicloActivo = cicloActivoRes.rows[0];
+
+    // Datos del alumno actual
+    const alumnoInfo = await query(
+      `SELECT a.id, a.matricula, a.semestre_actual, a.estatus, a.direccion,
+              a.telefono_tutor, a.nombre_tutor, a.curp_tutor, a.especialidad_id,
+              u.nombre, u.apellidos, u.email, u.telefono,
+              e.nombre AS especialidad_nombre,
+              g.id AS grupo_actual_id, g.nombre AS grupo_actual_nombre, g.letra AS grupo_actual_letra, g.turno_id
+       FROM alumnos a
+       JOIN usuarios u ON u.id = a.usuario_id
+       LEFT JOIN especialidades e ON e.id = a.especialidad_id
+       LEFT JOIN grupos g ON g.id = a.grupo_actual_id
+       WHERE a.id = $1`,
+      [alumnoId]
+    );
+
+    if (!alumnoInfo.rows[0]) {
+      return res.status(404).json({ success: false, message: 'Alumno no encontrado.' });
+    }
+    const alumno = alumnoInfo.rows[0];
+
+    // Verificar si ya está inscrito en el ciclo activo
+    const yaInscrito = await query(
+      `SELECT h.id, g.id AS grupo_id, g.nombre AS grupo_nombre, g.semestre
+       FROM historial_grupos_alumno h
+       JOIN grupos g ON g.id = h.grupo_id
+       WHERE h.alumno_id = $1 AND h.ciclo_id = $2 AND h.activo = TRUE`,
+      [alumnoId, cicloActivo.id]
+    );
+
+    if (yaInscrito.rows.length > 0) {
+      return res.json({
+        success: true,
+        ya_reinscrito: true,
+        mensaje: 'Ya te encuentras formalmente reinscrito para este ciclo escolar.',
+        grupo_asignado: yaInscrito.rows[0],
+        ciclo: cicloActivo
+      });
+    }
+
+    // Calcular condición académica
+    const evaluacion = await calcularCondicionAcademica(alumnoId);
+    const semestreSiguiente = (alumno.semestre_actual || 1) + 1;
+
+    // Buscar grupo sugerido para el siguiente semestre en el ciclo activo
+    let grupoSugerido = null;
+    if (semestreSiguiente <= 6 && alumno.especialidad_id) {
+      const grupoSugeridoRes = await query(
+        `SELECT g.id, g.nombre, g.semestre, g.letra, t.nombre AS turno
+         FROM grupos g
+         JOIN turnos t ON t.id = g.turno_id
+         WHERE g.ciclo_id = $1 
+           AND g.semestre = $2 
+           AND g.especialidad_id = $3
+           AND g.letra = $4
+           AND g.turno_id = $5
+           AND g.activo = TRUE
+         LIMIT 1`,
+        [cicloActivo.id, semestreSiguiente, alumno.especialidad_id, alumno.grupo_actual_letra || 'A', alumno.turno_id || 1]
+      );
+      grupoSugerido = grupoSugeridoRes.rows[0] || null;
+    }
+
+    return res.json({
+      success: true,
+      ya_reinscrito: false,
+      alumno: {
+        id: alumno.id,
+        nombre_completo: `${alumno.nombre} ${alumno.apellidos}`,
+        matricula: alumno.matricula,
+        email: alumno.email,
+        telefono: alumno.telefono,
+        direccion: alumno.direccion,
+        nombre_tutor: alumno.nombre_tutor,
+        telefono_tutor: alumno.telefono_tutor,
+        curp_tutor: alumno.curp_tutor,
+        especialidad: alumno.especialidad_nombre,
+        semestre_actual: alumno.semestre_actual,
+        semestre_siguiente: semestreSiguiente <= 6 ? semestreSiguiente : null
+      },
+      ciclo: cicloActivo,
+      evaluacion_academica: evaluacion,
+      grupo_sugerido: grupoSugerido,
+      elegible: evaluacion ? evaluacion.elegible_reinscripcion : true,
+      motivo_bloqueo: evaluacion ? evaluacion.motivo_no_elegible : null
+    });
+  } catch (err) {
+    console.error('Error en getEstatusReinscripcion:', err);
+    return res.status(500).json({ success: false, message: 'Error al verificar estatus de reinscripción.' });
+  }
+};
+
+export const procesarCedulaReinscripcion = async (req, res) => {
+  const {
+    alumno_id,
+    grupo_id,
+    direccion,
+    telefono_personal,
+    nombre_tutor,
+    telefono_tutor,
+    curp_tutor
+  } = req.body;
+
+  try {
+    let targetAlumnoId;
+
+    if (req.user.rol === 'alumno') {
+      const alumnoRes = await query('SELECT id FROM alumnos WHERE usuario_id = $1', [req.user.id]);
+      if (!alumnoRes.rows[0]) return res.status(404).json({ success: false, message: 'Alumno no encontrado.' });
+      targetAlumnoId = alumnoRes.rows[0].id;
+    } else {
+      targetAlumnoId = parseInt(alumno_id, 10);
+      if (!targetAlumnoId) return res.status(400).json({ success: false, message: 'alumno_id es requerido.' });
+    }
+
+    if (!nombre_tutor || !telefono_tutor || !direccion) {
+      return res.status(400).json({
+        success: false,
+        message: 'La actualización de datos del tutor (nombre, teléfono) y dirección son obligatorios para la reinscripción.'
+      });
+    }
+
+    const cicloActivoRes = await query('SELECT id, nombre FROM ciclos_escolares WHERE activo = TRUE LIMIT 1');
+    if (!cicloActivoRes.rows[0]) {
+      return res.status(400).json({ success: false, message: 'No hay un ciclo escolar activo.' });
+    }
+    const cicloActivo = cicloActivoRes.rows[0];
+
+    // Verificar si ya está reinscrito
+    const yaInscrito = await query(
+      `SELECT id FROM historial_grupos_alumno WHERE alumno_id = $1 AND ciclo_id = $2 AND activo = TRUE`,
+      [targetAlumnoId, cicloActivo.id]
+    );
+    if (yaInscrito.rows.length > 0) {
+      return res.status(409).json({ success: false, message: 'El alumno ya se encuentra reinscrito en este ciclo.' });
+    }
+
+    // Verificar elegibilidad académica
+    const evaluacion = await calcularCondicionAcademica(targetAlumnoId);
+    if (evaluacion && !evaluacion.elegible_reinscripcion && req.user.rol !== 'administrador') {
+      return res.status(403).json({
+        success: false,
+        message: evaluacion.motivo_no_elegible || 'No cumples con los requisitos académicos para avanzar de semestre.'
+      });
+    }
+
+    // Determinar grupo destino
+    let targetGrupoId = grupo_id ? parseInt(grupo_id, 10) : null;
+    if (!targetGrupoId) {
+      // Auto-buscar grupo del siguiente semestre con misma especialidad y turno
+      const alumnoInfo = await query(
+        `SELECT a.semestre_actual, a.especialidad_id, g.letra, g.turno_id
+         FROM alumnos a
+         LEFT JOIN grupos g ON g.id = a.grupo_actual_id
+         WHERE a.id = $1`,
+        [targetAlumnoId]
+      );
+      const aData = alumnoInfo.rows[0];
+      const siguienteSemestre = (aData?.semestre_actual || 1) + 1;
+
+      const autoGrupo = await query(
+        `SELECT id, semestre FROM grupos
+         WHERE ciclo_id = $1 AND semestre = $2 AND especialidad_id = $3 AND letra = $4 AND turno_id = $5 AND activo = TRUE
+         LIMIT 1`,
+        [cicloActivo.id, siguienteSemestre, aData.especialidad_id, aData.letra || 'A', aData.turno_id || 1]
+      );
+
+      if (!autoGrupo.rows[0]) {
+        return res.status(400).json({
+          success: false,
+          message: `No se encontró un grupo configurado para el semestre ${siguienteSemestre} en el ciclo activo. Contacta a Control Escolar.`
+        });
+      }
+      targetGrupoId = autoGrupo.rows[0].id;
+    }
+
+    const grupoInfo = await query('SELECT id, nombre, semestre FROM grupos WHERE id = $1 AND activo = TRUE', [targetGrupoId]);
+    if (!grupoInfo.rows[0]) {
+      return res.status(404).json({ success: false, message: 'Grupo destino no encontrado o inactivo.' });
+    }
+    const nuevoSemestre = grupoInfo.rows[0].semestre;
+
+    const folioReinscripcion = `REINS-${cicloActivo.id}-${Date.now().toString().slice(-6)}`;
+
+    // Transacción atómica de Reinscripción
+    await withTransaction(async (client) => {
+      // 1. Actualizar datos de contacto y tutor en alumnos
+      await client.query(
+        `UPDATE alumnos 
+         SET direccion = $1, telefono_tutor = $2, nombre_tutor = $3, curp_tutor = $4,
+             grupo_actual_id = $5, semestre_actual = $6,
+             estatus = $7
+         WHERE id = $8`,
+        [
+          direccion.trim(),
+          telefono_tutor.trim(),
+          nombre_tutor.trim(),
+          curp_tutor ? curp_tutor.trim().toUpperCase() : null,
+          targetGrupoId,
+          nuevoSemestre,
+          evaluacion?.condicion === 'regular' ? 'activo' : 'irregular',
+          targetAlumnoId
+        ]
+      );
+
+      // 2. Si se proporcionó teléfono personal, actualizar usuario
+      if (telefono_personal) {
+        await client.query(
+          `UPDATE usuarios SET telefono = $1 WHERE id = (SELECT usuario_id FROM alumnos WHERE id = $2)`,
+          [telefono_personal.trim(), targetAlumnoId]
+        );
+      }
+
+      // 3. Desactivar historiales anteriores
+      await client.query(
+        `UPDATE historial_grupos_alumno SET activo = FALSE WHERE alumno_id = $1`,
+        [targetAlumnoId]
+      );
+
+      // 4. Insertar nuevo registro en historial
+      await client.query(
+        `INSERT INTO historial_grupos_alumno (alumno_id, grupo_id, ciclo_id, semestre, activo)
+         VALUES ($1, $2, $3, $4, TRUE)`,
+        [targetAlumnoId, targetGrupoId, cicloActivo.id, nuevoSemestre]
+      );
+
+      // 5. Registrar auditoría formal
+      await client.query(
+        `INSERT INTO auditoria_inscripciones (alumno_id, grupo_id, tipo, usuario_id, observaciones)
+         VALUES ($1, $2, 'reinscripcion', $3, $4)`,
+        [
+          targetAlumnoId,
+          targetGrupoId,
+          req.user.id,
+          `Cédula digital completada. Folio: ${folioReinscripcion}. Promovido a semestre ${nuevoSemestre}`
+        ]
+      );
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'Cédula de reinscripción procesada con éxito. Has sido reinscrito formalmente.',
+      comprobante: {
+        folio: folioReinscripcion,
+        ciclo: cicloActivo.nombre,
+        semestre: nuevoSemestre,
+        grupo: grupoInfo.rows[0].nombre,
+        fecha: new Date().toISOString()
+      }
+    });
+
+  } catch (err) {
+    console.error('Error en procesarCedulaReinscripcion:', err);
+    return res.status(500).json({ success: false, message: 'Error interno al procesar la reinscripción.' });
+  }
+};
+
+export const getControlEscolarDashboard = async (req, res) => {
+  try {
+    const cicloActivoRes = await query('SELECT id, nombre FROM ciclos_escolares WHERE activo = TRUE LIMIT 1');
+    if (!cicloActivoRes.rows[0]) {
+      return res.status(404).json({ success: false, message: 'No hay ciclo escolar activo.' });
+    }
+    const cicloId = cicloActivoRes.rows[0].id;
+
+    // Total alumnos registrados
+    const totalAlumnosRes = await query("SELECT COUNT(*) AS total FROM alumnos WHERE estatus NOT IN ('baja_definitiva')");
+    const totalAlumnos = parseInt(totalAlumnosRes.rows[0].total, 10);
+
+    // Alumnos ya reinscritos en el ciclo activo
+    const reinscritosRes = await query(
+      `SELECT COUNT(DISTINCT alumno_id) AS total
+       FROM historial_grupos_alumno
+       WHERE ciclo_id = $1 AND activo = TRUE`,
+      [cicloId]
+    );
+    const totalReinscritos = parseInt(reinscritosRes.rows[0].total, 10);
+
+    // Desglose por estatus
+    const estatusRes = await query(
+      `SELECT estatus, COUNT(*) AS cantidad FROM alumnos GROUP BY estatus`
+    );
+
+    return res.json({
+      success: true,
+      ciclo_activo: cicloActivoRes.rows[0].nombre,
+      metricas: {
+        matricula_total: totalAlumnos,
+        reinscritos_ciclo_actual: totalReinscritos,
+        pendientes_reinscripcion: Math.max(0, totalAlumnos - totalReinscritos),
+        desglose_estatus: estatusRes.rows
+      }
+    });
+  } catch (err) {
+    console.error('Error en getControlEscolarDashboard:', err);
+    return res.status(500).json({ success: false, message: 'Error interno.' });
+  }
+};
 
 export const getAlumnosDeGrupo = async (req, res) => {
   try {
@@ -329,7 +615,7 @@ export const getAlumnosDeGrupo = async (req, res) => {
 
     const result = await query(
       `SELECT h.id AS historial_id, a.id AS alumno_id, u.id AS usuario_id,
-              u.nombre, u.apellidos, u.email, a.matricula
+              u.nombre, u.apellidos, u.email, a.matricula, a.estatus
        FROM historial_grupos_alumno h
        JOIN alumnos a ON h.alumno_id = a.id
        JOIN usuarios u ON a.usuario_id = u.id
@@ -343,10 +629,6 @@ export const getAlumnosDeGrupo = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Error interno.' });
   }
 };
-
-
-
-
 
 export const eliminarInscripcion = async (req, res) => {
   const { id } = req.params;
@@ -373,16 +655,13 @@ export const eliminarInscripcion = async (req, res) => {
     }
     const { alumno_id, grupo_id, ciclo_id } = hist.rows[0];
 
-    
     await query('UPDATE historial_grupos_alumno SET activo = FALSE WHERE id = $1', [id]);
 
-    
     await query(
       'UPDATE alumnos SET grupo_actual_id = NULL, semestre_actual = NULL WHERE id = $1 AND grupo_actual_id = $2',
       [alumno_id, grupo_id]
     );
 
-    
     await query(
       `INSERT INTO auditoria_inscripciones (alumno_id, grupo_id, tipo, usuario_id, observaciones)
        VALUES ($1, $2, 'baja', $3, $4)`,

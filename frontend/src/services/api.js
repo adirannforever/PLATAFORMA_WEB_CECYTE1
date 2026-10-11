@@ -115,8 +115,43 @@ export const inscripcionesService = {
     const response = await api.get(`/inscripciones/grupo/${grupoId}/alumnos`);
     return response.data;
   },
+  // Reinscripción Digital v3
+  getEstatusReinscripcion: async (params = {}) => {
+    const response = await api.get('/inscripciones/estatus-reinscripcion', { params });
+    return response.data;
+  },
+  procesarCedulaReinscripcion: async (data) => {
+    const response = await api.post('/inscripciones/cedula-reinscripcion', data);
+    return response.data;
+  },
+  getControlEscolarDashboard: async () => {
+    const response = await api.get('/inscripciones/dashboard-control-escolar');
+    return response.data;
+  },
 };
 
+export const aspirantesService = {
+  getAll: async (params = {}) => {
+    const response = await api.get('/aspirantes', { params });
+    return response.data;
+  },
+  getById: async (id) => {
+    const response = await api.get(`/aspirantes/${id}`);
+    return response.data;
+  },
+  crear: async (data) => {
+    const response = await api.post('/aspirantes', data);
+    return response.data;
+  },
+  actualizarEstatus: async (id, estatus) => {
+    const response = await api.patch(`/aspirantes/${id}/estatus`, { estatus });
+    return response.data;
+  },
+  convertirAAlumno: async (data) => {
+    const response = await api.post('/aspirantes/convertir', data);
+    return response.data;
+  },
+};
 
 export const calificacionesService = {
   misCalificaciones: async () => {
@@ -131,8 +166,18 @@ export const calificacionesService = {
     const response = await api.post('/calificaciones', data);
     return response.data;
   },
-  actualizar: async (id, calificacion) => {
-    const response = await api.put(`/calificaciones/${id}`, { calificacion });
+  actualizar: async (id, data) => {
+    const payload = typeof data === 'object' ? data : { calificacion: data };
+    const response = await api.put(`/calificaciones/${id}`, payload);
+    return response.data;
+  },
+  registrarRegularizacion: async (data) => {
+    const response = await api.post('/calificaciones/regularizacion', data);
+    return response.data;
+  },
+  getCondicionAcademica: async (alumnoId, cicloId = null) => {
+    const params = cicloId ? { ciclo_id: cicloId } : {};
+    const response = await api.get(`/calificaciones/condicion-academica/${alumnoId}`, { params });
     return response.data;
   },
   getPeriodosEvaluacion: async (materia_grupo_id) => {

@@ -5,19 +5,28 @@ import {
   getGruposDisponibles,
   inscribirAlumno,
   getAlumnosDeGrupo,
-  eliminarInscripcion
+  eliminarInscripcion,
+  getEstatusReinscripcion,
+  procesarCedulaReinscripcion,
+  getControlEscolarDashboard
 } from '../controllers/inscripciones.controller.js';
 
 const router = Router();
-
 router.use(verifyToken);
 
-// Obtener listas para formulario
+// Pipeline de Reinscripción Digital (Cédula)
+router.get('/estatus-reinscripcion', requireRole('alumno', 'administrador'), getEstatusReinscripcion);
+router.post('/cedula-reinscripcion', requireRole('alumno', 'administrador'), procesarCedulaReinscripcion);
+
+// Dashboard de Control Escolar
+router.get('/dashboard-control-escolar', requireRole('administrador'), getControlEscolarDashboard);
+
+// Listas administrativas tradicionales
 router.get('/alumnos-disponibles', requireRole('administrador'), getAlumnosDisponibles);
 router.get('/grupos-disponibles', requireRole('administrador'), getGruposDisponibles);
 router.get('/grupo/:grupo_id/alumnos', requireRole('administrador'), getAlumnosDeGrupo);
 
-// Acciones
+// Acciones manuales de inscripción/baja
 router.post('/', requireRole('administrador'), inscribirAlumno);
 router.delete('/:id', requireRole('administrador'), eliminarInscripcion);
 

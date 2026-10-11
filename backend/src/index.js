@@ -27,24 +27,48 @@ import tutoriasRoutes from './routes/tutorias.routes.js';
 import periodosRoutes from './routes/periodos.routes.js';
 import ciclosRoutes from './routes/ciclos.routes.js';
 import materiasCatalogoRoutes from './routes/materiasCatalogo.routes.js';
-// import auditoriaRoutes from './routes/auditoria.routes.js';
-// import { auditoriaGlobal } from './middlewares/auditoriaGlobal.js'; 
+import auditoriaRoutes from './routes/auditoria.routes.js';
 import reportesRoutes from './routes/reportes.routes.js';
 import materiasGrupoRoutes from './routes/materiasGrupo.routes.js';
+import { auditoriaGlobal } from './middlewares/auditoriaGlobal.js';
+import { apiLimiter } from './middlewares/rateLimit.js';
 
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 4000;
+const corsOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin(origin, callback) {
+    if (!origin || corsOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('Origen no permitido por CORS'));
+  },
   credentials: true,
 }));
 app.use(cookieParser());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
+// Health Check (sin rate limit)
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'OK',
+    version: '3.0.0',
+    platform: 'CECYTE Plantel 1',
+    timestamp: new Date().toISOString(),
+  });
+});
 
+// Middleware de auditoría global y rate limiting general
+app.use(auditoriaGlobal);
+app.use('/api', apiLimiter);
+
+// Rutas de la API
 app.use('/api/auth', authRoutes);
 app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/materias', materiasRoutes);
@@ -66,29 +90,32 @@ app.use('/api/tutorias', tutoriasRoutes);
 app.use('/api/periodos', periodosRoutes);
 app.use('/api/ciclos', ciclosRoutes);
 app.use('/api/materias-catalogo', materiasCatalogoRoutes);
-// app.use('/api/auditoria', auditoriaRoutes);
+app.use('/api/auditoria', auditoriaRoutes);
 app.use('/api/reportes', reportesRoutes);
-app.use('/api/horarios', horariosRoutes);
 app.use('/api/materias-grupo', materiasGrupoRoutes);
 
-// app.use(auditoriaGlobal);
-
-
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+// Manejador 404 para rutas de API no encontradas
+app.use('/api/*', (req, res) => {
+  res.status(404).json({ success: false, message: 'Ruta de API no encontrada.' });
 });
 
+// Manejador centralizado de errores
 app.use((err, req, res, next) => {
-  console.error('Error no manejado:', err);
-  res.status(500).json({ success: false, message: 'Error interno del servidor' });
+  console.error('[Error No Manejado]:', err);
+  const statusCode = err.status || err.statusCode || 500;
+  res.status(statusCode).json({
+    success: false,
+    message: err.message || 'Error interno del servidor',
+    code: err.code || 'INTERNAL_ERROR',
+  });
 });
 
 app.listen(PORT, async () => {
-  console.log(`Servidor corriendo en http://localhost:${PORT}`);
+  console.log(`[CECyTE v3.0.0] Servidor corriendo en http://localhost:${PORT}`);
   try {
     await crearCiclosFuturos();
-    console.log('Ciclos futuros verificados');
+    console.log('[CECyTE v3.0.0] Ciclos futuros verificados');
   } catch (err) {
-    console.error('Error al verificar ciclos:', err);
+    console.error('[CECyTE v3.0.0] Error al verificar ciclos:', err.message);
   }
 });

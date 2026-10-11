@@ -5,8 +5,6 @@ import { registrarAuditoria } from '../middlewares/auditoria.js';
 
 
 export const login = async (req, res) => {
-  console.log('Body recibido:', req.body);
-  console.log('Email:', req.body.email);
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -55,14 +53,19 @@ export const login = async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );
-    console.log('Token generado:', token);
-    console.log('Cookie establecida');
-
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    await registrarAuditoria({
+      req,
+      accion: 'LOGIN',
+      tabla: 'usuarios',
+      registroId: usuario.id,
+      datosNuevos: { email: usuario.email },
     });
 
     return res.status(200).json({
@@ -75,13 +78,6 @@ export const login = async (req, res) => {
         email: usuario.email,
         rol: usuario.rol,
       },
-    });
-    await registrarAuditoria({
-      req,
-      accion: 'LOGIN',
-      tabla: 'usuarios',
-      registroId: usuario.id,
-      datosNuevos: { email: usuario.email },
     });
   } catch (err) {
     console.error('Error en login:', err);

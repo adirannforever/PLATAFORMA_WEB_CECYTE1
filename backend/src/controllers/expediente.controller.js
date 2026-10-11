@@ -179,6 +179,15 @@ export const actualizarDocumentoExpediente = async (req, res) => {
 
 export const getAlumnosConExpediente = async (req, res) => {
   const { search, etapa, adeuda } = req.query;
+  const params = [];
+  let paramIndex = 1;
+  let etapaPendienteCondition = '';
+
+  if (etapa) {
+    etapaPendienteCondition = `AND cd.etapa = $${paramIndex}`;
+    params.push(etapa);
+    paramIndex++;
+  }
 
   try {
     let sql = `
@@ -199,16 +208,13 @@ export const getAlumnosConExpediente = async (req, res) => {
               AND ed.documento_id = cd.id
               AND ed.entregado = TRUE
           )
-          ${etapa ? `AND cd.etapa = '${etapa}'` : ''}
+          ${etapaPendienteCondition}
           AND cd.obligatorio = TRUE
         ) AS documentos_pendientes
       FROM alumnos a
       JOIN usuarios u ON u.id = a.usuario_id
       WHERE u.activo = TRUE
     `;
-    const params = [];
-    let paramIndex = 1;
-
     if (search) {
       sql += ` AND (u.nombre ILIKE $${paramIndex} OR u.apellidos ILIKE $${paramIndex} OR a.matricula ILIKE $${paramIndex})`;
       params.push(`%${search}%`);
@@ -221,10 +227,8 @@ export const getAlumnosConExpediente = async (req, res) => {
         FROM expediente_documentos ed
         JOIN catalogo_documentos cd ON cd.id = ed.documento_id
         WHERE ed.alumno_id = a.id 
-          AND cd.etapa = $${paramIndex}
+          AND cd.etapa = $1
       )`;
-      params.push(etapa);
-      paramIndex++;
     }
 
     if (adeuda === 'true') {
@@ -238,7 +242,7 @@ export const getAlumnosConExpediente = async (req, res) => {
             AND ed.documento_id = cd.id
             AND ed.entregado = TRUE
         )
-        ${etapa ? `AND cd.etapa = '${etapa}'` : ''}
+        ${etapaPendienteCondition}
         AND cd.obligatorio = TRUE
       ) > 0`;
     } else if (adeuda === 'false') {
@@ -252,7 +256,7 @@ export const getAlumnosConExpediente = async (req, res) => {
             AND ed.documento_id = cd.id
             AND ed.entregado = TRUE
         )
-        ${etapa ? `AND cd.etapa = '${etapa}'` : ''}
+        ${etapaPendienteCondition}
         AND cd.obligatorio = TRUE
       ) = 0`;
     }

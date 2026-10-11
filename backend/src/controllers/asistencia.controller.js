@@ -1,5 +1,20 @@
 import { query } from '../config/db.js';
 
+const alumnoPerteneceAMateriaGrupo = async (alumnoId, materiaGrupoId) => {
+  const result = await query(
+    `SELECT 1
+     FROM materias_grupo mg
+     JOIN historial_grupos_alumno h
+       ON h.grupo_id = mg.grupo_id
+      AND h.ciclo_id = mg.ciclo_id
+      AND h.activo = TRUE
+     WHERE mg.id = $1 AND h.alumno_id = $2
+     LIMIT 1`,
+    [materiaGrupoId, alumnoId]
+  );
+  return result.rows.length > 0;
+};
+
 // ── ASISTENCIA DIARIA (Pase de entrada al plantel) ───────────────────────
 export const getAsistenciaDiaria = async (req, res) => {
   const { fecha, alumno_id } = req.query;
@@ -157,6 +172,13 @@ export const registrarAsistenciaClase = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Acceso denegado.' });
     }
 
+    if (!(await alumnoPerteneceAMateriaGrupo(alumno_id, materia_grupo_id))) {
+      return res.status(400).json({
+        success: false,
+        message: 'El alumno no pertenece al grupo de esta materia.',
+      });
+    }
+
     // Insertar o actualizar (usamos periodo_numero = 1 por simplicidad)
     const result = await query(
       `INSERT INTO asistencia_clase 
@@ -217,6 +239,10 @@ export const guardarAsistenciasLote = async (req, res) => {
       if (!alumno_id || !estado) {
         continue; // omitir inválidos
       }
+      if (!(await alumnoPerteneceAMateriaGrupo(alumno_id, materia_grupo_id))) {
+        continue;
+      }
+
       const result = await query(
         `INSERT INTO asistencia_clase 
           (alumno_id, materia_grupo_id, fecha, periodo_numero, estado, justificacion, registrado_por)

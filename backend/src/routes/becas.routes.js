@@ -14,8 +14,8 @@ const router = Router();
 
 router.use(verifyToken);
 
-router.get('/', obtenerBecas);
-router.get('/detalle/:nombre_beca', obtenerDetalleBeca);
+router.get('/', requireRole('administrador'), obtenerBecas);
+router.get('/detalle/:nombre_beca', requireRole('administrador'), obtenerDetalleBeca);
 
 router.post('/', requireRole('administrador'), registrarBeca);
 router.post('/asignar', requireRole('administrador'), asignarBecaAlumno);

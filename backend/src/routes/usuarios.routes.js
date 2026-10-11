@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { verifyToken } from '../middlewares/auth.js';
+import { verifyToken, requireRole } from '../middlewares/auth.js';
 import {
   getUsuarios,
   getUsuarioById,
@@ -13,12 +13,13 @@ const router = Router();
 
 router.use(verifyToken);
 
-router.get('/', getUsuarios);
-router.get('/:id', getUsuarioById);
-router.post('/', crearUsuario);
-router.patch('/:id', actualizarUsuario);
-router.delete('/:id', desactivarUsuario);
-
-router.patch('/:id/password', actualizarPassword);
+// Los docentes solo pueden consultar alumnos de sus propios grupos. La
+// administración de cuentas es una responsabilidad exclusiva de coordinación.
+router.get('/', requireRole('administrador', 'docente'), getUsuarios);
+router.get('/:id', requireRole('administrador'), getUsuarioById);
+router.post('/', requireRole('administrador'), crearUsuario);
+router.patch('/:id', requireRole('administrador'), actualizarUsuario);
+router.delete('/:id', requireRole('administrador'), desactivarUsuario);
+router.patch('/:id/password', requireRole('administrador'), actualizarPassword);
 
 export default router;

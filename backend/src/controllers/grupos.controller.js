@@ -1,4 +1,4 @@
-import { query } from '../config/db.js';
+import { query, withTransaction } from '../config/db.js';
 
 export const getGrupos = async (req, res) => {
   try {
@@ -341,32 +341,30 @@ export const asignarMaterias = async (req, res) => {
     }
     const { ciclo_id } = grupoRes.rows[0];
 
-    await query('BEGIN');
-
-    let asignadas = 0;
-    for (const materia_id of materias_ids) {
-      const existente = await query(
-        'SELECT id FROM materias_grupo WHERE grupo_id = $1 AND materia_catalogo_id = $2 AND ciclo_id = $3',
-        [id, materia_id, ciclo_id]
-      );
-      if (existente.rows.length === 0) {
-        await query(
-          `INSERT INTO materias_grupo (grupo_id, materia_catalogo_id, docente_id, ciclo_id, activa)
-           VALUES ($1, $2, NULL, $3, TRUE)`,
+    const asignadas = await withTransaction(async (client) => {
+      let totalAsignadas = 0;
+      for (const materia_id of materias_ids) {
+        const existente = await client.query(
+          'SELECT id FROM materias_grupo WHERE grupo_id = $1 AND materia_catalogo_id = $2 AND ciclo_id = $3',
           [id, materia_id, ciclo_id]
         );
-        asignadas++;
+        if (existente.rows.length === 0) {
+          await client.query(
+            `INSERT INTO materias_grupo (grupo_id, materia_catalogo_id, docente_id, ciclo_id, activa)
+             VALUES ($1, $2, NULL, $3, TRUE)`,
+            [id, materia_id, ciclo_id]
+          );
+          totalAsignadas++;
+        }
       }
-    }
-
-    await query('COMMIT');
+      return totalAsignadas;
+    });
     return res.json({
       success: true,
       message: `${asignadas} materia(s) asignadas correctamente`,
       asignadas,
     });
   } catch (err) {
-    await query('ROLLBACK');
     console.error('Error en asignarMaterias:', err);
     return res.status(500).json({ success: false, message: 'Error interno' });
   }

@@ -14,8 +14,8 @@ const router = Router();
 router.use(verifyToken);
 
 // Asistencia diaria (entrada al plantel)
-router.get('/diaria', getAsistenciaDiaria);
-router.post('/diaria', registrarAsistenciaDiaria);
+router.get('/diaria', requireRole('administrador'), getAsistenciaDiaria);
+router.post('/diaria', requireRole('administrador'), registrarAsistenciaDiaria);
 
 // Asistencia por clase (materia_grupo)
 router.get('/clase', getAsistenciaClase);

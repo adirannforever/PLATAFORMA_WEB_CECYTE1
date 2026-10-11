@@ -1,4 +1,4 @@
-import { query } from '../config/db.js';
+import { query, withTransaction } from '../config/db.js';
 import bcrypt from 'bcryptjs';
 
 
@@ -255,48 +255,41 @@ export const convertirAspiranteEnAlumno = async (req, res) => {
     const matricula = `${year}${String(aspirante.id).padStart(4, '0')}`;
 
     
-    await query('BEGIN');
+    const { usuarioId, alumnoId } = await withTransaction(async (client) => {
+      const tempPassword = `CECyTE${year}!`;
+      const passwordHash = await bcrypt.hash(tempPassword, 12);
+      const userResult = await client.query(
+        `INSERT INTO usuarios (nombre, apellidos, email, password_hash, rol, activo, telefono)
+         VALUES ($1, $2, $3, $4, 'alumno', TRUE, $5)
+         RETURNING id`,
+        [aspirante.nombre, aspirante.apellidos, aspirante.email, passwordHash, aspirante.telefono || null]
+      );
+      const nuevoUsuarioId = userResult.rows[0].id;
 
-    
-    const passwordHash = await bcrypt.hash('Aspirante2024', 12);
-    const userResult = await query(
-      `INSERT INTO usuarios (nombre, apellidos, email, password_hash, rol, activo)
-       VALUES ($1, $2, $3, $4, 'alumno', TRUE)
-       RETURNING id`,
-      [aspirante.nombre, aspirante.apellidos, aspirante.email, passwordHash]
-    );
-    const usuarioId = userResult.rows[0].id;
+      const alumnoResult = await client.query(
+        `INSERT INTO alumnos (usuario_id, matricula, curp, especialidad_id, semestre_actual, estatus, fecha_ingreso)
+         VALUES ($1, $2, $3, $4, $5, 'activo', CURRENT_DATE)
+         RETURNING id`,
+        [nuevoUsuarioId, matricula, aspirante.curp, aspirante.especialidad_id, semestre]
+      );
+      const nuevoAlumnoId = alumnoResult.rows[0].id;
 
-    
-    const alumnoResult = await query(
-      `INSERT INTO alumnos (usuario_id, matricula, especialidad_id, semestre_actual, estatus, fecha_ingreso)
-       VALUES ($1, $2, $3, $4, 'activo', CURRENT_DATE)
-       RETURNING id`,
-      [usuarioId, matricula, aspirante.especialidad_id, semestre]
-    );
-    const alumnoId = alumnoResult.rows[0].id;
+      await client.query(
+        `INSERT INTO historial_grupos_alumno (alumno_id, grupo_id, ciclo_id, semestre, activo)
+         VALUES ($1, $2, $3, $4, TRUE)`,
+        [nuevoAlumnoId, grupo_id, ciclo_id, semestre]
+      );
+      await client.query(
+        `UPDATE alumnos SET grupo_actual_id = $1 WHERE id = $2`,
+        [grupo_id, nuevoAlumnoId]
+      );
+      await client.query(
+        `UPDATE aspirantes SET estatus = 'inscrito' WHERE id = $1`,
+        [aspirante_id]
+      );
 
-    
-    await query(
-      `INSERT INTO historial_grupos_alumno (alumno_id, grupo_id, ciclo_id, semestre, activo)
-       VALUES ($1, $2, $3, $4, TRUE)`,
-      [alumnoId, grupo_id, ciclo_id, semestre]
-    );
-
-    
-    await query(
-      `UPDATE alumnos SET grupo_actual_id = $1 WHERE id = $2`,
-      [grupo_id, alumnoId]
-    );
-
-    
-    await query(
-      `UPDATE aspirantes SET estatus = 'inscrito' WHERE id = $1`,
-      [aspirante_id]
-    );
-
-    
-    await query('COMMIT');
+      return { usuarioId: nuevoUsuarioId, alumnoId: nuevoAlumnoId };
+    });
 
     return res.status(201).json({
       success: true,
@@ -309,7 +302,6 @@ export const convertirAspiranteEnAlumno = async (req, res) => {
       }
     });
   } catch (err) {
-    await query('ROLLBACK');
     console.error('Error en convertirAspiranteEnAlumno:', err);
     return res.status(500).json({ success: false, message: 'Error interno al convertir aspirante.' });
   }
