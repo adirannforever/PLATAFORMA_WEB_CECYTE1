@@ -1,4 +1,5 @@
 import { query } from '../config/db.js';
+import { TIPOS_SERVICIO_SOCIAL } from '../config/catalogos.js';
 
 
 
@@ -235,11 +236,10 @@ export const registrarServicioSocial = async (req, res) => {
     });
   }
 
-  const tiposValidos = ['servicio_social', 'practicas_profesionales'];
-  if (!tiposValidos.includes(tipo)) {
+  if (!TIPOS_SERVICIO_SOCIAL.includes(tipo)) {
     return res.status(400).json({
       success: false,
-      message: `Tipo inválido. Valores permitidos: ${tiposValidos.join(', ')}`,
+      message: `Tipo inválido. Valores permitidos: ${TIPOS_SERVICIO_SOCIAL.join(', ')}`,
     });
   }
 

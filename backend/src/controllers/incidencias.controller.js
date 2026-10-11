@@ -1,4 +1,5 @@
 import { query } from '../config/db.js';
+import { TIPOS_INCIDENCIA } from '../config/catalogos.js';
 
 
 const docenteTieneAccesoAlAlumno = async (docenteId, alumnoId) => {
@@ -192,8 +193,7 @@ export const crearIncidencia = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Acceso denegado' });
     }
 
-    const tiposValidos = ['conducta','academica','asistencia','citatorio_tutor','felicitacion','otro'];
-    if (!tiposValidos.includes(tipo)) {
+    if (!TIPOS_INCIDENCIA.includes(tipo)) {
       return res.status(400).json({ success: false, message: 'Tipo inválido' });
     }
     const result = await query(

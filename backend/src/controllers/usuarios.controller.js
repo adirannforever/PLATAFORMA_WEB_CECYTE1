@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { query, withTransaction } from '../config/db.js';
+import { ROLES_VALIDOS } from '../config/catalogos.js';
 
 export const getUsuarios = async (req, res) => {
   try {
@@ -152,11 +153,10 @@ export const crearUsuario = async (req, res) => {
     });
   }
 
-  const rolesValidos = ['alumno', 'docente', 'administrador'];
-  if (!rolesValidos.includes(rol)) {
+  if (!ROLES_VALIDOS.includes(rol)) {
     return res.status(400).json({
       success: false,
-      message: `Rol inválido. Valores permitidos: ${rolesValidos.join(', ')}`,
+      message: `Rol inválido. Valores permitidos: ${ROLES_VALIDOS.join(', ')}`,
     });
   }
 
@@ -217,11 +217,10 @@ export const actualizarUsuario = async (req, res) => {
 
   try {
     if (rol) {
-      const rolesValidos = ['alumno', 'docente', 'administrador'];
-      if (!rolesValidos.includes(rol)) {
+      if (!ROLES_VALIDOS.includes(rol)) {
         return res.status(400).json({
           success: false,
-          message: `Rol inválido. Valores permitidos: ${rolesValidos.join(', ')}`,
+          message: `Rol inválido. Valores permitidos: ${ROLES_VALIDOS.join(', ')}`,
         });
       }
     }
