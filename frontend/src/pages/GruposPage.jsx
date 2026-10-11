@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
 import { gruposService, catalogosService, materiasCatalogoService } from '../services/api';
+import { semestresDesdeGrupos } from '../config/academicos';
 import Skeleton from '../components/Skeleton';
 import styles from './GruposPage.module.css';
 import { useNavigate } from 'react-router-dom';
@@ -493,7 +494,7 @@ export default function GruposPage() {
             onChange={handleFilterChange}
           >
             <option value="">Todos</option>
-            {[1,2,3,4,5,6].map((s) => (
+            {semestresDesdeGrupos(grupos).map((s) => (
               <option key={s} value={s}>{s}° Semestre</option>
             ))}
           </select>
@@ -591,7 +592,7 @@ export default function GruposPage() {
                   required
                 >
                   <option value="">Selecciona...</option>
-                  {[1,2,3,4,5,6].map(s => (
+                  {semestresDesdeGrupos(grupos).map(s => (
                     <option key={s} value={s}>{s}°</option>
                   ))}
                 </select>
@@ -693,7 +694,7 @@ export default function GruposPage() {
                   required
                 >
                   <option value="">Selecciona...</option>
-                  {[1,2,3,4,5,6].map(s => (
+                  {semestresDesdeGrupos(grupos).map(s => (
                     <option key={s} value={s}>{s}°</option>
                   ))}
                 </select>
@@ -782,7 +783,7 @@ export default function GruposPage() {
                     }}
                   >
                     <option value="">Todos</option>
-                    {[1,2,3,4,5,6].map(s => (
+                    {semestresDesdeGrupos(grupos).map(s => (
                       <option key={s} value={s}>{s}°</option>
                     ))}
                   </select>
