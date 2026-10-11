@@ -6,6 +6,9 @@ import { query } from './config/db.js';
 import { crearCiclosFuturos } from './utils/ciclos.js';
 import '../scripts/scheduler.js';
 
+import { logger } from './config/logger.js';
+import redisClient from './config/redis.js';
+
 import authRoutes from './routes/auth.routes.js';
 import usuariosRoutes from './routes/usuarios.routes.js';
 import materiasRoutes from './routes/materias.routes.js';
@@ -55,12 +58,61 @@ app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 
 // Health Check (sin rate limit)
-app.get('/api/health', (req, res) => {
+app.get('/health', async (req, res) => {
+  try {
+    const dbOk = await query('SELECT 1');
+    const redisOk = await redisClient.ping();
+    res.json({
+      status: 'OK',
+      version: '3.0.0',
+      platform: 'CECyTE Plantel 1',
+      timestamp: new Date().toISOString(),
+      database: 'ok',
+      redis: redisOk === 'PONG' ? 'ok' : 'error',
+    });
+  } catch (err) {
+    res.status(503).json({
+      status: 'ERROR',
+      message: 'No se pudo conectar a los servicios de infraestructura',
+      error: err.message,
+    });
+  }
+});
+
+// Readiness (si el proceso puede seguir activo)
+app.get('/ready', async (req, res) => {
+  try {
+    const dbOk = await query('SELECT 1');
+    const redisOk = await redisClient.ping();
+    if (dbOk && redisOk === 'PONG') {
+      res.json({ status: 'ready', timestamp: new Date().toISOString() });
+    } else {
+      res.status(503).json({ status: 'not ready', timestamp: new Date().toISOString() });
+    }
+  } catch (err) {
+    res.status(503).json({ status: 'not ready', error: err.message });
+  }
+});
+
+// Metrics de la instancia (sin dependencias extra)
+let requestCount = 0;
+app.use((req, res, next) => {
+  requestCount += 1;
+  next();
+});
+
+app.get('/metrics', (req, res) => {
+  const mem = process.memoryUsage();
   res.json({
-    status: 'OK',
-    version: '3.0.0',
-    platform: 'CECYTE Plantel 1',
-    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    requestCount,
+    memory: {
+      rss: mem.rss,
+      heapTotal: mem.heapTotal,
+      heapUsed: mem.heapUsed,
+      external: mem.external,
+    },
+    nodeVersion: process.version,
   });
 });
 
