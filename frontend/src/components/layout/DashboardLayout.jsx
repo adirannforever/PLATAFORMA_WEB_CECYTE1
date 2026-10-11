@@ -75,7 +75,7 @@ export default function DashboardLayout() {
   const { usuario, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const { hasPermission } = usePermissions();
+  const { tiene } = usePermissions();
 
   const [sidebarAbierto, setSidebarAbierto] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -91,7 +91,7 @@ export default function DashboardLayout() {
     return {};
   });
 
-  const groupedItems = getMenuItems(usuario?.rol);
+  const groupedItems = getMenuItems(tiene);
   const categoriesWithItems = categoryOrder.filter((cat) => groupedItems[cat]?.length > 0);
 
   const badgeCounts = useMemo(() => {

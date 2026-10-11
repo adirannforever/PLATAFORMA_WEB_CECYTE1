@@ -89,14 +89,19 @@ export const CATEGORIES = {
 };
 
 // Los ítems ahora pueden tener un badge (número o texto)
-// y pueden ser padres de submenús (aunque no se usará en esta versión)
+// y pueden ser padres de submenús (aunque no se usará en esta versión).
+//
+// Modelo de acceso: cada ítem declara el PERMISO ('modulo.accion') necesario
+// para VERLO en el menú. getMenuItems(tiene) filtra usando el predicado de
+// usePermissions().tiene(). El acceso real a la ruta se controla aparte en
+// App.jsx (puede ser más laxo que la visibilidad del menú, igual que antes).
 export const menuItems = [
   // ===== GENERAL =====
   {
     to: '/dashboard',
     label: 'Inicio',
     icon: <IconDashboard />,
-    roles: ['administrador', 'docente', 'alumno'],
+    permiso: 'dashboard.ver',
     category: 'general',
     order: 0,
   },
@@ -104,7 +109,7 @@ export const menuItems = [
     to: '/comunicados',
     label: 'Comunicados',
     icon: <IconComunicados />,
-    roles: ['administrador', 'docente', 'alumno'],
+    permiso: 'comunicados.ver',
     category: 'general',
     order: 1,
   },
@@ -112,7 +117,7 @@ export const menuItems = [
     to: '/reportes',
     label: 'Reportes',
     icon: <FileText size={18} />,
-    roles: ['administrador', 'docente', 'alumno'],
+    permiso: 'reportes.ver',
     category: 'general',
     order: 2,
   },
@@ -120,18 +125,19 @@ export const menuItems = [
     to: '/horarios',
     label: 'Horarios',
     icon: <Calendar size={18} />,
-    roles: ['administrador', 'docente', 'alumno'],
+    permiso: 'horarios.ver',
     category: 'general',
     order: 3,
   },
 
   // ===== ACADÉMICO =====
-  // SOLO ADMINISTRADOR (los docentes usan "Mis Clases")
+  // Visibles para roles con vista administrativa (admin/control/directivo).
+  // Los docentes usan "Mis Clases".
   {
     to: '/grupos',
     label: 'Grupos',
     icon: <IconGrupos />,
-    roles: ['administrador'],
+    permiso: 'grupos.ver_todos',
     category: 'academico',
     order: 1,
   },
@@ -139,7 +145,7 @@ export const menuItems = [
     to: '/asistencia',
     label: 'Asistencias',
     icon: <IconAsistencia />,
-    roles: ['administrador'],
+    permiso: 'asistencia.ver',
     category: 'academico',
     order: 2,
   },
@@ -147,7 +153,7 @@ export const menuItems = [
     to: '/calificaciones',
     label: 'Calificaciones',
     icon: <BookOpen size={18} />,
-    roles: ['administrador'],
+    permiso: 'calificaciones.ver',
     category: 'academico',
     order: 3,
   },
@@ -155,7 +161,7 @@ export const menuItems = [
     to: '/mis-calificaciones',
     label: 'Mis Calificaciones',
     icon: <IconCalif />,
-    roles: ['alumno'],
+    permiso: 'calificaciones.ver_mis_calificaciones',
     category: 'academico',
     order: 4,
   },
@@ -163,7 +169,7 @@ export const menuItems = [
     to: '/inscripciones',
     label: 'Inscripciones',
     icon: <IconInscripciones />,
-    roles: ['administrador'],
+    permiso: 'inscripciones.ver',
     category: 'academico',
     order: 5,
   },
@@ -171,7 +177,7 @@ export const menuItems = [
     to: '/incidencias',
     label: 'Incidencias',
     icon: <AlertCircle size={18} />,
-    roles: ['administrador'],
+    permiso: 'incidencias.ver_todas',
     category: 'academico',
     order: 6,
     badge: 'notificaciones',
@@ -182,7 +188,7 @@ export const menuItems = [
     to: '/usuarios',
     label: 'Usuarios',
     icon: <IconUsuarios />,
-    roles: ['administrador'],
+    permiso: 'usuarios.ver',
     category: 'administrativo',
     order: 0,
   },
@@ -190,7 +196,7 @@ export const menuItems = [
     to: '/aspirantes',
     label: 'Aspirantes',
     icon: <UserPlus size={18} />,
-    roles: ['administrador'],
+    permiso: 'aspirantes.ver',
     category: 'administrativo',
     order: 0,
   },
@@ -198,7 +204,7 @@ export const menuItems = [
     to: '/becas',
     label: 'Becas',
     icon: <Gift size={18} />,
-    roles: ['administrador'],
+    permiso: 'becas.ver',
     category: 'administrativo',
     order: 1,
   },
@@ -206,7 +212,7 @@ export const menuItems = [
     to: '/pagos',
     label: 'Pagos',
     icon: <CreditCard size={18} />,
-    roles: ['administrador'],
+    permiso: 'pagos.ver',
     category: 'administrativo',
     order: 2,
   },
@@ -214,7 +220,7 @@ export const menuItems = [
     to: '/titulacion',
     label: 'Titulación',
     icon: <GraduationCap size={18} />,
-    roles: ['administrador'],
+    permiso: 'titulacion.ver',
     category: 'administrativo',
     order: 3,
   },
@@ -222,7 +228,7 @@ export const menuItems = [
     to: '/servicio-social',
     label: 'Servicio Social',
     icon: <Briefcase size={18} />,
-    roles: ['administrador'],
+    permiso: 'servicio_social.ver',
     category: 'administrativo',
     order: 4,
   },
@@ -230,7 +236,7 @@ export const menuItems = [
     to: '/expediente',
     label: 'Expediente',
     icon: <FileText size={18} />,
-    roles: ['administrador'],
+    permiso: 'expediente.ver_todos',
     category: 'administrativo',
     order: 5,
   },
@@ -240,17 +246,17 @@ export const menuItems = [
     to: '/configuracion-academica',
     label: 'Configuración Académica',
     icon: <Settings size={18} />,
-    roles: ['administrador'],
+    permiso: 'config_academica.ver',
     category: 'configuracion',
     order: 0,
   },
 
-  // ===== DOCENTE (Mis Clases) =====
+  // ===== DOCENTE / TUTOR (Mis Clases) =====
   {
     to: '/mis-clases',
     label: 'Mis Clases',
     icon: <BookOpen size={18} />,
-    roles: ['docente'],
+    permiso: 'calificaciones.ver_mis_materias',
     category: 'academico',
     order: 0,
   },
@@ -258,9 +264,14 @@ export const menuItems = [
 
 export const categoryOrder = ['general', 'academico', 'administrativo', 'configuracion'];
 
-export const getMenuItems = (rol) => {
-  if (!rol) return {};
-  const filtered = menuItems.filter((item) => item.roles.includes(rol));
+/**
+ * Devuelve los ítems de menú agrupados por categoría, filtrados por permiso.
+ * @param {(codigo:string)=>boolean} tiene  Predicado de usePermissions().tiene().
+ *        Si se omite, se comporta como antes (sin filtrar) para no romper legacy.
+ */
+export const getMenuItems = (tiene) => {
+  const puede = typeof tiene === 'function' ? tiene : () => true;
+  const filtered = menuItems.filter((item) => !item.permiso || puede(item.permiso));
   const grouped = {};
   filtered.forEach((item) => {
     const cat = item.category || 'general';

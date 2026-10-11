@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
+import { usePermissions } from './hooks/usePermissions';
 
 import DashboardLayout from './components/layout/DashboardLayout';
 
@@ -28,11 +29,22 @@ import MisClasesPage from './pages/MisClasesPage';
 import MisClasesDetallePage from './pages/MisClasesDetallePage';
 import NetworkStatus from './components/NetworkStatus';
 
-const RutaProtegida = ({ children, rolesPermitidos }) => {
+const RutaProtegida = ({ children, rolesPermitidos, permisos }) => {
   const { usuario, cargando } = useAuth();
+  const { tieneAlguno } = usePermissions();
 
   if (cargando) return <div className="loading-screen">Cargando...</div>;
   if (!usuario) return <Navigate to="/login" replace />;
+
+  // Modelo nuevo (recomendado): acceso por permiso 'modulo.accion'.
+  if (permisos && permisos.length > 0) {
+    if (!tieneAlguno(...permisos)) {
+      return <Navigate to="/dashboard" replace />;
+    }
+    return children;
+  }
+
+  // Modelo legacy: acceso por rol plano (se mantiene por compatibilidad).
   if (rolesPermitidos && !rolesPermitidos.includes(usuario.rol)) {
     return <Navigate to="/dashboard" replace />;
   }
@@ -82,7 +94,7 @@ export default function App() {
           <Route
             path="mis-calificaciones"
             element={
-              <RutaProtegida rolesPermitidos={['alumno']}>
+              <RutaProtegida permisos={['calificaciones.ver_mis_calificaciones']}>
                 <CalificacionesPage />
               </RutaProtegida>
             }
@@ -92,7 +104,7 @@ export default function App() {
           <Route
             path="mis-clases"
             element={
-              <RutaProtegida rolesPermitidos={['docente']}>
+              <RutaProtegida permisos={['calificaciones.ver_mis_materias', 'asistencia.ver_mis_clases']}>
                 <MisClasesPage />
               </RutaProtegida>
             }
@@ -100,7 +112,7 @@ export default function App() {
           <Route
             path="mis-clases/grupo/:grupoId/*"
             element={
-              <RutaProtegida rolesPermitidos={['docente']}>
+              <RutaProtegida permisos={['calificaciones.ver_mis_materias', 'asistencia.ver_mis_clases', 'incidencias.ver_mis_alumnos']}>
                 <MisClasesDetallePage />
               </RutaProtegida>
             }
@@ -108,7 +120,7 @@ export default function App() {
           <Route
             path="mis-clases/materia/:materia_grupo_id"
             element={
-              <RutaProtegida rolesPermitidos={['docente']}>
+              <RutaProtegida permisos={['calificaciones.ver_mis_materias']}>
                 <CalificacionesPage />
               </RutaProtegida>
             }
@@ -118,7 +130,7 @@ export default function App() {
           <Route
             path="grupos"
             element={
-              <RutaProtegida rolesPermitidos={['administrador', 'docente']}>
+              <RutaProtegida permisos={['grupos.ver']}>
                 <GruposPage />
               </RutaProtegida>
             }
@@ -126,7 +138,7 @@ export default function App() {
           <Route
             path="asistencia"
             element={
-              <RutaProtegida rolesPermitidos={['administrador', 'docente']}>
+              <RutaProtegida permisos={['asistencia.ver', 'asistencia.ver_mis_clases', 'asistencia.ver_grupo']}>
                 <AsistenciaPage />
               </RutaProtegida>
             }
@@ -134,7 +146,7 @@ export default function App() {
           <Route
             path="calificaciones"
             element={
-              <RutaProtegida rolesPermitidos={['administrador', 'docente']}>
+              <RutaProtegida permisos={['calificaciones.ver', 'calificaciones.ver_todas', 'calificaciones.ver_mis_materias']}>
                 <CalificacionesPage />
               </RutaProtegida>
             }
@@ -142,7 +154,7 @@ export default function App() {
           <Route
             path="calificaciones/grupo/:grupo_id"
             element={
-              <RutaProtegida rolesPermitidos={['administrador', 'docente']}>
+              <RutaProtegida permisos={['calificaciones.ver', 'calificaciones.ver_todas', 'calificaciones.ver_grupo']}>
                 <CalificacionesPage />
               </RutaProtegida>
             }
@@ -150,7 +162,7 @@ export default function App() {
           <Route
             path="calificaciones/materia/:materia_grupo_id"
             element={
-              <RutaProtegida rolesPermitidos={['administrador', 'docente']}>
+              <RutaProtegida permisos={['calificaciones.ver', 'calificaciones.ver_todas', 'calificaciones.ver_mis_materias']}>
                 <CalificacionesPage />
               </RutaProtegida>
             }
@@ -158,7 +170,7 @@ export default function App() {
           <Route
             path="incidencias"
             element={
-              <RutaProtegida rolesPermitidos={['administrador', 'docente']}>
+              <RutaProtegida permisos={['incidencias.ver', 'incidencias.ver_todas', 'incidencias.ver_mis_alumnos', 'incidencias.ver_grupo']}>
                 <IncidenciasPage />
               </RutaProtegida>
             }
@@ -166,7 +178,7 @@ export default function App() {
           <Route
             path="horarios"
             element={
-              <RutaProtegida rolesPermitidos={['administrador', 'docente', 'alumno']}>
+              <RutaProtegida permisos={['horarios.ver', 'horarios.ver_mi_horario', 'horarios.ver_grupo']}>
                 <HorariosPage />
               </RutaProtegida>
             }
@@ -174,7 +186,7 @@ export default function App() {
           <Route
             path="reportes"
             element={
-              <RutaProtegida rolesPermitidos={['administrador', 'docente', 'alumno']}>
+              <RutaProtegida permisos={['reportes.ver']}>
                 <ReportesPage />
               </RutaProtegida>
             }
@@ -184,7 +196,7 @@ export default function App() {
           <Route
             path="usuarios"
             element={
-              <RutaProtegida rolesPermitidos={['administrador']}>
+              <RutaProtegida permisos={['usuarios.ver']}>
                 <UsuariosPage />
               </RutaProtegida>
             }
@@ -192,7 +204,7 @@ export default function App() {
           <Route
             path="aspirantes"
             element={
-              <RutaProtegida rolesPermitidos={['administrador']}>
+              <RutaProtegida permisos={['aspirantes.ver']}>
                 <AspirantesPage />
               </RutaProtegida>
             }
@@ -200,7 +212,7 @@ export default function App() {
           <Route
             path="inscripciones"
             element={
-              <RutaProtegida rolesPermitidos={['administrador']}>
+              <RutaProtegida permisos={['inscripciones.ver']}>
                 <InscripcionesPage />
               </RutaProtegida>
             }
@@ -208,7 +220,7 @@ export default function App() {
           <Route
             path="expediente"
             element={
-              <RutaProtegida rolesPermitidos={['administrador']}>
+              <RutaProtegida permisos={['expediente.ver', 'expediente.ver_todos']}>
                 <ExpedientePage />
               </RutaProtegida>
             }
@@ -216,7 +228,7 @@ export default function App() {
           <Route
             path="expediente/:id"
             element={
-              <RutaProtegida rolesPermitidos={['administrador', 'alumno']}>
+              <RutaProtegida permisos={['expediente.ver', 'expediente.ver_todos', 'expediente.ver_mi_expediente']}>
                 <ExpedientePage />
               </RutaProtegida>
             }
@@ -224,7 +236,7 @@ export default function App() {
           <Route
             path="becas"
             element={
-              <RutaProtegida rolesPermitidos={['administrador']}>
+              <RutaProtegida permisos={['becas.ver']}>
                 <BecasPage />
               </RutaProtegida>
             }
@@ -232,7 +244,7 @@ export default function App() {
           <Route
             path="becas/detalle/:nombre_beca"
             element={
-              <RutaProtegida rolesPermitidos={['administrador']}>
+              <RutaProtegida permisos={['becas.ver']}>
                 <BecasDetallePage />
               </RutaProtegida>
             }
@@ -240,7 +252,7 @@ export default function App() {
           <Route
             path="pagos"
             element={
-              <RutaProtegida rolesPermitidos={['administrador']}>
+              <RutaProtegida permisos={['pagos.ver', 'pagos.ver_mis_pagos']}>
                 <PagosPage />
               </RutaProtegida>
             }
@@ -248,7 +260,7 @@ export default function App() {
           <Route
             path="servicio-social"
             element={
-              <RutaProtegida rolesPermitidos={['administrador']}>
+              <RutaProtegida permisos={['servicio_social.ver']}>
                 <ServicioSocialPage />
               </RutaProtegida>
             }
@@ -256,7 +268,7 @@ export default function App() {
           <Route
             path="titulacion"
             element={
-              <RutaProtegida rolesPermitidos={['administrador']}>
+              <RutaProtegida permisos={['titulacion.ver']}>
                 <TitulacionPage />
               </RutaProtegida>
             }
@@ -264,7 +276,7 @@ export default function App() {
           <Route
             path="configuracion-academica"
             element={
-              <RutaProtegida rolesPermitidos={['administrador']}>
+              <RutaProtegida permisos={['config_academica.ver', 'config_academica.gestionar']}>
                 <ConfiguracionAcademicaPage />
               </RutaProtegida>
             }
@@ -273,7 +285,7 @@ export default function App() {
           <Route
             path="materias"
             element={
-              <RutaProtegida rolesPermitidos={['docente', 'administrador']}>
+              <RutaProtegida permisos={['grupos.ver', 'grupos.ver_mis_grupos']}>
                 <GruposPage />
               </RutaProtegida>
             }
