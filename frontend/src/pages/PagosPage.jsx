@@ -6,8 +6,6 @@ import Skeleton from '../components/Skeleton';
 import styles from './PagosPage.module.css';
 
 const ITEMS_PER_PAGE = 10;
-const GRUPO_LETRAS = ['A', 'B', 'C', 'D'];
-const SEMESTRES = [1, 2, 3, 4, 5, 6];
 
 export default function PagosPage() {
   const { usuario } = useAuth();
@@ -81,9 +79,20 @@ export default function PagosPage() {
   // Función para extraer la letra del grupo
   const extraerLetra = (grupoNombre) => {
     if (!grupoNombre) return '';
-    const match = grupoNombre.match(/([A-D])/);
-    return match ? match[1] : '';
+    const match = grupoNombre.match(/([A-Za-z])/);
+    return match ? match[1].toUpperCase() : '';
   };
+
+  // Semestres y letras derivados de los alumnos reales (sin listas estáticas)
+  const semestresDisponibles = useMemo(() => {
+    const set = new Set(alumnos.map(a => a.semestre).filter(Boolean));
+    return [...set].sort((a, b) => a - b);
+  }, [alumnos]);
+
+  const letrasDisponibles = useMemo(() => {
+    const set = new Set(alumnos.map(a => extraerLetra(a.grupo_nombre)).filter(Boolean));
+    return [...set].sort();
+  }, [alumnos]);
 
   // Filtrar alumnos
   const alumnosFiltrados = useMemo(() => {
@@ -325,7 +334,7 @@ export default function PagosPage() {
                 onChange={(e) => setFiltroSemestre(e.target.value)}
               >
                 <option value="">Todos</option>
-                {SEMESTRES.map(s => (
+                {semestresDisponibles.map(s => (
                   <option key={s} value={s}>{s}°</option>
                 ))}
               </select>
@@ -340,7 +349,7 @@ export default function PagosPage() {
                 onChange={(e) => setFiltroLetra(e.target.value)}
               >
                 <option value="">Todos</option>
-                {GRUPO_LETRAS.map(l => (
+                {letrasDisponibles.map(l => (
                   <option key={l} value={l}>{l}</option>
                 ))}
               </select>
