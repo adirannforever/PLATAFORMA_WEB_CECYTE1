@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { query } from '../config/db.js';
 import { registrarAuditoria } from '../middlewares/auditoria.js';
+import { listarPermisos } from '../config/permisos.js';
 
 
 export const login = async (req, res) => {
@@ -77,6 +78,7 @@ export const login = async (req, res) => {
         apellidos: usuario.apellidos,
         email: usuario.email,
         rol: usuario.rol,
+        permisos: listarPermisos(usuario.rol),
       },
     });
   } catch (err) {
@@ -115,7 +117,7 @@ export const me = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      usuario: result.rows[0],
+      usuario: { ...result.rows[0], permisos: listarPermisos(result.rows[0].rol) },
     });
   } catch (err) {
     console.error('Error en /me:', err);

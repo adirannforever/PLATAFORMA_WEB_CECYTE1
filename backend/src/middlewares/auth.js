@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import { tienePermiso } from '../config/permisos.js';
 
 export const verifyToken = (req, res, next) => {
   const token = req.cookies?.token;
@@ -37,6 +38,30 @@ export const requireRole = (...roles) => {
       });
     }
 
+    next();
+  };
+};
+
+export const requirePermiso = (...codigos) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'No autenticado.' });
+    }
+
+    // Administrador: bypass total (coincide con MATRIZ.administrador = ['*']).
+    // Se conserva el chequeo explícito por claridad y por si MATRIZ cambia.
+    if (req.user.rol === 'administrador') {
+      return next();
+    }
+
+    // Basta con tener UNO de los permisos indicados (OR).
+    const autorizado = codigos.some((codigo) => tienePermiso(req.user.rol, codigo));
+    if (!autorizado) {
+      return res.status(403).json({
+        success: false,
+        message: `Acceso denegado. Se requiere uno de estos permisos: ${codigos.join(', ')}.`,
+      });
+    }
     next();
   };
 };
