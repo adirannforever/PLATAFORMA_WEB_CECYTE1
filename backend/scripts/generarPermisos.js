@@ -12,7 +12,7 @@
 // sigue funcionando con requireRole/requirePermiso sobre el catálogo en
 // código; estas tablas habilitan gestión dinámica futura.
 // ============================================================
-import { query } from '../src/config/db.js';
+import { query, withTransaction } from '../src/config/db.js';
 import {
   ROLES,
   MODULOS,
@@ -22,6 +22,35 @@ import {
 
 const main = async () => {
   console.log('Sembrando RBAC desde el catálogo...');
+
+  // --- 0) Asegurar esquema (idempotente) ---
+  // Equivale a migrations/001_rbac_roles_permisos.sql. Se aplica aquí para
+  // que el script sea autónomo. Todo IF NOT EXISTS: no destruye nada.
+  await withTransaction(async (client) => {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS roles (
+        id          SERIAL PRIMARY KEY,
+        nombre      VARCHAR(40)  NOT NULL UNIQUE,
+        descripcion TEXT,
+        hereDa_de   VARCHAR(40)  REFERENCES roles(nombre),
+        es_sistema  BOOLEAN      NOT NULL DEFAULT FALSE,
+        activo      BOOLEAN      NOT NULL DEFAULT TRUE
+      );
+      CREATE TABLE IF NOT EXISTS permisos (
+        id       SERIAL PRIMARY KEY,
+        codigo   VARCHAR(60) NOT NULL UNIQUE,
+        modulo   VARCHAR(40) NOT NULL,
+        accion   VARCHAR(40) NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS roles_permisos (
+        rol_id     INTEGER NOT NULL REFERENCES roles(id)    ON DELETE CASCADE,
+        permiso_id INTEGER NOT NULL REFERENCES permisos(id) ON DELETE CASCADE,
+        PRIMARY KEY (rol_id, permiso_id)
+      );
+      ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS rol_id INTEGER REFERENCES roles(id);
+    `);
+  });
+  console.log('  Esquema asegurado (tablas + usuarios.rol_id).');
 
   // --- 1) Roles ---
   // Insertar roles respetando hereDa_de: primero los que no heredan, luego los demás.
