@@ -231,26 +231,6 @@ export const asistenciaService = {
 };
 
 
-export const aspirantesService = {
-  getAspirantes: async (params) => {
-    const response = await api.get('/aspirantes', { params });
-    return response.data;
-  },
-  crearAspirante: async (data) => {
-    const response = await api.post('/aspirantes', data);
-    return response.data;
-  },
-  actualizarEstatusAspirante: async (id, data) => {
-    const response = await api.patch(`/aspirantes/${id}/estatus`, data);
-    return response.data;
-  },
-  convertir: async (data) => {
-    const response = await api.post('/aspirantes/convertir', data);
-    return response.data;
-  },
-};
-
-
 export const becasService = {
   getAll: async (params = {}) => {
     const response = await api.get('/becas', { params });
