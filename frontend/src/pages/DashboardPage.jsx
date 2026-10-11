@@ -126,11 +126,11 @@ export default function DashboardPage() {
           <div className={styles.empty}>No hay comunicados publicados aún.</div>
         ) : (
           <div className={styles.comunicadosList}>
-            {comunicados.map((c) => {
+            {comunicados.map((c, idx) => {
               const textoContenido = c?.contenido || '';
               const fechaSegura = c?.fecha_publicacion ? new Date(c.fecha_publicacion) : new Date();
               return (
-                <div key={c.id || Math.random()} className={styles.comunicadoCard}>
+                <div key={c.id || `comunicado-${idx}`} className={styles.comunicadoCard}>
                   <div className={styles.comunicadoDot} />
                   <div className={styles.comunicadoBody}>
                     <h3 className={styles.comunicadoTitulo}>{c.titulo || 'Sin título'}</h3>

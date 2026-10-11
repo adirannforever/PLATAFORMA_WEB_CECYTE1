@@ -4,6 +4,7 @@ import { titulacionService, usuariosService, catalogosService, gruposService } f
 import { Plus, Edit, Trash2, X, Search, AlertCircle, Info } from 'lucide-react';
 import Skeleton from '../components/Skeleton';
 import styles from './TitulacionPage.module.css';
+import { letrasDesdeGrupos } from '../config/academicos';
 
 const ESTATUS_OPCIONES = ['en_proceso', 'tramite', 'titulado'];
 const ESTATUS_ETIQUETA = {
@@ -220,7 +221,7 @@ export default function TitulacionPage() {
     setPagina(nuevaPagina);
   };
 
-  const letrasGrupo = ['A', 'B', 'C', 'D'];
+  const letrasGrupo = useMemo(() => letrasDesdeGrupos(grupos), [grupos]);
 
   return (
     <div className={styles.page}>
