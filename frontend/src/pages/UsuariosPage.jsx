@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { usuariosService, catalogosService } from '../services/api';
+import { semestresDesdeGrupos } from '../config/academicos';
 import Skeleton from '../components/Skeleton';
 import styles from './UsuariosPage.module.css';
 
@@ -266,7 +267,7 @@ export default function UsuariosPage() {
             onChange={(e) => setFiltroSemestre(e.target.value)}
           >
             <option value="">Todos</option>
-            {[1,2,3,4,5,6].map(s => (
+            {semestresDesdeGrupos(grupos).map(s => (
               <option key={s} value={s}>{s}°</option>
             ))}
           </select>
