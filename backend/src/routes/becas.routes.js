@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { verifyToken, requireRole } from '../middlewares/auth.js';
+import { verifyToken, requirePermiso } from '../middlewares/auth.js';
 import {
   obtenerBecas,
   obtenerDetalleBeca,
@@ -14,14 +14,14 @@ const router = Router();
 
 router.use(verifyToken);
 
-router.get('/', requireRole('administrador'), obtenerBecas);
-router.get('/detalle/:nombre_beca', requireRole('administrador'), obtenerDetalleBeca);
+router.get('/', requirePermiso('becas.ver'), obtenerBecas);
+router.get('/detalle/:nombre_beca', requirePermiso('becas.ver'), obtenerDetalleBeca);
 
-router.post('/', requireRole('administrador'), registrarBeca);
-router.post('/asignar', requireRole('administrador'), asignarBecaAlumno);
-router.put('/:id', requireRole('administrador'), actualizarBeca);
-router.patch('/:id/estatus-pago', requireRole('administrador'), actualizarEstatusPago);
-router.delete('/:id', requireRole('administrador'), eliminarBeca);
+router.post('/', requirePermiso('becas.crear'), registrarBeca);
+router.post('/asignar', requirePermiso('becas.asignar'), asignarBecaAlumno);
+router.put('/:id', requirePermiso('becas.editar'), actualizarBeca);
+router.patch('/:id/estatus-pago', requirePermiso('becas.editar'), actualizarEstatusPago);
+router.delete('/:id', requirePermiso('becas.eliminar'), eliminarBeca);
 
 // depuracion
 // console.log(' Archivo becas.routes.js cargado');

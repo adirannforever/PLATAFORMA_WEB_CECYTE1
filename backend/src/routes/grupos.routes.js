@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { verifyToken, requireRole } from '../middlewares/auth.js';
+import { verifyToken, requirePermiso } from '../middlewares/auth.js';
 import {
   getGrupos,
   getGrupoById,
@@ -14,13 +14,13 @@ const router = Router();
 
 router.use(verifyToken);
 
-router.get('/', requireRole('administrador', 'docente'), getGrupos);
-router.get('/:id', requireRole('administrador', 'docente'), getGrupoById);
+router.get('/', requirePermiso('grupos.ver'), getGrupos);
+router.get('/:id', requirePermiso('grupos.ver'), getGrupoById);
 router.get('/:id/materias', verifyToken, getMaterias);
-router.get('/:id/alumnos', requireRole('administrador', 'docente'), getAlumnosDeGrupo);
-router.post('/', requireRole('administrador'), crearGrupo);
-router.patch('/:id', requireRole('administrador'), actualizarGrupo);
+router.get('/:id/alumnos', requirePermiso('grupos.ver'), getAlumnosDeGrupo);
+router.post('/', requirePermiso('grupos.crear'), crearGrupo);
+router.patch('/:id', requirePermiso('grupos.editar'), actualizarGrupo);
 
-router.post('/:id/materias', verifyToken, requireRole('administrador'), asignarMaterias);
+router.post('/:id/materias', verifyToken, requirePermiso('grupos.asignar_materias'), asignarMaterias);
 
 export default router;

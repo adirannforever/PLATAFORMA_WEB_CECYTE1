@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { verifyToken, requireRole } from '../middlewares/auth.js';
+import { verifyToken, requirePermiso } from '../middlewares/auth.js';
 import {
   getMaterias,
   getMateriaById,
@@ -13,12 +13,12 @@ const router = Router();
 
 router.use(verifyToken);
 
-router.get('/', requireRole('administrador', 'docente'), getMaterias);
-router.get('/grupo', requireRole('administrador', 'docente'), getMateriasByGrupo);
-router.get('/:id', requireRole('administrador', 'docente'), getMateriaById);
-router.get('/:id/alumnos', requireRole('administrador', 'docente'), getAlumnosDeMateria);
+router.get('/', requirePermiso('grupos.ver', 'calificaciones.ver'), getMaterias);
+router.get('/grupo', requirePermiso('grupos.ver', 'calificaciones.ver'), getMateriasByGrupo);
+router.get('/:id', requirePermiso('grupos.ver', 'calificaciones.ver'), getMateriaById);
+router.get('/:id/alumnos', requirePermiso('grupos.ver', 'calificaciones.ver'), getAlumnosDeMateria);
 
-router.post('/', requireRole('administrador'), crearMateria);
-router.patch('/:id', requireRole('administrador'), actualizarMateria);
+router.post('/', requirePermiso('config_academica.gestionar'), crearMateria);
+router.patch('/:id', requirePermiso('config_academica.gestionar'), actualizarMateria);
 
 export default router;

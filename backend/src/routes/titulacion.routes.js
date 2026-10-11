@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { verifyToken, requireRole } from '../middlewares/auth.js';
+import { verifyToken, requirePermiso } from '../middlewares/auth.js';
 import {
   obtenerTitulaciones,
   registrarTitulacion,
@@ -11,9 +11,9 @@ const router = Router();
 
 router.use(verifyToken);
 
-router.get('/', requireRole('administrador'), obtenerTitulaciones);
-router.post('/', requireRole('administrador'), registrarTitulacion);
-router.put('/:id', requireRole('administrador'), actualizarTitulacion);
-router.delete('/:id', requireRole('administrador'), eliminarTitulacion);
+router.get('/', requirePermiso('titulacion.ver'), obtenerTitulaciones);
+router.post('/', requirePermiso('titulacion.crear'), registrarTitulacion);
+router.put('/:id', requirePermiso('titulacion.editar'), actualizarTitulacion);
+router.delete('/:id', requirePermiso('titulacion.eliminar'), eliminarTitulacion);
 
 export default router;

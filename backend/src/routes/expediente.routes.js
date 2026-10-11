@@ -4,14 +4,14 @@ import {
   actualizarDocumentoExpediente,
   getAlumnosConExpediente
 } from '../controllers/expediente.controller.js';
-import { verifyToken, requireRole } from '../middlewares/auth.js';
+import { verifyToken, requirePermiso } from '../middlewares/auth.js';
 
 const router = Router();
 
-router.get('/alumnos', verifyToken, requireRole('administrador'), getAlumnosConExpediente);
+router.get('/alumnos', verifyToken, requirePermiso('expediente.ver', 'expediente.ver_todos'), getAlumnosConExpediente);
 
 router.get('/:alumno_id', verifyToken, getExpedienteAlumno);
 
-router.post('/documento', verifyToken, requireRole('administrador'), actualizarDocumentoExpediente);
+router.post('/documento', verifyToken, requirePermiso('expediente.crear', 'expediente.editar'), actualizarDocumentoExpediente);
 
 export default router;

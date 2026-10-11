@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { verifyToken, requireRole } from '../middlewares/auth.js';
+import { verifyToken, requirePermiso } from '../middlewares/auth.js';
 import {
   getMateriasCatalogo,
   crearMateriaCatalogo,
@@ -9,7 +9,7 @@ import {
 
 const router = Router();
 router.use(verifyToken);
-router.use(requireRole('administrador'));
+router.use(requirePermiso('config_academica.gestionar'));
 
 router.get('/', getMateriasCatalogo);
 router.post('/', crearMateriaCatalogo);

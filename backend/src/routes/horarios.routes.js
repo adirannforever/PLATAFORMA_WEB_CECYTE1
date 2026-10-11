@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { verifyToken, requireRole } from '../middlewares/auth.js';
+import { verifyToken, requirePermiso } from '../middlewares/auth.js';
 import {
   getConfiguracion,
   actualizarConfiguracion,
@@ -23,13 +23,13 @@ router.post('/download/solicitar', solicitarDescarga);
 router.get('/semestre-actual', getSemestreActual);
 
 // Rutas de administrador
-router.post('/upload/solicitar', requireRole('administrador'), solicitarUploadHorario);
-router.put('/:id', requireRole('administrador'), actualizarHorario);
-router.delete('/:id', requireRole('administrador'), eliminarHorario);
-router.post('/upload/batch', requireRole('administrador'), uploadMultipleHorarios);
-router.get('/contar-faltantes', requireRole('administrador'), contarHorariosFaltantes);
-router.get('/configuracion', requireRole('administrador'), getConfiguracion);
-router.put('/configuracion', requireRole('administrador'), actualizarConfiguracion);
+router.post('/upload/solicitar', requirePermiso('horarios.subir'), solicitarUploadHorario);
+router.put('/:id', requirePermiso('horarios.editar'), actualizarHorario);
+router.delete('/:id', requirePermiso('horarios.eliminar'), eliminarHorario);
+router.post('/upload/batch', requirePermiso('horarios.subir'), uploadMultipleHorarios);
+router.get('/contar-faltantes', requirePermiso('horarios.ver'), contarHorariosFaltantes);
+router.get('/configuracion', requirePermiso('config_academica.ver'), getConfiguracion);
+router.put('/configuracion', requirePermiso('config_academica.gestionar'), actualizarConfiguracion);
 router.get('/plantilla', generarPlantillaHorario);
 
 export default router;

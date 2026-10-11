@@ -6,7 +6,7 @@ import {
   registrarAsistenciaClase,
   guardarAsistenciasLote,
 } from '../controllers/asistencia.controller.js';
-import { verifyToken, requireRole } from '../middlewares/auth.js';
+import { verifyToken, requirePermiso } from '../middlewares/auth.js';
 
 const router = Router();
 
@@ -14,8 +14,8 @@ const router = Router();
 router.use(verifyToken);
 
 // Asistencia diaria (entrada al plantel)
-router.get('/diaria', requireRole('administrador'), getAsistenciaDiaria);
-router.post('/diaria', requireRole('administrador'), registrarAsistenciaDiaria);
+router.get('/diaria', requirePermiso('asistencia.registrar_diaria'), getAsistenciaDiaria);
+router.post('/diaria', requirePermiso('asistencia.registrar_diaria'), registrarAsistenciaDiaria);
 
 // Asistencia por clase (materia_grupo)
 router.get('/clase', getAsistenciaClase);

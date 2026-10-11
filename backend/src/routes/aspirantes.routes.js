@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { verifyToken, requireRole } from '../middlewares/auth.js';
+import { verifyToken, requirePermiso } from '../middlewares/auth.js';
 import {
   getAspirantes,
   getAspirante,          
@@ -11,12 +11,12 @@ import {
 const router = Router();
 
 
-router.get('/', verifyToken, requireRole('administrador'), getAspirantes);
-router.get('/:id', verifyToken, requireRole('administrador'), getAspirante); 
-router.post('/', verifyToken, requireRole('administrador'), crearAspirante);
-router.patch('/:id/estatus', verifyToken, requireRole('administrador'), actualizarEstatusAspirante);
+router.get('/', verifyToken, requirePermiso('aspirantes.ver'), getAspirantes);
+router.get('/:id', verifyToken, requirePermiso('aspirantes.ver'), getAspirante); 
+router.post('/', verifyToken, requirePermiso('aspirantes.crear'), crearAspirante);
+router.patch('/:id/estatus', verifyToken, requirePermiso('aspirantes.editar'), actualizarEstatusAspirante);
 
 
-router.post('/convertir', verifyToken, requireRole('administrador'), convertirAspiranteEnAlumno);
+router.post('/convertir', verifyToken, requirePermiso('aspirantes.convertir'), convertirAspiranteEnAlumno);
 
 export default router;

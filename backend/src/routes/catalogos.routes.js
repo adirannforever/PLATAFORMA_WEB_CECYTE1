@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { verifyToken, requireRole } from '../middlewares/auth.js';
+import { verifyToken, requirePermiso } from '../middlewares/auth.js';
 import {
   getCiclos,
   getCicloActivo,
@@ -30,10 +30,10 @@ router.get('/edificios',        getEdificios);
 router.get('/aulas',            getAulas);
 router.get('/periodos',         getPeriodos);
 router.get('/materias',         getMateriasCatalogo);
-router.get('/conceptos-pago',   requireRole('administrador'), getConceptosPago);
-router.get('/documentos',       requireRole('administrador'), getCatalogoDocumentos);
-router.get('/docentes',         requireRole('administrador', 'docente'), getDocentes);
-router.get('/alumnos',          requireRole('administrador', 'docente'), getAlumnos);
+router.get('/conceptos-pago',   requirePermiso('pagos.ver'), getConceptosPago);
+router.get('/documentos',       requirePermiso('expediente.ver'), getCatalogoDocumentos);
+router.get('/docentes',         requirePermiso('grupos.ver', 'calificaciones.ver'), getDocentes);
+router.get('/alumnos',          requirePermiso('grupos.ver', 'calificaciones.ver'), getAlumnos);
 router.get('/alumno/:usuarioId', getAlumnoByUsuario);
 
 export default router;
