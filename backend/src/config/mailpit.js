@@ -15,20 +15,20 @@ export const mailConfig = {
     }
 
     return {
-      host: process.env.MAILPIT_SMTP_HOST || 'localhost',
-      port: Number(process.env.MAILPIT_SMTP_PORT || 1025),
+      host: process.env.MAILHOG_SMTP_HOST || 'localhost',
+      port: Number(process.env.MAILHOG_SMTP_PORT || 1025),
       secure: false,
-      auth: process.env.MAILPIT_SMTP_USER
-        ? { user: process.env.MAILPIT_SMTP_USER, pass: process.env.MAILPIT_SMTP_PASS }
+      auth: process.env.MAILHOG_SMTP_USER
+        ? { user: process.env.MAILHOG_SMTP_USER, pass: process.env.MAILHOG_SMTP_PASS }
         : undefined,
     };
   },
 
   get from() {
-    return process.env.SMTP_FROM || process.env.MAILPIT_BOX_DEFAULT_NAME || 'no-reply@cecyte.edu.mx';
+    return process.env.SMTP_FROM || process.env.MAILHOG_BOX_DEFAULT_NAME || 'no-reply@cecyte.edu.mx';
   },
 
-  get mailpitApiUrl() {
-    return process.env.MAILPIT_API_URL || 'http://localhost:8025';
+  get mailHogApiUrl() {
+    return process.env.MAILHOG_API_URL || 'http://localhost:8025';
   },
 };
