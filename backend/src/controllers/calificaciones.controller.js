@@ -75,24 +75,36 @@ export const calcularCondicionAcademica = async (alumnoId, cicloId = null) => {
     };
   });
 
+  // Parciales configurados para el ciclo (periodos_evaluacion).
+  // Si el ciclo no define periodos, se asume el esquema clásico 1-2-3.
+  const perRes = await query(
+    `SELECT parcial FROM periodos_evaluacion WHERE ciclo_id = $1 AND activo = TRUE ORDER BY parcial`,
+    [targetCicloId]
+  );
+  const parcialesConfig = perRes.rows
+    .map(r => Number(r.parcial))
+    .filter(n => Number.isFinite(n) && n > 0);
+  const parciales = parcialesConfig.length > 0 ? parcialesConfig : [1, 2, 3];
+  const totalParciales = parciales.length;
+
   const detalleMaterias = [];
   let sumaPromedios = 0;
   let materiasEvaluadas = 0;
   let reprobadas = 0;
 
   for (const m of materiasRes.rows) {
-    const p1 = califMap[m.materia_grupo_id]?.[1]?.calificacion ?? null;
-    const p2 = califMap[m.materia_grupo_id]?.[2]?.calificacion ?? null;
-    const p3 = califMap[m.materia_grupo_id]?.[3]?.calificacion ?? null;
+    const valoresPorParcial = parciales.map(
+      p => califMap[m.materia_grupo_id]?.[p]?.calificacion ?? null
+    );
 
-    const parcialesPresentes = [p1, p2, p3].filter(p => p !== null);
+    const parcialesPresentes = valoresPorParcial.filter(v => v !== null);
     let promedioOrdinario = null;
     let calificacionFinal = null;
     let acreditada = false;
     let estatusMateria = 'en_curso';
 
-    if (parcialesPresentes.length === 3) {
-      promedioOrdinario = (p1 + p2 + p3) / 3;
+    if (totalParciales > 0 && parcialesPresentes.length === totalParciales) {
+      promedioOrdinario = parcialesPresentes.reduce((a, b) => a + b, 0) / totalParciales;
       // Regla de acreditación CECyTE: < 6.0 no es aprobatorio
       if (promedioOrdinario >= 6.0) {
         calificacionFinal = Math.round(promedioOrdinario * 10) / 10;
@@ -127,7 +139,7 @@ export const calcularCondicionAcademica = async (alumnoId, cicloId = null) => {
       nombre: m.materia_nombre,
       clave: m.clave,
       tipo: m.tipo,
-      parciales: { 1: p1, 2: p2, 3: p3 },
+      parciales: Object.fromEntries(parciales.map((p, i) => [p, valoresPorParcial[i]])),
       promedio_ordinario: promedioOrdinario ? Math.round(promedioOrdinario * 10) / 10 : null,
       calificacion_final: calificacionFinal,
       acreditada,

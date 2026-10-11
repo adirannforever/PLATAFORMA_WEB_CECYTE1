@@ -8,6 +8,7 @@ import {
 } from '../services/api';
 import Skeleton from '../components/Skeleton';
 import styles from './CalificacionesPage.module.css';
+import { parcialesDesdePeriodos, semestresDesdeGrupos } from '../config/academicos';
 
 
 const IconPencil = () => (
@@ -25,7 +26,6 @@ const IconSave = () => (
   </svg>
 );
 
-const PARCIALES = [1, 2, 3];
 const COLOR_CALIF = (c) => {
   if (c >= 8) return '#1A6B35';
   if (c >= 6) return '#F37238';
@@ -482,7 +482,8 @@ export default function CalificacionesPage() {
     setError('');
   };
 
-  const parcialesEditables = PARCIALES.filter(p => esAdmin || isParcialEditable(p));
+  const parciales = parcialesDesdePeriodos(periodos);
+  const parcialesEditables = parciales.filter(p => esAdmin || isParcialEditable(p));
 
   
   if (esAlumno) {
@@ -756,7 +757,7 @@ export default function CalificacionesPage() {
               <thead>
                 <tr>
                   <th className={styles.th}>Alumno</th>
-                  {PARCIALES.map(p => (
+                  {parciales.map(p => (
                     <th key={p} className={styles.th}>
                       Parcial {p}
                       {!modoColumna && parcialesEditables.includes(p) && (
@@ -777,7 +778,7 @@ export default function CalificacionesPage() {
                 {[1, 2, 3, 4].map(row => (
                   <tr key={row} className={styles.tr}>
                     <td className={styles.tdNombre}><Skeleton width="180px" height="18px" variant="text" /></td>
-                    {PARCIALES.map(p => (
+                    {parciales.map(p => (
                       <td key={p} className={styles.tdCal}><Skeleton width="28px" height="20px" variant="text" style={{ margin: '0 auto' }} /></td>
                     ))}
                     <td className={styles.tdCal}><Skeleton width="28px" height="20px" variant="text" style={{ margin: '0 auto' }} /></td>
@@ -796,7 +797,7 @@ export default function CalificacionesPage() {
               <thead>
                 <tr>
                   <th className={styles.th}>Alumno</th>
-                  {PARCIALES.map(p => (
+                  {parciales.map(p => (
                     <th key={p} className={styles.th}>
                       Parcial {p}
                       {!modoColumna && parcialesEditables.includes(p) && (
@@ -834,7 +835,7 @@ export default function CalificacionesPage() {
                         {alumno.nombre}
                         {alumno.matricula && <span className={styles.matricula}>({alumno.matricula})</span>}
                       </td>
-                      {PARCIALES.map(p => {
+                      {parciales.map(p => {
                         const cal = alumno.calificaciones[p];
                         if (modoColumna && p === parcialSeleccionado) {
                           const valor = calificacionesTemp[alumno.alumno_id] || '';
@@ -939,7 +940,7 @@ export default function CalificacionesPage() {
               onChange={handleFiltroChange}
             >
               <option value="">Todos</option>
-              {[1, 2, 3, 4, 5, 6].map(s => (
+              {semestresDesdeGrupos(grupos).map(s => (
                 <option key={s} value={s}>{s}°</option>
               ))}
             </select>
