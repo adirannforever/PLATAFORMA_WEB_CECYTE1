@@ -77,11 +77,39 @@ export const actualizarConfiguracion = async (req, res) => {
   }
 };
 
-export const getSemestreActual = (req, res) => {
-  const hoy = new Date();
-  const mes = hoy.getMonth() + 1;
-  const semestres = (mes >= 1 && mes <= 6) ? [2, 4, 6] : [1, 3, 5];
-  return res.json({ success: true, data: { semestres } });
+export const getSemestreActual = async (req, res) => {
+  try {
+    // Derivar los semestres activos desde el ciclo escolar real en curso.
+    const ciclo = await query('SELECT id FROM ciclos_escolares WHERE activo = TRUE LIMIT 1');
+
+    if (!ciclo.rows[0]) {
+      // Sin ciclo activo: mantener el criterio histórico por calendario.
+      const mes = new Date().getMonth() + 1;
+      const semestres = (mes >= 1 && mes <= 6) ? [2, 4, 6] : [1, 3, 5];
+      return res.json({ success: true, data: { semestres } });
+    }
+
+    const result = await query(
+      `SELECT DISTINCT semestre FROM grupos
+        WHERE ciclo_id = $1 AND activo = TRUE
+        ORDER BY semestre`,
+      [ciclo.rows[0].id]
+    );
+    const semestres = result.rows
+      .map(r => Number(r.semestre))
+      .filter(n => Number.isFinite(n) && n > 0);
+
+    if (semestres.length === 0) {
+      const mes = new Date().getMonth() + 1;
+      const fallback = (mes >= 1 && mes <= 6) ? [2, 4, 6] : [1, 3, 5];
+      return res.json({ success: true, data: { semestres: fallback } });
+    }
+
+    return res.json({ success: true, data: { semestres } });
+  } catch (err) {
+    console.error('Error en getSemestreActual:', err);
+    return res.status(500).json({ success: false, message: 'Error interno' });
+  }
 };
 
 export const listarHorarios = async (req, res) => {
