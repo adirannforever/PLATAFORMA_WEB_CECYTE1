@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { gruposService, incidenciasService } from '../services/api';
 import Skeleton from '../components/Skeleton';
 import styles from './MisClasesPage.module.css';
+import { TIPO_INCIDENCIA, getSubtipos } from '../config/incidencias';
 
 export default function MisClasesIncidencias({ grupoId }) {
   const [incidencias, setIncidencias] = useState([]);
@@ -269,12 +270,9 @@ export default function MisClasesIncidencias({ grupoId }) {
                     required
                   >
                     <option value="">Seleccionar...</option>
-                    <option value="conducta">Conducta</option>
-                    <option value="academica">Académica</option>
-                    <option value="asistencia">Asistencia</option>
-                    <option value="citatorio_tutor">Citatorio a tutor</option>
-                    <option value="felicitacion">Felicitación</option>
-                    <option value="otro">Otro</option>
+                    {Object.entries(TIPO_INCIDENCIA).map(([key, label]) => (
+                      <option key={key} value={key}>{label}</option>
+                    ))}
                   </select>
                 </div>
                 <div className={styles.field}>
@@ -286,38 +284,9 @@ export default function MisClasesIncidencias({ grupoId }) {
                     disabled={!form.tipo}
                   >
                     <option value="">Sin subtipo</option>
-                    {form.tipo === 'conducta' && (
-                      <>
-                        <option>Falta de respeto</option>
-                        <option>Agresividad</option>
-                        <option>Incumplimiento de normas</option>
-                      </>
-                    )}
-                    {form.tipo === 'academica' && (
-                      <>
-                        <option>Bajo rendimiento</option>
-                        <option>Faltas de entrega de trabajos</option>
-                        <option>Plagio</option>
-                      </>
-                    )}
-                    {form.tipo === 'asistencia' && (
-                      <>
-                        <option>Faltas injustificadas</option>
-                        <option>Retardos</option>
-                      </>
-                    )}
-                    {form.tipo === 'citatorio_tutor' && (
-                      <>
-                        <option>Por bajo rendimiento</option>
-                        <option>Por conducta</option>
-                      </>
-                    )}
-                    {form.tipo === 'felicitacion' && (
-                      <>
-                        <option>Excelente rendimiento</option>
-                        <option>Participación destacada</option>
-                      </>
-                    )}
+                    {getSubtipos(form.tipo).map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
                   </select>
                 </div>
               </div>

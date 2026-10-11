@@ -5,60 +5,8 @@ import { incidenciasService, usuariosService, catalogosService } from '../servic
 import { Plus, Edit, Trash2, X, Search, Filter, CheckCircle, AlertCircle, User } from 'lucide-react';
 import Skeleton from '../components/Skeleton';
 import styles from './IncidenciasPage.module.css';
-
-const TIPO_INCIDENCIA = {
-  conducta: 'Conducta',
-  academica: 'Académica',
-  asistencia: 'Asistencia',
-  citatorio_tutor: 'Citatorio a tutor',
-  felicitacion: 'Felicitación',
-  otro: 'Otro',
-};
-
-const SUBTIPOS_POR_TIPO = {
-  conducta: [
-    'Falta de respeto',
-    'Agresividad',
-    'Incumplimiento de normas',
-    'Bullying',
-    'Uso inadecuado de dispositivos',
-  ],
-  academica: [
-    'Bajo rendimiento',
-    'Faltas de entrega de trabajos',
-    'Plagio',
-    'Participación insuficiente',
-    'Dificultad en la materia',
-  ],
-  asistencia: [
-    'Faltas injustificadas',
-    'Retardos',
-    'Salida anticipada',
-    'Inasistencia recurrente',
-  ],
-  citatorio_tutor: [
-    'Por bajo rendimiento',
-    'Por conducta',
-    'Por asistencia',
-    'Por seguimiento académico',
-  ],
-  felicitacion: [
-    'Excelente rendimiento',
-    'Participación destacada',
-    'Mejora significativa',
-    'Compañerismo',
-  ],
-  otro: ['General'],
-};
-
-const TIPO_COLORS = {
-  conducta: '#b91c1c',
-  academica: '#dc2626',
-  asistencia: '#f59e0b',
-  citatorio_tutor: '#3b82f6',
-  felicitacion: '#10b981',
-  otro: '#6b7280',
-};
+import { TIPO_INCIDENCIA, SUBTIPOS_POR_TIPO, TIPO_COLORS } from '../config/incidencias';
+import { semestresDesdeGrupos } from '../config/academicos';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -118,6 +66,8 @@ export default function IncidenciasPage() {
     const letras = grupos.map(g => g.letra).filter(Boolean);
     return [...new Set(letras)].sort();
   }, [grupos]);
+
+  const semestresUnicos = useMemo(() => semestresDesdeGrupos(grupos), [grupos]);
 
   const abrirConfirmacion = (message, onConfirm) => {
     setConfirmModal({
@@ -763,7 +713,7 @@ export default function IncidenciasPage() {
                       onChange={(e) => setFiltroSemestre(e.target.value)}
                     >
                       <option value="">Todos los semestres</option>
-                      {[1, 2, 3, 4, 5, 6].map((s) => (
+                      {semestresUnicos.map((s) => (
                         <option key={s} value={s}>
                           {s}°
                         </option>
