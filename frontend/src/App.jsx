@@ -10,6 +10,7 @@ import ComunicadosPage from './pages/ComunicadosPage';
 import CalificacionesPage from './pages/CalificacionesPage';
 import GruposPage from './pages/GruposPage';
 import UsuariosPage from './pages/UsuariosPage';
+import AspirantesPage from './pages/AspirantesPage';
 import InscripcionesPage from './pages/InscripcionesPage';
 import AsistenciaPage from './pages/AsistenciaPage';
 import NotFoundPage from './pages/NotFoundPage';
@@ -185,6 +186,14 @@ export default function App() {
             element={
               <RutaProtegida rolesPermitidos={['administrador']}>
                 <UsuariosPage />
+              </RutaProtegida>
+            }
+          />
+          <Route
+            path="aspirantes"
+            element={
+              <RutaProtegida rolesPermitidos={['administrador']}>
+                <AspirantesPage />
               </RutaProtegida>
             }
           />

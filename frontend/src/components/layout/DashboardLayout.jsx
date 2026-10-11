@@ -53,6 +53,7 @@ const ROUTE_NAMES = {
   '/inscripciones': 'Inscripciones',
   '/incidencias': 'Incidencias',
   '/usuarios': 'Usuarios',
+  '/aspirantes': 'Aspirantes',
   '/becas': 'Becas',
   '/pagos': 'Pagos',
   '/titulacion': 'Titulación',

@@ -12,6 +12,7 @@ import {
   Calendar,
   BookOpen,
   UserCheck,
+  UserPlus,
   ClipboardList,
   BarChart3,
 } from 'lucide-react';
@@ -181,6 +182,14 @@ export const menuItems = [
     to: '/usuarios',
     label: 'Usuarios',
     icon: <IconUsuarios />,
+    roles: ['administrador'],
+    category: 'administrativo',
+    order: 0,
+  },
+  {
+    to: '/aspirantes',
+    label: 'Aspirantes',
+    icon: <UserPlus size={18} />,
     roles: ['administrador'],
     category: 'administrativo',
     order: 0,
