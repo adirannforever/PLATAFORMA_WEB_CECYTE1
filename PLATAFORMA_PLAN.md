@@ -1,7 +1,7 @@
 # Plataforma CECyTE Plantel 1 — hoja de ruta verificada
 
 **Revisada:** 12 de octubre de 2026
-**Estado general:** varias bases tecnicas ya existen; su adopcion funcional es parcial. El trabajo activo mas visible es auditoria.
+**Estado general:** varias bases tecnicas ya existen; su adopcion funcional es parcial. La siguiente prioridad es reconciliar y probar el baseline real de PostgreSQL antes de seguir con migraciones y pruebas E2E.
 **Proposito:** avanzar por incrementos comprobables, atender primero las necesidades reales del plantel y evitar instalar tecnologias solo para ampliar la lista.
 
 ## 1. Como leer el estado
@@ -11,7 +11,7 @@
 - **Pendiente:** no hay implementacion comprobable en el repositorio.
 - **Opcional/diferido:** se evaluara solo cuando exista una necesidad concreta.
 
-La presencia de un paquete, archivo de configuracion, pantalla o contenedor **no** cuenta por si sola como funcionalidad terminada. La base PostgreSQL viva no se consulto para esta revision; los hallazgos de base de datos se refieren a los SQL versionados.
+La presencia de un paquete, archivo de configuracion, pantalla o contenedor **no** cuenta por si sola como funcionalidad terminada. El catalogo de Neon se inspecciono en solo lectura el 12 de octubre de 2026; el snapshot no contiene filas ni credenciales.
 
 ## 2. Estado comprobado del proyecto
 
@@ -25,12 +25,12 @@ La presencia de un paquete, archivo de configuracion, pantalla o contenedor **no
 | Rate limiting | Middleware y limitador de autenticacion/API presentes | Hecho como proteccion basica; no reemplaza Helmet ni otras medidas pendientes |
 | Auditoria HTTP | Middleware global registra mutaciones exitosas y exportaciones; login/logout tienen registros explicitos | Parcial: la cobertura, los fallos y los cambios de datos deben probarse de forma sistematica |
 | Auditoria de dominio | Existen escrituras especificas para cambios de calificaciones e inscripciones | Parcial: se debe definir una politica unica y evitar duplicados con auditoria global |
-| Auditoria en BD | Hay tablas e indices de auditoria en `schema.sql` | Pendiente: no se encontraron triggers de auditoria |
+| Auditoria en BD | Hay tablas e indices de auditoria; Neon tiene dos triggers operativos | Pendiente: ninguno de los triggers actuales registra auditoria |
 | Pantalla de auditoria | `AuditoriaPage` y su ruta estan en el frontend | Hecho como pantalla inicial; validar cobertura, filtros, permisos y datos nuevos |
 | Correo | Nodemailer, configuracion SMTP, servicio y prueba manual existen | Parcial: Compose inicia MailHog (no Mailpit); no hay verificacion de correo ni recuperacion de cuenta |
 | Mailpit | El plan lo solicita, pero no es el servicio actual de Compose | Pendiente: sustituir MailHog por Mailpit y alinear variables, documentacion y prueba |
 | Perfil de usuario | No se encontro una ruta/pantalla de perfil de cuenta en el frontend | Pendiente |
-| Base de datos/migraciones | `schema.sql` y una migracion SQL RBAC versionada | Parcial: falta un flujo de migraciones uniforme y documentado |
+| Base de datos/migraciones | `schema.sql`, una migracion RBAC y un baseline DDL schema-only de Neon | Parcial: el baseline aun debe restaurarse y compararse; no hay ledger de migraciones |
 | Reportes | Hay endpoints y generadores actuales para varios formatos | Hecho de forma sincrona; la generacion en cola sigue pendiente |
 | Pruebas | El smoke test de servicios ahora incluye una regresion para texto especial en PDFs; hay un test E2E de auditoria en JS | Parcial: no hay Jest/Supertest, Vitest/Testing Library ni CI; el E2E requiere entorno y datos de prueba |
 | CI/CD | No se encontro configuracion versionada en `.github/workflows` | Pendiente |
@@ -48,7 +48,7 @@ Los cambios locales de controladores, middleware, esquema SQL, pantalla de audit
 2. El plan afirmaba Mailpit; Compose y la configuracion SMTP siguen nombrando MailHog.
 3. La pantalla de auditoria ya existe y esta conectada a una ruta. La pantalla que falta identificar y planear es el perfil de usuario.
 4. El modulo de pagos existe; el proveedor de pago es una decision futura, no una ausencia total del dominio.
-5. No se encontro trigger SQL, migrador uniforme, framework de pruebas, workflow de CI, sistema de colas ni las bibliotecas de estado/formularios/graficas propuestas.
+5. Los SQL versionados no incluyen los dos triggers operativos que existen en Neon. Tampoco hay ledger de migraciones, framework de pruebas, workflow de CI, sistema de colas ni las bibliotecas de estado/formularios/graficas propuestas.
 6. La antigua distribucion de fases ponia funciones asincronas antes de crear pruebas y CI. Se reordena para validar antes de ampliar el sistema.
 
 ## 3. Principios de ejecucion
@@ -63,6 +63,19 @@ Los cambios locales de controladores, middleware, esquema SQL, pantalla de audit
 8. Cada fase tiene condicion de salida; no se declara completa por instalar paquetes.
 
 ## 4. Hoja de ruta reestructurada
+
+### Paso prioritario — Baseline y versionado del esquema PostgreSQL
+
+**Estado: snapshot de catalogo y DDL schema-only capturados; reconciliacion y restauracion aislada pendientes.**
+
+- El inventario de Neon contiene 43 tablas, 42 secuencias, 356 columnas, 419 constraints, 124 indices, una vista y dos triggers con sus dos funciones. No hay tipos enum/domain, politicas RLS ni candidatos a tabla de historial de migraciones.
+- Los nombres de las 43 tablas vivas aparecen entre `backend/src/db/schema.sql` y `001_rbac_roles_permisos.sql`. La unica diferencia de nombre de columna encontrada es `usuarios.rol_id`, agregada por esa migracion.
+- Neon tambien tiene `v_promedios_periodo`, ausente de los SQL versionados, y dos triggers ausentes de ellos: uno crea periodos escolares al insertar un ciclo; otro valida conflictos de horario docente. No son triggers de auditoria.
+- El DDL schema-only fechado esta en `backend/src/db/snapshots/neon-baseline-2026-10-12.sql`. No contiene filas y no se debe aplicar a Neon ni a otra base existente: es un baseline para comparar y probar en una base vacia/desechable.
+- Revisar diferencias de tipos, defaults, constraints, indices, vista y funciones entre el baseline y los SQL versionados; despues restaurar el baseline solo en PostgreSQL local desechable y comparar el catalogo restaurado con el snapshot.
+- Tras validar el baseline, definir un ledger simple y migraciones SQL inmutables. Registrar el baseline de una base existente requerira backup y autorizacion explicita; nunca reproducir el dump sobre Neon como una migracion.
+
+**Salida:** baseline reproducible en una base vacia, diferencias documentadas y estrategia de migraciones que conserva Neon sin reaplicar su DDL.
 
 ### Fase 0 — Cerrar y verificar el trabajo de auditoria
 
@@ -156,10 +169,12 @@ Los cambios locales de controladores, middleware, esquema SQL, pantalla de audit
 
 ## 5. Trabajo de base de datos
 
-- `schema.sql` se conserva como referencia de instalacion; los cambios a una base viva van en migraciones nuevas e inmutables.
-- La migracion RBAC `001_rbac_roles_permisos.sql` prueba que hay al menos un SQL versionado, pero no constituye por si sola un flujo completo de migraciones.
-- No se verifico en los SQL versionados la vista `v_promedios_periodo` descrita anteriormente. Confirmar contra el esquema real antes de documentarla como parte garantizada.
-- No se encontraron `CREATE TRIGGER`/funciones de trigger de auditoria en los SQL versionados.
+- `schema.sql` y `001_rbac_roles_permisos.sql` no deben tratarse como historial completo: describen los mismos nombres de tablas que Neon, pero no incluyen todos sus objetos.
+- El dump de `pg_dump --schema-only` conserva la estructura viva sin filas, propietarios ni privilegios; no reemplaza aun a `schema.sql` ni es una migracion incremental.
+- Para actualizar el snapshot desde `backend`, usar `npm run db:export-neon-schema -- --output=src/db/snapshots/neon-baseline-YYYY-MM-DD.sql`. La herramienta exige un host Neon, no pasa la URL con credenciales como argumento, mantiene TLS verificado y fuerza transacciones read-only.
+- Para volver a generar el inventario de catalogo, usar `npm run db:inspect-neon-schema -- --output=src/db/snapshots/neon-catalog.json`; no consulta filas de tablas.
+- El catalogo no encontro una tabla `schema_migrations`, `knex`, `sequelize`, `prisma` o equivalente. El seguimiento uniforme sigue pendiente.
+- Los dos triggers de Neon son operativos (periodos escolares y conflicto de horarios); no existe evidencia de triggers de auditoria.
 - No copiar dumps completos ni datos de produccion al repositorio. Los fixtures deben ser pequenos, sinteticos y anonimos.
 
 ## 6. Higiene del repositorio
@@ -172,10 +187,11 @@ Los cambios locales de controladores, middleware, esquema SQL, pantalla de audit
 
 ## 7. Orden inmediato
 
-1. Ejecutar la prueba E2E de auditoria y validar la migracion en una base PostgreSQL local dedicada; documentar resultados y cualquier limitacion del entorno.
-2. Crear la base de pruebas/CI para que las fases siguientes tengan una comprobacion repetible.
-3. Completar fundamentos backend de manera dirigida; evitar rehacer componentes que ya existen.
-4. Implementar Mailpit y el ciclo de verificacion de correo, junto con el perfil de usuario.
-5. Continuar con auditoria de dominio/migraciones; luego evaluar colas, mejoras frontend y despliegue.
+1. Revisar el baseline Neon contra ambos SQL versionados y restaurarlo en una base PostgreSQL local desechable; documentar el diff estructural y la prueba de restauracion.
+2. Definir y probar el ledger/migrador Node sobre esa base local; no escribir el ledger en Neon sin backup y autorizacion explicita.
+3. Ejecutar el E2E de auditoria solo en un entorno local dedicado con fixtures sinteticos y validar su migracion sobre la estructura reconciliada.
+4. Crear la base de pruebas/CI para que las fases siguientes tengan una comprobacion repetible.
+5. Completar fundamentos backend de manera dirigida; despues implementar Mailpit, verificacion de correo y perfil.
+6. Continuar con auditoria de dominio; luego evaluar colas, mejoras frontend y despliegue.
 
 **Regla de avance:** cerrar una fase con evidencia (comandos, pruebas y docs) antes de cambiar la prioridad o arrancar la siguiente. Las fechas y duraciones se estimaran despues de acotar cada incremento, no antes.
