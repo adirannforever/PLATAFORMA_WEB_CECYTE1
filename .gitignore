@@ -9,10 +9,9 @@ backend/dist/
 build/
 
 # ── Entorno seguro: se commitea .env.example, no .env ────────────────────────
-.env
-.env.local
-.env.*.local
+.env*
 !.env.example
+!.env.*.example
 
 # ── Logs y process id ─────────────────────────────────────────────────────────
 *.log
@@ -38,6 +37,7 @@ Thumbs.db
 *.sublime-workspace
 
 # ── Artefactos de agentes/tooling ─────────────────────────────────────────────
+.agents/
 .aider.chat.history.md
 .aider.input.history
 .aider.tags.cache.v4
@@ -68,6 +68,14 @@ jest-output.xml
 # ── Temporales ───────────────────────────────────────────────────────────────
 tmp/
 temp/
+*.ps1
+*.tmp
+*.bak
+*.orig
+
+# Dumps/pruebas locales de base de datos y salidas de investigacion
+/test_usuario.sql
+backend/scripts/*.txt
 
 # Salidas de previsualizacion del motor de documentos (backend/python)
 backend/python/previsualizaciones/
@@ -76,4 +84,3 @@ backend/python/previsualizaciones/
 # Cache de Python
 __pycache__/
 *.pyc
-
