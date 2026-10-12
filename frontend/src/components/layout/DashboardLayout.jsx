@@ -80,6 +80,8 @@ export default function DashboardLayout() {
 
   const [sidebarAbierto, setSidebarAbierto] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [rail, setRail] = useState(() => localStorage.getItem('sidebar_rail') === '1');
+  const [userMenuAbierto, setUserMenuAbierto] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState(() => {
     const saved = localStorage.getItem('sidebar_collapsed');
     if (saved) {
@@ -91,6 +93,29 @@ export default function DashboardLayout() {
     }
     return {};
   });
+
+  // Close the user menu on outside click / Escape.
+  useEffect(() => {
+    if (!userMenuAbierto) return undefined;
+    const onClick = (e) => {
+      if (!e.target.closest?.('[data-user-menu]')) setUserMenuAbierto(false);
+    };
+    const onKey = (e) => { if (e.key === 'Escape') setUserMenuAbierto(false); };
+    document.addEventListener('click', onClick);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('click', onClick);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [userMenuAbierto]);
+
+  const toggleRail = () => {
+    setRail((prev) => {
+      const next = !prev;
+      localStorage.setItem('sidebar_rail', next ? '1' : '0');
+      return next;
+    });
+  };
 
   const groupedItems = getMenuItems(tiene);
   const categoriesWithItems = categoryOrder.filter((cat) => groupedItems[cat]?.length > 0);
@@ -134,13 +159,22 @@ export default function DashboardLayout() {
     <div className={styles.shell}>
       {sidebarAbierto && <div className={styles.overlay} onClick={() => setSidebarAbierto(false)} />}
 
-      <aside className={`${styles.sidebar} ${sidebarAbierto ? styles.sidebarOpen : ''}`} role="navigation" aria-label="Menú principal">
+      <aside className={`${styles.sidebar} ${sidebarAbierto ? styles.sidebarOpen : ''} ${rail ? styles.sidebarRail : ''}`} role="navigation" aria-label="Menú principal">
         <div className={styles.brand}>
           <LogoCECyTE />
           <div className={styles.brandText}>
             <span className={styles.brandTitle}>CECyTE</span>
             <span className={styles.brandSub}>Plantel 1</span>
           </div>
+          <button
+            type="button"
+            className={styles.railToggle}
+            onClick={toggleRail}
+            aria-label={rail ? 'Expandir menú' : 'Contraer menú'}
+            title={rail ? 'Expandir menú' : 'Contraer menú'}
+          >
+            {rail ? <ChevronRight size={16} /> : <ChevronDown size={16} style={{ transform: 'rotate(90deg)' }} />}
+          </button>
         </div>
 
         <div className={styles.userCard}>
@@ -198,7 +232,7 @@ export default function DashboardLayout() {
                         aria-current={({ isActive }) => (isActive ? 'page' : undefined)}
                       >
                         <span className={styles.navIcon} aria-hidden="true">{item.icon}</span>
-                        {item.label}
+                        <span className={styles.navLabel}>{item.label}</span>
                         {badge}
                       </NavLink>
                     );
@@ -212,12 +246,12 @@ export default function DashboardLayout() {
         <div className={styles.sidebarFooter}>
           <NavLink to="/" className={styles.navItemPortal} onClick={() => setSidebarAbierto(false)}>
             <span className={styles.navIcon} aria-hidden="true"><IconPortal /></span>
-            Volver al Portal
+            <span className={styles.navLabel}>Volver al Portal</span>
           </NavLink>
 
           <button className={styles.logoutBtn} onClick={() => setShowLogoutConfirm(true)}>
             <span className={styles.navIcon} aria-hidden="true"><IconLogout /></span>
-            Cerrar sesión
+            <span className={styles.navLabel}>Cerrar sesión</span>
           </button>
         </div>
       </aside>
@@ -235,9 +269,32 @@ export default function DashboardLayout() {
             <LogoCECyTE />
             <span className={styles.headerTitle}>{INSTITUCION.nombre}</span>
           </div>
-          <div className={styles.headerUser}>
-            <span>{usuario?.nombre}</span>
-            <div className={styles.avatarSmall}>{usuario?.nombre?.charAt(0)}</div>
+          <div className={styles.headerUser} data-user-menu>
+            <button
+              type="button"
+              className={styles.userMenuTrigger}
+              onClick={() => setUserMenuAbierto((v) => !v)}
+              aria-haspopup="menu"
+              aria-expanded={userMenuAbierto}
+              aria-label={`Menú de ${usuario?.nombre || 'usuario'}`}
+            >
+              <span className={styles.userMenuName}>{usuario?.nombre}</span>
+              <div className={styles.avatarSmall}>{usuario?.nombre?.charAt(0)}</div>
+            </button>
+            {userMenuAbierto && (
+              <div className={styles.userMenu} role="menu">
+                <div className={styles.userMenuHead}>
+                  <span className={styles.userMenuFullName}>{usuario?.nombre} {usuario?.apellidos}</span>
+                  <span className={styles.userMenuRole}>{ETIQUETA_ROL[usuario?.rol]}</span>
+                </div>
+                <NavLink to="/" className={styles.userMenuItem} role="menuitem" onClick={() => setUserMenuAbierto(false)}>
+                  <IconPortal /> Volver al Portal
+                </NavLink>
+                <button type="button" className={styles.userMenuItemDanger} role="menuitem" onClick={() => { setUserMenuAbierto(false); setShowLogoutConfirm(true); }}>
+                  <IconLogout /> Cerrar sesión
+                </button>
+              </div>
+            )}
           </div>
         </header>
 
