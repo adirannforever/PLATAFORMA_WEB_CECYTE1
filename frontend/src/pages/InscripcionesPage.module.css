@@ -1,12 +1,34 @@
-@import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Roboto:wght@400;500;700&display=swap');
-
+.field {
+  composes: fieldGroup from '../styles/shared.module.css';
+}
+.btnSecondary {
+  composes: secondaryButton from '../styles/shared.module.css';
+}
+.subtitle {
+  composes: pageSubtitle from '../styles/shared.module.css';
+}
+.title {
+  composes: pageTitle from '../styles/shared.module.css';
+}
+.successMsg {
+  composes: successAlert from '../styles/shared.module.css';
+}
+.errorMsg {
+  composes: errorAlert from '../styles/shared.module.css';
+}
+.label {
+  composes: formLabel from '../styles/shared.module.css';
+}
+.btnPrimary {
+  composes: primaryButton from '../styles/shared.module.css';
+}
 /* ============================================================
    BASE
    ============================================================ */
 .page {
-  font-family: 'Roboto', sans-serif;
-  color: #1e293b;
-  background-color: #f4f6f9;
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  background-color: var(--color-surface-page);
   padding: 2rem 1.5rem;
   max-width: 1400px;
   margin: 0 auto;
@@ -24,38 +46,13 @@
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
-  border-bottom: 2px solid #d1d9e6;
+  border-bottom: 2px solid var(--color-border);
   padding-bottom: 0.75rem;
-}
-
-.title {
-  font-family: 'Merriweather', serif;
-  font-size: 1.65rem;
-  font-weight: 700;
-  color: #1A6B35;
-  margin: 0;
-}
-
-.title::before {
-  content: '';
-  display: inline-block;
-  width: 4px;
-  height: 28px;
-  background: #F37238;
-  margin-right: 12px;
-  vertical-align: middle;
-  border-radius: 0;
-}
-
-.subtitle {
-  font-size: 0.95rem;
-  color: #64748b;
-  margin: 0.25rem 0 0 0;
 }
 
 .cicloInfo {
   font-weight: 600;
-  color: #1A6B35;
+  color: var(--color-primary);
 }
 
 /* ============================================================
@@ -72,9 +69,9 @@
    PANEL IZQUIERDO – FORMULARIO + LISTA DE GRUPOS
    ============================================================ */
 .formPanel {
-  background: #ffffff;
-  border: 2px solid #d1d9e6;
-  border-radius: 2px;
+  background: var(--color-white);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
@@ -82,16 +79,16 @@
 }
 
 .panelTitle {
-  font-family: 'Merriweather', serif;
+  font-family: var(--font-display);
   font-size: 1.1rem;
   font-weight: 700;
-  color: #1A6B35;
+  color: var(--color-primary);
   margin: 0 0 0.25rem 0;
 }
 
 .panelSubtitle {
   font-size: 0.85rem;
-  color: #64748b;
+  color: var(--color-text-muted);
   margin-top: -0.5rem;
 }
 
@@ -101,24 +98,13 @@
   gap: 1rem;
 }
 
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
 .label {
-  font-family: 'Roboto', sans-serif;
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: #1e293b;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
 .helpText {
   font-size: 0.75rem;
-  color: #94a3b8;
+  color: var(--color-text-subtle);
   margin-top: 0.25rem;
 }
 
@@ -133,12 +119,12 @@
 .dropdownToggle {
   width: 100%;
   padding: 0.5rem 0.8rem;
-  background: #ffffff;
-  border: 2px solid #d1d9e6;
-  border-radius: 2px;
-  font-family: 'Roboto', sans-serif;
+  background: var(--color-white);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
   font-size: 0.9rem;
-  color: #1e293b;
+  color: var(--color-text);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -152,7 +138,7 @@
 }
 
 .dropdownToggle:focus {
-  border-color: #1A6B35;
+  border-color: var(--color-primary);
   outline: none;
 }
 
@@ -168,9 +154,9 @@
   left: 0;
   right: 0;
   margin-top: 4px;
-  background: #ffffff;
-  border: 2px solid #d1d9e6;
-  border-radius: 2px;
+  background: var(--color-white);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
   z-index: 50;
   min-width: 100%;
@@ -184,12 +170,12 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 0.8rem;
-  border-bottom: 1px solid #e9edf2;
+  border-bottom: 1px solid var(--color-border-subtle);
   flex-shrink: 0;
 }
 
 .dropdownSearch .searchIcon {
-  color: #94a3b8;
+  color: var(--color-text-subtle);
   flex-shrink: 0;
 }
 
@@ -198,14 +184,14 @@
   padding: 0.3rem 0;
   border: none;
   outline: none;
-  font-family: 'Roboto', sans-serif;
+  font-family: var(--font-sans);
   font-size: 0.9rem;
-  color: #1e293b;
+  color: var(--color-text);
   background: transparent;
 }
 
 .dropdownSearch .searchInput::placeholder {
-  color: #94a3b8;
+  color: var(--color-text-subtle);
 }
 
 .dropdownList {
@@ -219,11 +205,11 @@
 }
 
 .dropdownList::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: var(--color-surface-subtle);
 }
 
 .dropdownList::-webkit-scrollbar-thumb {
-  background: #d1d9e6;
+  background: var(--color-border);
   border-radius: 3px;
 }
 
@@ -247,12 +233,12 @@
 }
 
 .dropdownItem:hover {
-  background: #f8fafc;
+  background: var(--color-surface-page);
 }
 
 .dropdownItemActive {
-  background: #e6f0ea;
-  border-left-color: #1A6B35;
+  background: var(--color-success-light);
+  border-left-color: var(--color-primary);
 }
 
 .dropdownItemActive:hover {
@@ -276,44 +262,44 @@
 
 .dropdownItemInfo .especialidad {
   font-weight: 500;
-  color: #1A6B35;
+  color: var(--color-primary);
 }
 
 .dropdownItemInfo .turno {
-  color: #64748b;
-  background: #f1f5f9;
+  color: var(--color-text-muted);
+  background: var(--color-surface-subtle);
   padding: 0.05rem 0.4rem;
   border-radius: 10px;
   font-size: 0.7rem;
 }
 
 .dropdownItemInfo .email {
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: 0.75rem;
 }
 
 .dropdownItemInfo .matricula {
-  color: #94a3b8;
+  color: var(--color-text-subtle);
   font-size: 0.7rem;
-  background: #f1f5f9;
+  background: var(--color-surface-subtle);
   padding: 0.05rem 0.4rem;
   border-radius: 10px;
 }
 
 .dropdownItemAlumnos {
   font-size: 0.7rem;
-  color: #94a3b8;
+  color: var(--color-text-subtle);
   margin-top: 0.1rem;
 }
 
 .dropdownItemActive .dropdownItemAlumnos {
-  color: #1A6B35;
+  color: var(--color-primary);
 }
 
 .dropdownEmpty {
   padding: 1rem 0.8rem;
   text-align: center;
-  color: #94a3b8;
+  color: var(--color-text-subtle);
   font-size: 0.9rem;
 }
 
@@ -322,7 +308,7 @@
    ============================================================ */
 .gruposSection {
   margin-top: 0.5rem;
-  border-top: 2px solid #e9edf2;
+  border-top: 2px solid var(--color-border-subtle);
   padding-top: 0.8rem;
 }
 
@@ -334,10 +320,10 @@
 }
 
 .subTitle {
-  font-family: 'Roboto', sans-serif;
+  font-family: var(--font-sans);
   font-size: 0.8rem;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--color-text);
   text-transform: uppercase;
   letter-spacing: 0.3px;
   margin: 0;
@@ -345,8 +331,8 @@
 
 .gruposCount {
   font-size: 0.7rem;
-  color: #94a3b8;
-  background: #f1f5f9;
+  color: var(--color-text-subtle);
+  background: var(--color-surface-subtle);
   padding: 0.1rem 0.5rem;
   border-radius: 10px;
 }
@@ -355,15 +341,15 @@
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  background: #f8fafc;
-  border: 1.5px solid #e9edf2;
-  border-radius: 2px;
+  background: var(--color-surface-page);
+  border: 1.5px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
   padding: 0.3rem 0.6rem;
   margin-bottom: 0.5rem;
 }
 
 .gruposSearch .searchIcon {
-  color: #94a3b8;
+  color: var(--color-text-subtle);
   flex-shrink: 0;
 }
 
@@ -373,13 +359,13 @@
   border: none;
   outline: none;
   background: transparent;
-  font-family: 'Roboto', sans-serif;
+  font-family: var(--font-sans);
   font-size: 0.85rem;
-  color: #1e293b;
+  color: var(--color-text);
 }
 
 .gruposSearch .searchInput::placeholder {
-  color: #94a3b8;
+  color: var(--color-text-subtle);
 }
 
 .gruposListContainer {
@@ -392,12 +378,12 @@
 }
 
 .gruposListContainer::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: var(--color-surface-subtle);
   border-radius: 3px;
 }
 
 .gruposListContainer::-webkit-scrollbar-thumb {
-  background: #d1d9e6;
+  background: var(--color-border);
   border-radius: 3px;
 }
 
@@ -417,9 +403,9 @@
   align-items: flex-start;
   width: 100%;
   padding: 0.5rem 0.7rem;
-  background: #ffffff;
-  border: 1.5px solid #e9edf2;
-  border-radius: 2px;
+  background: var(--color-white);
+  border: 1.5px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
   text-align: left;
   cursor: pointer;
   transition: all 0.15s;
@@ -427,13 +413,13 @@
 }
 
 .grupoItem:hover {
-  background: #f8fafc;
+  background: var(--color-surface-page);
   border-color: #cbd5e1;
 }
 
 .grupoItemActive {
-  background: #e6f0ea;
-  border-color: #1A6B35;
+  background: var(--color-success-light);
+  border-color: var(--color-primary);
   border-width: 2px;
 }
 
@@ -454,12 +440,12 @@
 
 .grupoItemInfo .especialidad {
   font-weight: 500;
-  color: #1A6B35;
+  color: var(--color-primary);
 }
 
 .grupoItemInfo .turno {
-  color: #64748b;
-  background: #f1f5f9;
+  color: var(--color-text-muted);
+  background: var(--color-surface-subtle);
   padding: 0.05rem 0.4rem;
   border-radius: 10px;
   font-size: 0.65rem;
@@ -467,18 +453,18 @@
 
 .grupoItemAlumnos {
   font-size: 0.65rem;
-  color: #94a3b8;
+  color: var(--color-text-subtle);
   margin-top: 0.05rem;
 }
 
 .grupoItemActive .grupoItemAlumnos {
-  color: #1A6B35;
+  color: var(--color-primary);
 }
 
 .gruposEmpty {
   padding: 0.8rem 0.7rem;
   text-align: center;
-  color: #94a3b8;
+  color: var(--color-text-subtle);
   font-size: 0.85rem;
 }
 
@@ -486,59 +472,14 @@
    BOTONES GENERALES
    ============================================================ */
 .btnPrimary {
-  padding: 0.6rem 1.5rem;
-  background: #1A6B35;
-  color: #ffffff;
-  border: 2px solid #135228;
-  border-radius: 2px;
-  font-family: 'Roboto', sans-serif;
-  font-size: 0.85rem;
-  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  transition: background 0.15s, border-color 0.15s;
-  cursor: pointer;
-}
-
-.btnPrimary:hover:not(:disabled) {
-  background: #135228;
-  border-color: #0d421a;
-}
-
-.btnPrimary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btnSecondary {
-  padding: 0.6rem 1.5rem;
-  background: #e9edf2;
-  color: #1e293b;
-  border: 2px solid #d1d9e6;
-  border-radius: 2px;
-  font-family: 'Roboto', sans-serif;
-  font-size: 0.85rem;
-  font-weight: 500;
-  transition: background 0.15s, border-color 0.15s;
-  cursor: pointer;
-}
-
-.btnSecondary:hover {
-  background: #d1d9e6;
-  border-color: #b0bccf;
 }
 
 /* ============================================================
    MENSAJES
    ============================================================ */
 .errorMsg {
-  padding: 0.6rem 0.8rem;
-  background: #fee2e2;
-  color: #b91c1c;
-  border: 2px solid #b91c1c;
-  border-radius: 2px;
-  font-family: 'Roboto', sans-serif;
-  font-size: 0.85rem;
   margin-bottom: 0.5rem;
   word-break: break-word;
 }
@@ -549,13 +490,13 @@
   overflow-y: auto;
   font-size: 0.85rem;
   line-height: 1.6;
-  background: #fee2e2;
-  color: #b91c1c;
-  border: 2px solid #b91c1c;
-  border-radius: 2px;
+  background: var(--color-error-light);
+  color: var(--color-error);
+  border: 2px solid var(--color-error);
+  border-radius: var(--radius-sm);
   padding: 1rem 1.2rem;
   margin-bottom: 1rem;
-  font-family: 'Roboto', sans-serif;
+  font-family: var(--font-sans);
 }
 
 .errorMsgDocs br {
@@ -565,14 +506,6 @@
 }
 
 .successMsg {
-  padding: 0.6rem 0.8rem;
-  background: #e6f0ea;
-  color: #1A6B35;
-  border: 2px solid #1A6B35;
-  border-radius: 2px;
-  font-family: 'Roboto', sans-serif;
-  font-size: 0.85rem;
-  font-weight: 600;
   margin-bottom: 0.5rem;
 }
 
@@ -580,9 +513,9 @@
    PANEL DERECHO – RESULTADOS
    ============================================================ */
 .resultPanel {
-  background: #ffffff;
-  border: 2px solid #d1d9e6;
-  border-radius: 2px;
+  background: var(--color-white);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
   padding: 1.5rem;
   min-height: 300px;
   display: flex;
@@ -595,7 +528,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #94a3b8;
+  color: var(--color-text-subtle);
   font-size: 0.95rem;
   text-align: center;
   padding: 2rem 0;
@@ -603,7 +536,7 @@
 }
 
 .placeholderIcon {
-  color: #d1d9e6;
+  color: var(--color-border);
   margin-bottom: 0.5rem;
 }
 
@@ -618,26 +551,26 @@
   align-items: center;
   gap: 0.3rem;
   padding: 0.3rem 0.8rem;
-  background: #e9edf2;
-  border: 2px solid #d1d9e6;
-  border-radius: 2px;
-  font-family: 'Roboto', sans-serif;
+  background: var(--color-border-subtle);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
   font-size: 0.8rem;
   font-weight: 500;
-  color: #1e293b;
+  color: var(--color-text);
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .btnVolver:hover {
-  background: #d1d9e6;
+  background: var(--color-border);
   border-color: #b0bccf;
 }
 
 .emptyResult {
   padding: 2rem 0;
   text-align: center;
-  color: #94a3b8;
+  color: var(--color-text-subtle);
   font-size: 0.9rem;
 }
 
@@ -652,9 +585,9 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.6rem 0.8rem;
-  background: #f8fafc;
-  border: 1.5px solid #e9edf2;
-  border-radius: 2px;
+  background: var(--color-surface-page);
+  border: 1.5px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
 }
 
 .alumnoInfo {
@@ -666,54 +599,54 @@
 .alumnoAvatar {
   width: 32px;
   height: 32px;
-  background: #1A6B35;
-  color: #ffffff;
-  font-family: 'Merriweather', serif;
+  background: var(--color-primary);
+  color: var(--color-white);
+  font-family: var(--font-display);
   font-size: 0.7rem;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
   text-transform: uppercase;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   flex-shrink: 0;
 }
 
 .alumnoNombre {
   font-weight: 600;
-  color: #1e293b;
+  color: var(--color-text);
   font-size: 0.85rem;
 }
 
 .alumnoEmail {
   font-size: 0.7rem;
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .btnEliminar {
   padding: 0.15rem 0.6rem;
-  background: #fee2e2;
+  background: var(--color-error-light);
   border: 1.5px solid #fecaca;
-  border-radius: 2px;
-  font-family: 'Roboto', sans-serif;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
   font-size: 0.65rem;
   font-weight: 500;
-  color: #b91c1c;
+  color: var(--color-error);
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .btnEliminar:hover {
-  background: #b91c1c;
-  color: #ffffff;
-  border-color: #b91c1c;
+  background: var(--color-error);
+  color: var(--color-white);
+  border-color: var(--color-error);
 }
 
 .skeletonRow {
   height: 40px;
-  background: #e9edf2;
-  border: 1px solid #d1d9e6;
-  border-radius: 2px;
+  background: var(--color-border-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
 }
 
 /* ============================================================
@@ -726,14 +659,6 @@
 
   .page {
     padding: 1rem;
-  }
-
-  .title {
-    font-size: 1.3rem;
-  }
-
-  .title::before {
-    display: none;
   }
 
   .pageHeader {

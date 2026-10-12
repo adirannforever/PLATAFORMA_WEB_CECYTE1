@@ -1,3 +1,12 @@
+.btnSecondary {
+  composes: secondaryButton from '../styles/shared.module.css';
+}
+.btnPrimary {
+  composes: primaryButton from '../styles/shared.module.css';
+}
+.title {
+  composes: pageTitle from '../styles/shared.module.css';
+}
 .page {
   min-height: 100vh;
   display: flex;
@@ -27,11 +36,6 @@
   line-height: 1;
   margin-top: 8px;
 }
-.title {
-  font-size: var(--font-size-xl);
-  font-weight: 700;
-  color: var(--color-gray-900);
-}
 .desc {
   font-size: var(--font-size-sm);
   color: var(--color-gray-600);
@@ -44,23 +48,3 @@
   flex-wrap: wrap;
   justify-content: center;
 }
-.btnPrimary {
-  padding: 10px 24px;
-  background: var(--color-primary);
-  color: white;
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  transition: background 0.15s;
-}
-.btnPrimary:hover { background: var(--color-primary-dark); }
-.btnSecondary {
-  padding: 10px 24px;
-  background: var(--color-gray-100);
-  color: var(--color-gray-700);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  transition: background 0.15s;
-}
-.btnSecondary:hover { background: var(--color-gray-200); }

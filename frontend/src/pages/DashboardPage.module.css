@@ -1,9 +1,11 @@
-@import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Roboto:wght@400;500;700&display=swap');
+.empty {
+  composes: emptyState from '../styles/shared.module.css';
+}
 
 .page {
-  font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-  color: #1e293b;
-  background-color: #f4f6f9;
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  background-color: var(--color-surface-page);
   min-height: 100vh;
   padding: 2rem 1.5rem;
   max-width: 1200px;
@@ -26,18 +28,18 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  background: #1A6B35; /* Verde institucional */
+  background: var(--color-primary); /* Verde institucional */
   padding: 1.5rem 2rem;
-  border: 2px solid #135228;
-  border-radius: 2px; /* Muy poco redondeado */
-  color: #ffffff;
+  border: 2px solid var(--color-primary-dark);
+  border-radius: var(--radius-sm); /* Muy poco redondeado */
+  color: var(--color-white);
 }
 
 .welcomeTitle {
-  font-family: 'Merriweather', Georgia, serif;
+  font-family: var(--font-display);
   font-size: 1.65rem;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--color-white);
   margin: 0;
   letter-spacing: -0.01em;
 }
@@ -47,7 +49,7 @@
   display: inline-block;
   width: 4px;
   height: 28px;
-  background: #F37238; /* Naranja institucional */
+  background: var(--color-accent-orange); /* Naranja institucional */
   border-radius: 0;
   margin-right: 12px;
   vertical-align: middle;
@@ -61,17 +63,17 @@
 }
 
 .welcomeBadge {
-  background: #135228;
-  color: #ffffff;
+  background: var(--color-primary-dark);
+  color: var(--color-white);
   font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.8px;
   padding: 0.4rem 1.2rem;
   border: 1px solid #2a7a4a;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   white-space: nowrap;
-  font-family: 'Roboto', sans-serif;
+  font-family: var(--font-sans);
 }
 
 .statsGrid {
@@ -86,9 +88,9 @@
   align-items: center;
   justify-content: center;
   padding: 1.5rem 1rem;
-  background: #ffffff;
-  border: 2px solid #d1d9e6;
-  border-radius: 2px;
+  background: var(--color-white);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
   text-decoration: none;
   transition: border-color 0.2s, background-color 0.2s;
   gap: 0.25rem;
@@ -96,15 +98,15 @@
 }
 
 .statCard:hover {
-  border-color: #1A6B35;
+  border-color: var(--color-primary);
   background-color: #f8fcf9;
 }
 
 .statValue {
-  font-family: 'Merriweather', Georgia, serif;
+  font-family: var(--font-display);
   font-size: 2.2rem;
   font-weight: 700;
-  color: #1A6B35;
+  color: var(--color-primary);
   line-height: 1.2;
 }
 
@@ -114,7 +116,7 @@
   color: #475569;
   text-transform: uppercase;
   letter-spacing: 0.8px;
-  font-family: 'Roboto', sans-serif;
+  font-family: var(--font-sans);
 }
 
 .section {
@@ -127,15 +129,15 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 2px solid #d1d9e6;
+  border-bottom: 2px solid var(--color-border);
   padding-bottom: 0.5rem;
 }
 
 .sectionTitle {
-  font-family: 'Merriweather', Georgia, serif;
+  font-family: var(--font-display);
   font-size: 1.2rem;
   font-weight: 700;
-  color: #1A6B35;
+  color: var(--color-primary);
   margin: 0;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -144,26 +146,19 @@
 .verTodos {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #1A6B35;
+  color: var(--color-primary);
   text-decoration: none;
   transition: color 0.15s;
-  font-family: 'Roboto', sans-serif;
+  font-family: var(--font-sans);
 }
 
 .verTodos:hover {
-  color: #135228;
+  color: var(--color-primary-dark);
   text-decoration: underline;
 }
 
 .empty {
-  padding: 2rem 1rem;
-  text-align: center;
-  color: #94a3b8;
-  background: #ffffff;
-  border: 2px solid #d1d9e6;
-  border-radius: 2px;
-  font-size: 0.95rem;
-  font-family: 'Roboto', sans-serif;
+  font-family: var(--font-sans);
 }
 
 .comunicadosList {
@@ -176,9 +171,9 @@
   display: flex;
   gap: 1rem;
   padding: 1rem 1.5rem;
-  background: #ffffff;
-  border: 2px solid #d1d9e6;
-  border-radius: 2px;
+  background: var(--color-white);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
   transition: border-color 0.2s, background-color 0.2s;
 }
 
@@ -186,7 +181,7 @@
   width: 6px;
   height: 6px;
   border-radius: 0;
-  background: #F37238; /* Naranja */
+  background: var(--color-accent-orange); /* Naranja */
   flex-shrink: 0;
   margin-top: 0.6rem;
 }
@@ -199,10 +194,10 @@
 }
 
 .comunicadoTitulo {
-  font-family: 'Merriweather', Georgia, serif;
+  font-family: var(--font-display);
   font-size: 1rem;
   font-weight: 700;
-  color: #1A6B35;
+  color: var(--color-primary);
   margin: 0;
 }
 
@@ -211,16 +206,16 @@
   color: #334155;
   line-height: 1.6;
   margin: 0;
-  font-family: 'Roboto', sans-serif;
+  font-family: var(--font-sans);
 }
 
 .comunicadoMeta {
   font-size: 0.75rem;
-  color: #94a3b8;
+  color: var(--color-text-subtle);
   margin-top: 0.25rem;
-  border-top: 1px solid #e9edf2;
+  border-top: 1px solid var(--color-border-subtle);
   padding-top: 0.4rem;
-  font-family: 'Roboto', sans-serif;
+  font-family: var(--font-sans);
 }
 
 @media (max-width: 640px) {

@@ -2,23 +2,9 @@
    LANDING PAGE - ESTILOS COMPLETOS Y CORREGIDOS
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Roboto:wght@400;500;700&display=swap');
-
 /* ============================================================
    1. VARIABLES GLOBALES
    ============================================================ */
-
-:root {
-  --primary-green: #1A6B35;
-  --primary-green-dark: #135228;
-  --accent-orange: #F37238;
-  --accent-orange-hover: #d95c2a;
-  --bg-color: #f4f6f9;
-  --text-main: #1e293b;
-  --text-muted: #64748b;
-  --card-bg: #ffffff;
-  --border-subtle: #d1d9e6;
-}
 
 /* ============================================================
    2. RESET Y BASE
@@ -30,7 +16,7 @@
   min-height: 100vh;
   background-color: var(--bg-color);
   color: var(--text-main);
-  font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  font-family: var(--font-sans);
   overflow-x: hidden;
 }
 
@@ -44,9 +30,9 @@
   left: 18px;
   z-index: 1000;
   background-color: var(--primary-green);
-  color: #ffffff;
+  color: var(--color-white);
   border: 2px solid var(--primary-green-dark);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   width: 44px;
   height: 44px;
   display: flex;
@@ -77,7 +63,7 @@
 }
 
 .drawerMenu {
-  background-color: #ffffff;
+  background-color: var(--color-white);
   width: 260px;
   height: 100%;
   padding: 1.5rem 1.25rem;
@@ -98,7 +84,7 @@
 }
 
 .drawerTitle {
-  font-family: 'Merriweather', Georgia, serif;
+  font-family: var(--font-display);
   font-size: 1rem;
   font-weight: 700;
   color: var(--primary-green);
@@ -131,7 +117,7 @@
   font-weight: 500;
   padding: 0.6rem 0.75rem;
   border: 2px solid transparent;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   transition: background-color 0.15s, border-color 0.15s;
 }
 
@@ -147,7 +133,7 @@
   margin-top: 0.75rem;
   padding: 0.6rem 0.75rem !important;
   background-color: var(--primary-green);
-  color: #ffffff !important;
+  color: var(--color-white) !important;
   font-weight: 600;
   text-align: center;
   border: 2px solid var(--primary-green-dark) !important;
@@ -168,7 +154,7 @@
 
 .topHeader {
   width: 100%;
-  background: #ffffff;
+  background: var(--color-white);
   border-bottom: 3px solid var(--accent-orange);
   padding: 12px 16px;
   box-sizing: border-box;
@@ -206,7 +192,7 @@
 }
 
 .headerTitles h1 {
-  font-family: 'Merriweather', Georgia, serif;
+  font-family: var(--font-display);
   font-size: 1.1rem;
   font-weight: 700;
   color: var(--primary-green);
@@ -227,10 +213,10 @@
 
 .headerLoginBtn {
   background-color: var(--primary-green);
-  color: #ffffff;
+  color: var(--color-white);
   padding: 8px 16px;
   border: 2px solid var(--primary-green-dark);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   font-weight: 600;
   font-size: 0.8rem;
   text-decoration: none;
@@ -288,16 +274,16 @@
 .slideCaption {
   max-width: 800px;
   padding: 0 20px;
-  color: #ffffff;
+  color: var(--color-white);
   text-align: center;
 }
 
 .slideBadge {
   background-color: var(--accent-orange);
-  color: #ffffff;
+  color: var(--color-white);
   padding: 4px 16px;
-  border: 2px solid #d95c2a;
-  border-radius: 2px;
+  border: 2px solid var(--color-accent-orange-dark);
+  border-radius: var(--radius-sm);
   font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -307,7 +293,7 @@
 }
 
 .slideCaption h2 {
-  font-family: 'Merriweather', Georgia, serif;
+  font-family: var(--font-display);
   font-size: 2.2rem;
   font-weight: 700;
   margin: 0 0 8px 0;
@@ -326,7 +312,7 @@
   top: 50%;
   transform: translateY(-50%);
   background: rgba(0, 0, 0, 0.5);
-  color: #ffffff;
+  color: var(--color-white);
   border: none;
   padding: 12px 16px;
   cursor: pointer;
@@ -379,7 +365,7 @@
 }
 
 .carouselDotActive {
-  background: #ffffff;
+  background: var(--color-white);
   transform: scale(1.2);
   box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
 }
@@ -402,7 +388,7 @@
 }
 
 .sectionHeader h2 {
-  font-family: 'Merriweather', Georgia, serif;
+  font-family: var(--font-display);
   font-size: 2rem;
   font-weight: 700;
   color: var(--primary-green);
@@ -423,7 +409,7 @@
 .specialtyCard {
   background: var(--card-bg);
   border: 2px solid var(--border-subtle);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   padding: 24px;
   cursor: pointer;
   position: relative;
@@ -454,11 +440,11 @@
 }
 
 .espBadge {
-  background-color: #e6f0ea;
+  background-color: var(--color-success-light);
   color: var(--primary-green);
   border: 1px solid #c8dcd0;
   padding: 4px 10px;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   font-size: 0.7rem;
   font-weight: 700;
   align-self: flex-start;
@@ -467,7 +453,7 @@
 }
 
 .specialtyCard h3 {
-  font-family: 'Merriweather', Georgia, serif;
+  font-family: var(--font-display);
   font-size: 1.1rem;
   font-weight: 700;
   color: var(--text-main);
@@ -513,12 +499,12 @@
 }
 
 .expandedCardModal {
-  background: #ffffff;
+  background: var(--color-white);
   width: 100%;
   max-width: 850px;
   max-height: 85vh;
   border: 2px solid var(--border-subtle);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   display: flex;
   flex-direction: column;
   position: relative;
@@ -546,22 +532,22 @@
 .modalHeader {
   padding: 24px 24px 16px 24px;
   border-bottom: 2px solid var(--border-subtle);
-  background-color: #f8fafc;
+  background-color: var(--color-surface-page);
 }
 
 .espBadgeModal {
   background-color: var(--accent-orange);
-  color: #ffffff;
+  color: var(--color-white);
   padding: 4px 12px;
-  border: 1px solid #d95c2a;
-  border-radius: 2px;
+  border: 1px solid var(--color-accent-orange-dark);
+  border-radius: var(--radius-sm);
   font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
 }
 
 .modalHeader h2 {
-  font-family: 'Merriweather', Georgia, serif;
+  font-family: var(--font-display);
   font-size: 1.6rem;
   color: var(--primary-green);
   margin: 8px 0 0 0;
@@ -585,7 +571,7 @@
   height: 220px;
   object-fit: cover;
   border: 2px solid var(--border-subtle);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
 }
 
 .modalTexts {
@@ -595,7 +581,7 @@
 }
 
 .infoBlock h4 {
-  font-family: 'Merriweather', Georgia, serif;
+  font-family: var(--font-display);
   font-size: 0.9rem;
   font-weight: 700;
   color: var(--primary-green);
@@ -641,7 +627,7 @@
   background: var(--card-bg);
   padding: 28px 24px;
   border: 2px solid var(--border-subtle);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -653,7 +639,7 @@
 }
 
 .genCard h3 {
-  font-family: 'Merriweather', Georgia, serif;
+  font-family: var(--font-display);
   font-size: 1.1rem;
   font-weight: 700;
   color: var(--primary-green);
@@ -674,7 +660,7 @@
 .contactSection {
   width: 100%;
   background: var(--primary-green);
-  color: #ffffff;
+  color: var(--color-white);
   padding: 60px 20px;
   margin-top: 48px;
   box-sizing: border-box;
@@ -692,7 +678,7 @@
 }
 
 .contactContainer h2 {
-  font-family: 'Merriweather', Georgia, serif;
+  font-family: var(--font-display);
   font-size: 2rem;
   font-weight: 700;
   margin: 0;
@@ -719,9 +705,9 @@
   gap: 10px;
   background-color: rgba(255, 255, 255, 0.12);
   border: 2px solid rgba(255, 255, 255, 0.25);
-  color: #ffffff;
+  color: var(--color-white);
   padding: 12px 24px;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   font-weight: 600;
   font-size: 0.9rem;
   text-decoration: none;
@@ -744,7 +730,7 @@
 }
 
 .mapIconLink {
-  color: #ffffff;
+  color: var(--color-white);
   text-decoration: none;
   transition: opacity 0.15s;
 }
@@ -765,7 +751,7 @@
   height: 50px;
   border-radius: 50%;
   background: var(--primary-green);
-  color: #ffffff;
+  color: var(--color-white);
   border: none;
   font-size: 24px;
   cursor: pointer;
@@ -785,7 +771,7 @@
 
 .mainFooter {
   background-color: #0f172a;
-  color: #94a3b8;
+  color: var(--color-text-subtle);
   text-align: center;
   padding: 24px;
   font-size: 0.8rem;
