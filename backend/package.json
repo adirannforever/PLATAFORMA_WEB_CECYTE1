@@ -10,7 +10,10 @@
     "ciclos": "node src/scripts/crearCiclos.js",
     "db:seed": "node scripts/seed.js",
     "db:permisos": "node scripts/generarPermisos.js",
-    "test:servicios": "node scripts/testServicios.js"
+    "db:setup-local": "node scripts/setupLocalDb.js",
+    "db:migrate-auditoria": "node scripts/migrarAuditoria.mjs",
+    "test:servicios": "node scripts/testServicios.js",
+    "test:auditoria": "node scripts/testAuditoria.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1109.0",
