@@ -250,6 +250,14 @@ export const menuItems = [
     category: 'configuracion',
     order: 0,
   },
+  {
+    to: '/auditoria',
+    label: 'Auditoría',
+    icon: <Activity size={18} />,
+    permiso: 'auditoria.ver',
+    category: 'configuracion',
+    order: 1,
+  },
 
   // ===== DOCENTE / TUTOR (Mis Clases) =====
   {

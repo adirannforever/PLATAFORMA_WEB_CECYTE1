@@ -23,6 +23,7 @@ import ServicioSocialPage from './pages/ServicioSocialPage';
 import TitulacionPage from './pages/TitulacionPage';
 import ConfiguracionAcademicaPage from './pages/ConfiguracionAcademicaPage';
 import IncidenciasPage from './pages/IncidenciasPage';
+import AuditoriaPage from './pages/AuditoriaPage';
 import ReportesPage from './pages/ReportesPage';
 import HorariosPage from './pages/HorariosPage';
 import MisClasesPage from './pages/MisClasesPage';
@@ -278,6 +279,14 @@ export default function App() {
             element={
               <RutaProtegida permisos={['config_academica.ver', 'config_academica.gestionar']}>
                 <ConfiguracionAcademicaPage />
+              </RutaProtegida>
+            }
+          />
+          <Route
+            path="auditoria"
+            element={
+              <RutaProtegida permisos={['auditoria.ver']}>
+                <AuditoriaPage />
               </RutaProtegida>
             }
           />

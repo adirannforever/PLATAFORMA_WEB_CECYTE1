@@ -61,7 +61,8 @@ export const getLogs = async (req, res) => {
       sql += ' AND ' + conditions.join(' AND ');
     }
 
-    const countSql = sql.replace(/SELECT .+? FROM /, 'SELECT COUNT(*) as total FROM ');
+    // El SQL es multilínea: [\s\S]+? cruza los saltos de línea hasta el primer FROM.
+    const countSql = sql.replace(/SELECT [\s\S]+? FROM /, 'SELECT COUNT(*) AS total FROM ');
     const countResult = await query(countSql, params);
     const total = parseInt(countResult.rows[0]?.total || 0, 10);
 

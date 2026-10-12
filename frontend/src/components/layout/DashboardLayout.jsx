@@ -61,6 +61,7 @@ const ROUTE_NAMES = {
   '/servicio-social': 'Servicio Social',
   '/expediente': 'Expediente',
   '/configuracion-academica': 'Configuración Académica',
+  '/auditoria': 'Auditoría',
   // Nuevas rutas para Mis Clases (docente)
   '/mis-clases': 'Mis Clases',
   '/mis-clases/grupo': 'Grupo',
