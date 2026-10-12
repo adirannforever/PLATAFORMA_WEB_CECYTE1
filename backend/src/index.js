@@ -34,6 +34,7 @@ import materiasCatalogoRoutes from './routes/materiasCatalogo.routes.js';
 import auditoriaRoutes from './routes/auditoria.routes.js';
 import reportesRoutes from './routes/reportes.routes.js';
 import materiasGrupoRoutes from './routes/materiasGrupo.routes.js';
+import dashboardRoutes from './routes/dashboard.routes.js';
 import { auditoriaGlobal } from './middlewares/auditoriaGlobal.js';
 import { apiLimiter } from './middlewares/rateLimit.js';
 import { refrescar as refrescarPermisos } from './services/permisos.service.js';
@@ -155,6 +156,7 @@ app.use('/api/materias-catalogo', materiasCatalogoRoutes);
 app.use('/api/auditoria', auditoriaRoutes);
 app.use('/api/reportes', reportesRoutes);
 app.use('/api/materias-grupo', materiasGrupoRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // Manejador 404 para rutas de API no encontradas
 app.use('/api/*', (req, res) => {
