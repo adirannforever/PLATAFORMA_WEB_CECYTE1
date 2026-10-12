@@ -513,13 +513,13 @@ export default function LandingPage() {
             </SocialButton>
           </div>
 
-          <a
-            href={urlMap}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.mapIconLink}
-            aria-label="Ver ubicación de la institución en Google Maps"
-          >
+            <a
+              href={INSTITUCION_LEGAL_URLS.mapa}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.mapIconLink}
+              aria-label="Ver ubicación de la institución en Google Maps (enlace de demostración)"
+            >
             <span className={styles.locationSubtext}>
               <MapPin size={20} className={styles.locationIcon} />
               Ubicación: Carretera Benito Juárez - Tepetitan - 20 de Noviembre 85, Macuspana, Tabasco
@@ -530,12 +530,12 @@ export default function LandingPage() {
 
       {/* ===== Footer ===== */}
       <footer className={styles.mainFooter}>
-        <p>&copy; {new Date().getFullYear()} {INSTITUCION.nombre} — Todos los derechos reservados.</p>
-        <button
-          className={styles.scrollTopBtn}
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          aria-label="Volver arriba"
-        >
+        <p>&copy; {new Date().getFullYear()} {INSTITUCION.nombre} � Plantilla educativa (demo). Todos los derechos reservados.</p>
+        <div style={{ marginTop: '0.75rem', display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <a href="/legal/privacidad" style={{ color: '#fff', textDecoration: 'underline', fontSize: '0.875rem' }}>Aviso de Privacidad</a>
+          <a href="/legal/terminos" style={{ color: '#fff', textDecoration: 'underline', fontSize: '0.875rem' }}>T�rminos y Condiciones</a>
+          <a href="/legal/cookies" style={{ color: '#fff', textDecoration: 'underline', fontSize: '0.875rem' }}>Pol�tica de Cookies</a>
+        </div>
           ↑
         </button>
       </footer>

@@ -15,6 +15,9 @@ import AspirantesPage from './pages/AspirantesPage';
 import InscripcionesPage from './pages/InscripcionesPage';
 import AsistenciaPage from './pages/AsistenciaPage';
 import NotFoundPage from './pages/NotFoundPage';
+import LegalPrivacidad from './pages/LegalPrivacidad';
+import LegalTerminos from './pages/LegalTerminos';
+import LegalCookies from './pages/LegalCookies';
 import ExpedientePage from './pages/ExpedientePage';
 import BecasPage from './pages/BecasPage';
 import BecasDetallePage from './pages/BecasDetallePage';
@@ -80,6 +83,9 @@ export default function App() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={usuario ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
+        <Route path="/legal/privacidad" element={<LegalPrivacidad />} />
+        <Route path="/legal/terminos" element={<LegalTerminos />} />
+        <Route path="/legal/cookies" element={<LegalCookies />} />
 
         <Route
           element={
