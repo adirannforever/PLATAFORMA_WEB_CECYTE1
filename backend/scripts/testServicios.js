@@ -11,7 +11,10 @@
 //
 // Ejecutar: npm run test:servicios
 // ============================================================
+import { spawnSync } from 'node:child_process';
+import path from 'node:path';
 import { generarBoletaPDF, generarConstanciaPDF } from '../src/utils/pdfGenerator.js';
+import { DIR_MOTOR_PYTHON } from '../src/utils/generadorPython.js';
 import { generarPlantillaHorarioDOCX } from '../src/utils/docxGenerator.js';
 import { generarListadoAlumnosExcel, generarEstadisticasExcel } from '../src/utils/excelGenerator.js';
 import { sanitizarNombreArchivo } from '../src/services/s3.service.js';
@@ -56,6 +59,23 @@ const materiasPrueba = [
 
 async function testPdf() {
   console.log('\n[1] Servicio PDF (motor Python · ReportLab)');
+  const python = process.env.PYTHON_BIN
+    || (process.platform === 'win32' ? 'python' : 'python3');
+  const pruebaTexto = spawnSync(
+    python,
+    ['-m', 'unittest', 'discover', '-s', path.join(DIR_MOTOR_PYTHON, 'tests')],
+    { cwd: DIR_MOTOR_PYTHON, encoding: 'utf8', timeout: 30000 },
+  );
+  const detallePrueba = [pruebaTexto.stdout, pruebaTexto.stderr]
+    .filter(Boolean)
+    .join('\n')
+    .trim();
+  check(
+    'Texto dinámico del PDF se representa literalmente',
+    pruebaTexto.status === 0,
+    pruebaTexto.error?.message || detallePrueba,
+  );
+
   try {
     const boleta = await generarBoletaPDF(alumnoPrueba, materiasPrueba, 8.5, { p1Prom: 8, p2Prom: 9, p3Prom: 8 });
     check('Boleta PDF se genera', esPdf(boleta), 'magic %PDF ausente');

@@ -32,7 +32,7 @@ La presencia de un paquete, archivo de configuracion, pantalla o contenedor **no
 | Perfil de usuario | No se encontro una ruta/pantalla de perfil de cuenta en el frontend | Pendiente |
 | Base de datos/migraciones | `schema.sql` y una migracion SQL RBAC versionada | Parcial: falta un flujo de migraciones uniforme y documentado |
 | Reportes | Hay endpoints y generadores actuales para varios formatos | Hecho de forma sincrona; la generacion en cola sigue pendiente |
-| Pruebas | Hay un smoke test de servicios; el arbol de trabajo tambien contiene un test E2E de auditoria en JS | Parcial: no hay Jest/Supertest, Vitest/Testing Library ni CI; el E2E requiere entorno y datos de prueba |
+| Pruebas | El smoke test de servicios ahora incluye una regresion para texto especial en PDFs; hay un test E2E de auditoria en JS | Parcial: no hay Jest/Supertest, Vitest/Testing Library ni CI; el E2E requiere entorno y datos de prueba |
 | CI/CD | No se encontro configuracion versionada en `.github/workflows` | Pendiente |
 | Frontend | React Router, contexto de autenticacion, paginas funcionales y pantalla de auditoria | Parcial: no se encontraron React Query, React Hook Form, Zustand/Redux, Recharts ni Socket.IO |
 | Docker local | Compose tiene PostgreSQL, Redis y MailHog | Parcial: no orquesta backend/frontend y aun no usa Mailpit |
@@ -82,6 +82,7 @@ Al revisar el arbol de trabajo hay cambios locales sin commit en controladores, 
 
 - Establecer pruebas backend con Jest/Supertest **o** el runner nativo de Node si cubre el caso con menos complejidad; decidirlo antes de instalar.
 - Establecer Vitest/Testing Library para componentes/frontend donde aporte cobertura util.
+- Conservar las regresiones de generacion documental dentro de `npm run test:servicios`, incluyendo texto de usuario con caracteres especiales en PDFs.
 - Separar pruebas unitarias, contrato HTTP y pruebas que necesitan PostgreSQL/Redis/Mailpit.
 - Crear GitHub Actions para instalacion reproducible, pruebas y build; no desplegar automaticamente hasta elegir entorno y politica.
 - Incorporar ESLint/Prettier despues de fijar reglas compatibles con el codigo existente; evitar reformatear el proyecto completo como efecto colateral.

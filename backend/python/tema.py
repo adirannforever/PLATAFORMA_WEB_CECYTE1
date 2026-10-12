@@ -6,6 +6,7 @@
 # Inter (UI de la plataforma) y Merriweather Italic (acentos).
 # ============================================================
 import os
+from xml.sax.saxutils import escape
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT, TA_RIGHT
@@ -199,7 +200,7 @@ def parciales_get(parciales, n):
 
 def P(texto, estilo):
     from reportlab.platypus import Paragraph
-    return Paragraph(texto, estilo)
+    return Paragraph(escape(texto) if isinstance(texto, str) else texto, estilo)
 
 
 # ---------------- Componentes de layout ----------------
@@ -403,6 +404,4 @@ class PaginasNumeradas:
                                      f'Página {self._pageNumber} de {total}')
 
         return _PaginasNumeradas(*args, **kwargs)
-
-
 
