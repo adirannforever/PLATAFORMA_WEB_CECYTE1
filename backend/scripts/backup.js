@@ -14,8 +14,13 @@ dotenv.config();
 const execAsync = promisify(exec);
 const DATABASE_URL = process.env.DATABASE_URL;
 
-if (!DATABASE_URL || !process.env.AWS_BUCKET_NAME) {
-  console.warn('️ Faltan variables de entorno.');
+// Validación temprana: mejor fallar con mensaje claro ANTES de intentar pg_dump
+if (!DATABASE_URL) {
+  console.error('❌ DATABASE_URL no definida. Abortando: no se puede generar el backup.');
+  process.exit(1);
+}
+if (!process.env.AWS_BUCKET_NAME) {
+  console.warn('️ AWS_BUCKET_NAME no definida: el backup se generará pero NO se subirá a la nube.');
 }
 
 const s3 = new S3Client({
@@ -124,7 +129,9 @@ export async function backup() {
     console.log(` Backup completado y subido: ${filename}`);
 
     
-    const list = await s3.send(new ListObjectsV2Command({ Bucket: BUCKET }));
+    // Retención SOLO sobre los backups (nunca tocar otros prefijos del bucket,
+    // ej. horarios/*. Se conservan los 7 backups más recientes.)
+    const list = await s3.send(new ListObjectsV2Command({ Bucket: BUCKET, Prefix: 'backup-' }));
     const files = list.Contents || [];
     const sorted = files.sort((a, b) => a.Key.localeCompare(b.Key));
     const toDelete = sorted.slice(0, Math.max(0, sorted.length - 7));

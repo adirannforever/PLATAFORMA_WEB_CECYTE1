@@ -60,17 +60,26 @@ app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 
 // Health Check (sin rate limit)
+// DB = crítico (si falla → 503). Redis = opcional (no tumba el health).
 app.get('/health', async (req, res) => {
   try {
     const dbOk = await query('SELECT 1');
-    const redisOk = await redisClient.ping();
+    let redisEstado = 'disabled';
+    if (!redisClient.disabled) {
+      try {
+        const redisOk = await redisClient.ping();
+        redisEstado = redisOk === 'PONG' ? 'ok' : 'error';
+      } catch {
+        redisEstado = 'error';
+      }
+    }
     res.json({
       status: 'OK',
       version: '3.0.0',
       platform: INSTITUCION.nombre,
       timestamp: new Date().toISOString(),
       database: 'ok',
-      redis: redisOk === 'PONG' ? 'ok' : 'error',
+      redis: redisEstado,
     });
   } catch (err) {
     res.status(503).json({
@@ -81,12 +90,11 @@ app.get('/health', async (req, res) => {
   }
 });
 
-// Readiness (si el proceso puede seguir activo)
+// Readiness (si el proceso puede seguir activo: solo depende de la DB)
 app.get('/ready', async (req, res) => {
   try {
     const dbOk = await query('SELECT 1');
-    const redisOk = await redisClient.ping();
-    if (dbOk && redisOk === 'PONG') {
+    if (dbOk) {
       res.json({ status: 'ready', timestamp: new Date().toISOString() });
     } else {
       res.status(503).json({ status: 'not ready', timestamp: new Date().toISOString() });

@@ -1,29 +1,7 @@
 
 import PDFDocument from 'pdfkit';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import { INSTITUCION, INSTITUCION_HEADER } from '../config/institucion.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-let logoBase64 = null;
-
-const getLogoBase64 = () => {
-  if (logoBase64) return logoBase64;
-  try {
-    const logoPath = path.join(__dirname, '../assets/logo_cecyte.png');
-    if (fs.existsSync(logoPath)) {
-      const imageBuffer = fs.readFileSync(logoPath);
-      logoBase64 = `data:image/png;base64,${imageBuffer.toString('base64')}`;
-      return logoBase64;
-    }
-    return null;
-  } catch {
-    return null;
-  }
-};
+import { getLogoBase64 } from './logoHelper.js';
 
 export const generarBoletaPDF = async (alumnoData, materias, promedioGeneral, promediosParciales = {}) => {
   const doc = new PDFDocument({ margin: 50, size: 'A4' });
@@ -178,9 +156,10 @@ export const generarBoletaPDF = async (alumnoData, materias, promedioGeneral, pr
   doc.y = 750;
   doc.fontSize(8).fillColor('#94a3b8').text('Este documento es de carácter informativo y no sustituye el certificado oficial de calificaciones.', { align: 'center' });
 
-  doc.end();
-  return new Promise(resolve => {
+  return new Promise((resolve, reject) => {
+    doc.on('error', reject);
     doc.on('end', () => resolve(Buffer.concat(buffers)));
+    doc.end();
   });
 };
 
@@ -314,8 +293,9 @@ export const generarConstanciaPDF = async (alumnoData, tipo = 'estudios', becaDa
   doc.y = 750;
   doc.fontSize(8).fillColor('#94a3b8').text(`Este documento es un comprobante interno del ${INSTITUCION.nombre} y está sujeto a verificación en el sistema académico.`, { align: 'center' });
 
-  doc.end();
-  return new Promise(resolve => {
+  return new Promise((resolve, reject) => {
+    doc.on('error', reject);
     doc.on('end', () => resolve(Buffer.concat(buffers)));
+    doc.end();
   });
 };

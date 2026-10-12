@@ -1,5 +1,5 @@
 import { query } from '../config/db.js';
-import { generateUploadUrl, generateDownloadUrl } from '../services/s3.service.js';
+import { generateUploadUrl, generateDownloadUrl, fileExists, deleteFile } from '../services/s3.service.js';
 import { generarPlantillaHorarioDOCX } from '../utils/docxGenerator.js';
 
 
@@ -528,6 +528,22 @@ export const solicitarDescarga = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Key es requerida' });
     }
 
+    // Verificar que el archivo exista realmente en S3 (evita URLs firmadas
+    // a keys inexistentes: subida cancelada, registro huérfano, etc.)
+    let existe = null;
+    try {
+      existe = await fileExists(key);
+    } catch (verifErr) {
+      // S3 no responde: degradar y firmar igual (el error real lo verá el cliente)
+      console.warn('solicitarDescarga: no se pudo verificar S3:', verifErr.message);
+    }
+    if (existe === false) {
+      return res.status(404).json({
+        success: false,
+        message: 'El archivo no está disponible en el almacenamiento (la subida pudo no haberse completado).',
+      });
+    }
+
     const url = await generateDownloadUrl(key);
 
     return res.json({
@@ -554,11 +570,24 @@ export const eliminarHorario = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Acceso denegado' });
     }
 
-    const result = await query('DELETE FROM horario_archivos WHERE id = $1 RETURNING id', [id]);
+    const result = await query('DELETE FROM horario_archivos WHERE id = $1 RETURNING id, key', [id]);
     if (!result.rows[0]) {
       return res.status(404).json({ success: false, message: 'Horario no encontrado' });
     }
-    return res.json({ success: true, message: 'Horario eliminado correctamente' });
+
+    // Purgar también el archivo del bucket (best-effort): evita huérfanos en S3
+    const keyBorrada = result.rows[0].key;
+    let aviso = 'Horario eliminado correctamente';
+    if (keyBorrada) {
+      try {
+        await deleteFile(keyBorrada);
+      } catch (s3Err) {
+        console.warn(`eliminarHorario: no se pudo purgar "${keyBorrada}" de S3:`, s3Err.message);
+        aviso = 'Horario eliminado (no se pudo purgar el archivo de S3; revisar manualmente)';
+      }
+    }
+
+    return res.json({ success: true, message: aviso });
   } catch (err) {
     console.error('Error en eliminarHorario:', err);
     return res.status(500).json({ success: false, message: 'Error interno' });
