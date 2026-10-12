@@ -38,9 +38,9 @@ La presencia de un paquete, archivo de configuracion, pantalla o contenedor **no
 | Docker local | Compose tiene PostgreSQL, Redis y MailHog | Parcial: no orquesta backend/frontend y aun no usa Mailpit |
 | Pagos | Existe una pantalla/modulo de pagos del sistema | Parcial: no se encontro integracion con Stripe o Mercado Pago |
 
-### Cambios de auditoria en curso
+### Cambios de auditoria recientes
 
-Al revisar el arbol de trabajo hay cambios locales sin commit en controladores, middleware, esquema SQL y pantalla de auditoria, ademas de herramientas JS nuevas para migracion, preparacion local y E2E. Se consideran **trabajo en curso**, no una entrega validada ni parte de `main` remoto. Esta hoja de ruta no los agrega al indice, no los commitea y no sustituye su revision funcional.
+Los cambios locales de controladores, middleware, esquema SQL, pantalla de auditoria y herramientas Node se registraron en commits locales. La ampliacion del contexto de auditoria esta en `14e1916`; las herramientas Node y limpieza asociada, en `3d526fb`. No se hizo push. La prueba E2E de auditoria y la migracion contra una base PostgreSQL dedicada siguen pendientes, por lo que los commits no equivalen a una validacion funcional completa.
 
 ### Diferencias detectadas frente al plan anterior
 
@@ -64,9 +64,9 @@ Al revisar el arbol de trabajo hay cambios locales sin commit en controladores, 
 
 ## 4. Hoja de ruta reestructurada
 
-### Fase 0 — Cerrar y verificar el trabajo activo de auditoria
+### Fase 0 — Cerrar y verificar el trabajo de auditoria
 
-**Estado: en curso en el arbol local; aun no validado/commiteado.**
+**Estado: cambios principales commiteados localmente; validacion E2E y de migracion pendientes.**
 
 - Revisar cambios actuales de API, esquema, middleware y `AuditoriaPage`.
 - Confirmar comportamiento para login fallido/exitoso, logout, mutaciones y exportaciones.
@@ -165,14 +165,14 @@ Al revisar el arbol de trabajo hay cambios locales sin commit en controladores, 
 ## 6. Higiene del repositorio
 
 - `.gitignore` ignora `.env*` conservando `.env.example`, agentes locales `.agents/`, scripts PowerShell, temporales, logs, dumps locales y archivos `.txt` de `backend/scripts`.
-- Ignorar no retira archivos ya rastreados. Los dos dumps SQL vacios y `setup_local_db.ps1` siguen en el indice actual aunque sus eliminaciones locales estan pendientes; una regla nueva no quita archivos del indice ni de commits anteriores.
-- `test_usuario.sql` fue revisado: inserta manualmente un usuario sintetico con rol de administrador y un hash de contrasena fijo; no se encontraron referencias que lo ejecuten. No debe ejecutarse fuera de una base local aislada. Se recomienda retirarlo del codigo versionado o sustituirlo por un fixture de pruebas automatizado y aislado.
+- Los dos dumps SQL vacios, `setup_local_db.ps1` y `test_usuario.sql` se eliminaron del arbol versionado; las reglas de ignore no purgan versiones historicas.
+- `test_usuario.sql` insertaba manualmente un usuario sintetico con rol de administrador y un hash de contrasena fijo. No se encontraron referencias que lo ejecutaran y no debe recrearse como mecanismo de setup; usar fixtures aislados.
 - No reescribir historia ni purgar objetos remotos sin confirmar que contienen secretos/datos personales y acordar la accion; una eliminacion en un commit nuevo no borra copias historicas.
 - Revisar `git status` antes de cada commit; no incluir `.env`, logs, backups, dumps, salidas de pruebas ni archivos de agente.
 
 ## 7. Orden inmediato
 
-1. Terminar y validar la Fase 0 (auditoria) sin mezclar cambios ajenos del arbol de trabajo.
+1. Ejecutar la prueba E2E de auditoria y validar la migracion en una base PostgreSQL local dedicada; documentar resultados y cualquier limitacion del entorno.
 2. Crear la base de pruebas/CI para que las fases siguientes tengan una comprobacion repetible.
 3. Completar fundamentos backend de manera dirigida; evitar rehacer componentes que ya existen.
 4. Implementar Mailpit y el ciclo de verificacion de correo, junto con el perfil de usuario.
