@@ -24,6 +24,13 @@ export const login = async (req, res) => {
     const usuario = result.rows[0];
 
     if (!usuario) {
+      await registrarAuditoria({
+        req,
+        accion: 'LOGIN_FALLIDO',
+        tabla: 'usuarios',
+        datosNuevos: { email, motivo: 'Usuario no encontrado' },
+        status: 401,
+      });
       return res.status(401).json({
         success: false,
         message: 'Credenciales incorrectas.',
@@ -31,6 +38,14 @@ export const login = async (req, res) => {
     }
 
     if (!usuario.activo) {
+      await registrarAuditoria({
+        req,
+        accion: 'LOGIN_FALLIDO',
+        tabla: 'usuarios',
+        registroId: usuario.id,
+        datosNuevos: { email, motivo: 'Cuenta desactivada' },
+        status: 403,
+      });
       return res.status(403).json({
         success: false,
         message: 'Esta cuenta ha sido desactivada. Contacta al administrador.',
@@ -39,6 +54,14 @@ export const login = async (req, res) => {
 
     const passwordValida = await bcrypt.compare(password, usuario.password_hash);
     if (!passwordValida) {
+      await registrarAuditoria({
+        req,
+        accion: 'LOGIN_FALLIDO',
+        tabla: 'usuarios',
+        registroId: usuario.id,
+        datosNuevos: { email, motivo: 'Contraseña incorrecta' },
+        status: 401,
+      });
       return res.status(401).json({
         success: false,
         message: 'Usuario o Correo Incorrecto.',
@@ -66,7 +89,8 @@ export const login = async (req, res) => {
       accion: 'LOGIN',
       tabla: 'usuarios',
       registroId: usuario.id,
-      datosNuevos: { email: usuario.email },
+      datosNuevos: { email: usuario.email, rol: usuario.rol },
+      status: 200,
     });
 
     return res.status(200).json({
@@ -90,11 +114,20 @@ export const login = async (req, res) => {
   }
 };
 
-export const logout = (req, res) => {
+export const logout = async (req, res) => {
   res.clearCookie('token', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
+  });
+
+  await registrarAuditoria({
+    req,
+    accion: 'LOGOUT',
+    tabla: 'usuarios',
+    registroId: req.user?.id || null,
+    datosNuevos: { rol: req.user?.rol || null },
+    status: 200,
   });
 
   return res.status(200).json({

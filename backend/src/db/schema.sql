@@ -514,6 +514,9 @@ CREATE TABLE auditoria_logs (
   datos_nuevos     JSONB,
   ip               VARCHAR(45),
   user_agent       TEXT,
+  metodo           VARCHAR(10),
+  ruta             VARCHAR(255),
+  status           INTEGER,
   fecha            TIMESTAMPTZ DEFAULT NOW()
 );
 

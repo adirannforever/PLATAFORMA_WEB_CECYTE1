@@ -28,6 +28,9 @@ export const getLogs = async (req, res) => {
         l.datos_nuevos,
         l.ip,
         l.user_agent,
+        l.metodo,
+        l.ruta,
+        l.status,
         l.fecha
       FROM auditoria_logs l
       LEFT JOIN usuarios u ON u.id = l.usuario_id

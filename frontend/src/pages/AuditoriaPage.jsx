@@ -8,7 +8,7 @@ import styles from './AuditoriaPage.module.css';
 const ITEMS_PER_PAGE = 20;
 
 const ACCIONES = [
-  'CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT', 'VIEW', 'EXPORT'
+  'CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'LOGIN_FALLIDO', 'LOGOUT', 'VIEW', 'EXPORT'
 ];
 
 export default function AuditoriaPage() {
@@ -107,11 +107,29 @@ export default function AuditoriaPage() {
       UPDATE: { className: 'accionUpdate', label: 'Actualización' },
       DELETE: { className: 'accionDelete', label: 'Eliminación' },
       LOGIN: { className: 'accionLogin', label: 'Inicio sesión' },
+      LOGIN_FALLIDO: { className: 'accionLoginFallido', label: 'Login fallido' },
       LOGOUT: { className: 'accionLogout', label: 'Cierre sesión' },
       VIEW: { className: 'accionView', label: 'Vista' },
       EXPORT: { className: 'accionExport', label: 'Exportación' },
     };
     return map[accion] || { className: 'accionDefault', label: accion };
+  };
+
+  const fmtValor = (valor) => {
+    if (valor === null || valor === undefined || valor === '') return '—';
+    if (typeof valor === 'object') return JSON.stringify(valor);
+    return String(valor);
+  };
+
+  // Diferencia campo-por-campo entre datos anteriores y nuevos.
+  // Solo compara las claves presentes en el payload nuevo (lo que se envió).
+  const calcularCambios = (antes, despues) => {
+    if (!antes || !despues) return null;
+    if (typeof antes !== 'object' || typeof despues !== 'object') return null;
+    if (Array.isArray(antes) || Array.isArray(despues)) return null;
+    return Object.keys(despues)
+      .filter((campo) => JSON.stringify(antes[campo]) !== JSON.stringify(despues[campo]))
+      .map((campo) => ({ campo, antes: antes[campo], despues: despues[campo] }));
   };
 
   return (
@@ -207,6 +225,7 @@ export default function AuditoriaPage() {
                 <th>Acción</th>
                 <th>Tabla</th>
                 <th>Registro</th>
+                <th>Endpoint</th>
                 <th>Fecha</th>
                 <th>IP</th>
                 <th>Detalle</th>
@@ -219,6 +238,7 @@ export default function AuditoriaPage() {
                   <td><Skeleton width="100px" height="16px" variant="text" /></td>
                   <td><Skeleton width="100px" height="16px" variant="text" /></td>
                   <td><Skeleton width="60px" height="16px" variant="text" /></td>
+                  <td><Skeleton width="150px" height="16px" variant="text" /></td>
                   <td><Skeleton width="160px" height="16px" variant="text" /></td>
                   <td><Skeleton width="120px" height="16px" variant="text" /></td>
                   <td><Skeleton width="40px" height="16px" variant="text" /></td>
@@ -238,6 +258,7 @@ export default function AuditoriaPage() {
                 <th>Acción</th>
                 <th>Tabla</th>
                 <th>Registro</th>
+                <th>Endpoint</th>
                 <th>Fecha</th>
                 <th>IP</th>
                 <th>Detalle</th>
@@ -260,6 +281,14 @@ export default function AuditoriaPage() {
                     </td>
                     <td>{log.tabla_afectada || '—'}</td>
                     <td>{log.registro_id || '—'}</td>
+                    <td className={styles.endpointCell} title={`${log.metodo || ''} ${log.ruta || ''}`}>
+                      {log.metodo && (
+                        <span className={`${styles.metodoBadge} ${styles[`metodo${log.metodo}`] || ''}`}>
+                          {log.metodo}
+                        </span>
+                      )}
+                      <span className={styles.rutaText}>{log.ruta || '—'}</span>
+                    </td>
                     <td>{formatDate(log.fecha)}</td>
                     <td>{log.ip || '—'}</td>
                     <td>
@@ -337,6 +366,36 @@ export default function AuditoriaPage() {
                 <span>{detalleModal.log.registro_id || '—'}</span>
               </div>
               <div className={styles.detalleRow}>
+                <span className={styles.detalleLabel}>Método:</span>
+                <span>
+                  {detalleModal.log.metodo ? (
+                    <span className={`${styles.metodoBadge} ${styles[`metodo${detalleModal.log.metodo}`] || ''}`}>
+                      {detalleModal.log.metodo}
+                    </span>
+                  ) : (
+                    '—'
+                  )}
+                </span>
+              </div>
+              <div className={styles.detalleRow}>
+                <span className={styles.detalleLabel}>Endpoint:</span>
+                <span className={styles.detalleUserAgent}>{detalleModal.log.ruta || '—'}</span>
+              </div>
+              <div className={styles.detalleRow}>
+                <span className={styles.detalleLabel}>Estatus:</span>
+                <span
+                  className={
+                    !detalleModal.log.status
+                      ? undefined
+                      : detalleModal.log.status >= 400
+                        ? styles.statusErr
+                        : styles.statusOk
+                  }
+                >
+                  {detalleModal.log.status ?? '—'}
+                </span>
+              </div>
+              <div className={styles.detalleRow}>
                 <span className={styles.detalleLabel}>IP:</span>
                 <span>{detalleModal.log.ip || '—'}</span>
               </div>
@@ -348,9 +407,53 @@ export default function AuditoriaPage() {
                 <span className={styles.detalleLabel}>Fecha:</span>
                 <span>{formatDate(detalleModal.log.fecha)}</span>
               </div>
+              {(() => {
+                const cambios = calcularCambios(
+                  detalleModal.log.datos_anteriores,
+                  detalleModal.log.datos_nuevos
+                );
+                if (!cambios) return null;
+                if (cambios.length === 0) {
+                  return (
+                    <div className={styles.detalleSection}>
+                      <strong>Cambios:</strong>
+                      <p className={styles.diffVacio}>
+                        Sin campos modificados (payload idéntico al registro actual).
+                      </p>
+                    </div>
+                  );
+                }
+                return (
+                  <div className={styles.detalleSection}>
+                    <strong>Cambios detectados ({cambios.length}):</strong>
+                    <table className={styles.diffTable}>
+                      <thead>
+                        <tr>
+                          <th>Campo</th>
+                          <th>Antes</th>
+                          <th>Después</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {cambios.map((cambio) => (
+                          <tr key={cambio.campo}>
+                            <td className={styles.diffCampo}>{cambio.campo}</td>
+                            <td className={styles.diffAntes}>{fmtValor(cambio.antes)}</td>
+                            <td className={styles.diffDespues}>{fmtValor(cambio.despues)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
               {detalleModal.log.datos_anteriores && (
                 <div className={styles.detalleSection}>
-                  <strong>Datos anteriores:</strong>
+                  <strong>
+                    {detalleModal.log.accion === 'DELETE'
+                      ? 'Datos del registro eliminado:'
+                      : 'Datos anteriores:'}
+                  </strong>
                   <pre className={styles.detalleJson}>
                     {JSON.stringify(detalleModal.log.datos_anteriores, null, 2)}
                   </pre>

@@ -480,3 +480,109 @@
   border-right: 1px solid #e9edf2;
   background: #f8fafc;
 }
+
+/* ===== Endpoint / metodo HTTP ===== */
+.endpointCell {
+  max-width: 220px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.78rem;
+  color: #475569;
+}
+.rutaText {
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 0.72rem;
+}
+.metodoBadge {
+  display: inline-block;
+  padding: 0.05rem 0.35rem;
+  margin-right: 4px;
+  border-radius: 3px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  vertical-align: middle;
+}
+.metodoGET {
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #0ea5e9;
+}
+.metodoPOST {
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #22c55e;
+}
+.metodoPUT {
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #f59e0b;
+}
+.metodoPATCH {
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #f59e0b;
+}
+.metodoDELETE {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #ef4444;
+}
+
+/* ===== Estatus HTTP en modal ===== */
+.statusOk {
+  color: #15803d;
+  font-weight: 600;
+}
+.statusErr {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+/* ===== Tabla de diff antes/despues ===== */
+.diffTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+}
+.diffTable th {
+  background: #f1f5f9;
+  text-align: left;
+  padding: 0.3rem 0.5rem;
+  color: #334155;
+  border: 1px solid #d1d9e6;
+  font-weight: 600;
+}
+.diffTable td {
+  padding: 0.3rem 0.5rem;
+  border: 1px solid #e9edf2;
+  word-break: break-word;
+  vertical-align: top;
+}
+.diffCampo {
+  font-weight: 600;
+  color: #0f4521;
+  white-space: nowrap;
+}
+.diffAntes {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+.diffDespues {
+  background: #f0fdf4;
+  color: #15803d;
+}
+.diffVacio {
+  font-size: 0.8rem;
+  color: #64748b;
+  margin: 0.35rem 0 0;
+}
+
+/* ===== Badge login fallido ===== */
+.accionLoginFallido {
+  background: #fff1f2;
+  color: #be123c;
+  border: 1px solid #f43f5e;
+}
