@@ -36,6 +36,7 @@ import reportesRoutes from './routes/reportes.routes.js';
 import materiasGrupoRoutes from './routes/materiasGrupo.routes.js';
 import { auditoriaGlobal } from './middlewares/auditoriaGlobal.js';
 import { apiLimiter } from './middlewares/rateLimit.js';
+import { refrescar as refrescarPermisos } from './services/permisos.service.js';
 
 dotenv.config();
 
@@ -170,5 +171,11 @@ app.listen(PORT, async () => {
     console.log('[CECyTE v3.0.0] Ciclos futuros verificados');
   } catch (err) {
     console.error('[CECyTE v3.0.0] Error al verificar ciclos:', err.message);
+  }
+  // Cargar el cache de permisos desde la BD (fallback al catálogo si falla).
+  try {
+    await refrescarPermisos();
+  } catch (err) {
+    console.error('[CECyTE v3.0.0] Error al cargar permisos desde BD:', err.message);
   }
 });

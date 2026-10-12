@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { query } from '../config/db.js';
 import { registrarAuditoria } from '../middlewares/auditoria.js';
-import { listarPermisos } from '../config/permisos.js';
+import { listarPermisosDeRol, refrescar as refrescarCache, usandoBD } from '../services/permisos.service.js';
 
 
 export const login = async (req, res) => {
@@ -78,7 +78,7 @@ export const login = async (req, res) => {
         apellidos: usuario.apellidos,
         email: usuario.email,
         rol: usuario.rol,
-        permisos: listarPermisos(usuario.rol),
+        permisos: listarPermisosDeRol(usuario.rol),
       },
     });
   } catch (err) {
@@ -117,10 +117,25 @@ export const me = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      usuario: { ...result.rows[0], permisos: listarPermisos(result.rows[0].rol) },
+      usuario: { ...result.rows[0], permisos: listarPermisosDeRol(result.rows[0].rol) },
     });
   } catch (err) {
     console.error('Error en /me:', err);
+    return res.status(500).json({ success: false, message: 'Error interno.' });
+  }
+};
+
+// Refresca en caliente el cache de permisos desde la BD (solo admin).
+export const refrescarPermisos = async (req, res) => {
+  try {
+    await refrescarCache();
+    return res.status(200).json({
+      success: true,
+      message: 'Cache de permisos actualizado desde la base de datos.',
+      usandoBD: usandoBD(),
+    });
+  } catch (err) {
+    console.error('Error al refrescar permisos:', err);
     return res.status(500).json({ success: false, message: 'Error interno.' });
   }
 };

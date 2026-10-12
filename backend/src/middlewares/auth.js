@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import { tienePermiso } from '../config/permisos.js';
+import { tienePermiso } from '../services/permisos.service.js';
 
 export const verifyToken = (req, res, next) => {
   const token = req.cookies?.token;
