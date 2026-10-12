@@ -68,3 +68,12 @@ jest-output.xml
 # ── Temporales ───────────────────────────────────────────────────────────────
 tmp/
 temp/
+
+# Salidas de previsualizacion del motor de documentos (backend/python)
+backend/python/previsualizaciones/
+
+
+# Cache de Python
+__pycache__/
+*.pyc
+

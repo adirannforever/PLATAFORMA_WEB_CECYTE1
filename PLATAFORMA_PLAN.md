@@ -34,7 +34,7 @@ No entrega académica. Se busca **ampliar la pila tecnológica** del sistema CEC
 
 | Capa | Tecnologías |
 |---|---|
-| Backend | Node 20, Express 4 (ESM), PostgreSQL/Neon (`pg`), JWT + bcryptjs, `@neondatabase/serverless`, AWS S3 presigned (`@aws-sdk/client-s3`), `node-cron`, `pdfkit`/`pdfmake`/`exceljs`/`docx`/`@fast-csv`, `console-stamp`, `cookie-parser`, `cors` |
+| Backend | Node 20, Express 4 (ESM), PostgreSQL/Neon (`pg`), JWT + bcryptjs, `@neondatabase/serverless`, AWS S3 presigned (`@aws-sdk/client-s3`), `node-cron`, `motor Python (reportlab / python-docx / openpyxl)`, `console-stamp`, `cookie-parser`, `cors` |
 | Frontend | React 18 + Vite, React Router v6, React DnD, react-grid-layout, react-resizable, Lucide, axios, lodash |
 | Scripts de backend | `scripts/backup.js` (cron 3AM + S3/R2), `scripts/crearCiclos.js`, `scripts/seed.js`, `scripts/scheduler.js` |
 

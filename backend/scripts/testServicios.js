@@ -1,9 +1,9 @@
 // ============================================================
 // Smoke tests de los servicios del backend.
 // Valida que los servicios de generación y soporte SÍ funcionan:
-//   1. PDF (pdfkit)          → boleta + constancia, magic %PDF
-//   2. DOCX (docx)           → plantilla de horario, magic PK
-//   3. Excel (exceljs)       → listado + estadísticas, magic PK
+//   1. PDF (ReportLab)      → boleta + constancia, magic %PDF
+//   2. DOCX (python-docx)   → plantilla de horario, magic PK
+//   3. Excel (openpyxl)     → listado + estadísticas, magic PK
 //   4. S3                    → sanitización de keys + validación de env
 //   5. Redis                 → stub deshabilitado sin crash (o real si hay REDIS_URL)
 //   6. Logo institucional    → legibilidad (informativo)
@@ -55,7 +55,7 @@ const materiasPrueba = [
 ];
 
 async function testPdf() {
-  console.log('\n[1] Servicio PDF (pdfkit)');
+  console.log('\n[1] Servicio PDF (motor Python · ReportLab)');
   try {
     const boleta = await generarBoletaPDF(alumnoPrueba, materiasPrueba, 8.5, { p1Prom: 8, p2Prom: 9, p3Prom: 8 });
     check('Boleta PDF se genera', esPdf(boleta), 'magic %PDF ausente');
@@ -84,7 +84,7 @@ async function testPdf() {
 }
 
 async function testDocx() {
-  console.log('\n[2] Servicio DOCX (docx)');
+  console.log('\n[2] Servicio DOCX (motor Python · python-docx)');
   try {
     const buf = await generarPlantillaHorarioDOCX({
       tipo: 'grupo',
@@ -103,7 +103,7 @@ async function testDocx() {
 }
 
 async function testExcel() {
-  console.log('\n[3] Servicio Excel (exceljs)');
+  console.log('\n[3] Servicio Excel (motor Python · openpyxl)');
   try {
     const listado = await generarListadoAlumnosExcel([
       { matricula: '1', apellidos: 'Pérez', nombre: 'Juan', semestre_actual: 3, grupo_nombre: '3° A', grupo_letra: 'A', especialidad_nombre: 'Programación', estatus: 'activo' },
