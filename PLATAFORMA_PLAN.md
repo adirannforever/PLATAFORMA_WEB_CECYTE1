@@ -187,8 +187,8 @@ Los cambios locales de controladores, middleware, esquema SQL, pantalla de audit
 
 ## 7. Orden inmediato
 
-1. Revisar el baseline Neon contra ambos SQL versionados y restaurarlo en una base PostgreSQL local desechable; documentar el diff estructural y la prueba de restauracion.
-2. Definir y probar el ledger/migrador Node sobre esa base local; no escribir el ledger en Neon sin backup y autorizacion explicita.
+1. ~~Revisar el baseline Neon contra ambos SQL versionados y restaurarlo en una base PostgreSQL local desechable; documentar el diff estructural y la prueba de restauracion.~~ **Hecho (12 oct 2026).** Evidencia: `npm run db:reconcile-schema` (40+3=43 tablas = Neon) y `npm run db:restore-baseline` restaura el baseline en una base desechable con catalogo identico (43 tablas, 42 secuencias, 356 columnas, 1 vista, 2 triggers, 2 funciones, 124 indices, 419 constraints). Diff documentado en `backend/src/db/snapshots/DIFF-neon-baseline-vs-versionados.md`: los SQL versionados cubren las 43 tablas por nombre pero NO la vista `v_promedios_periodo` ni los 2 triggers/funciones de dominio.
+2. ~~Definir y probar el ledger/migrador Node sobre esa base local; no escribir el ledger en Neon sin backup y autorizacion explicita.~~ **Hecho (12 oct 2026).** Evidencia: `npm run db:migrate` / `db:migrate:status` con ledger `schema_migrations` (idempotente + guarda de inmutabilidad por checksum, rechaza hosts no locales); migracion `002_domain_view_triggers.sql` versiona los 3 objetos faltantes; `npm run test:migrate` pasa 7/7 en base desechable (aplica 001+002, idempotente, detecta alteracion).
 3. Ejecutar el E2E de auditoria solo en un entorno local dedicado con fixtures sinteticos y validar su migracion sobre la estructura reconciliada.
 4. Crear la base de pruebas/CI para que las fases siguientes tengan una comprobacion repetible.
 5. Completar fundamentos backend de manera dirigida; despues implementar Mailpit, verificacion de correo y perfil.

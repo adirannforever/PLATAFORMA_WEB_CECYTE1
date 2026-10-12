@@ -14,8 +14,13 @@
     "db:inspect-neon-schema": "node scripts/inspectNeonSchema.mjs",
     "db:export-neon-schema": "node scripts/exportNeonSchema.mjs",
     "db:migrate-auditoria": "node scripts/migrarAuditoria.mjs",
+    "db:reconcile-schema": "node scripts/reconcile-schema.mjs",
+    "db:restore-baseline": "node scripts/restore-baseline.mjs",
+    "db:migrate": "node scripts/migrate.mjs",
+    "db:migrate:status": "node scripts/migrate.mjs --status",
     "test:servicios": "node scripts/testServicios.js",
-    "test:auditoria": "node scripts/testAuditoria.js"
+    "test:auditoria": "node scripts/testAuditoria.js",
+    "test:migrate": "node scripts/test-migrate.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1109.0",
