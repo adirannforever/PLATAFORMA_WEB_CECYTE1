@@ -2,6 +2,8 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { usePermissions } from './hooks/usePermissions';
 
+import CookieBanner from './components/CookieBanner';
+
 import DashboardLayout from './components/layout/DashboardLayout';
 
 import LandingPage from './pages/LandingPage';
@@ -79,7 +81,8 @@ export default function App() {
 
   return (
     <>
-    <NetworkStatus/>
+      <CookieBanner />
+      <NetworkStatus/>
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={usuario ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
