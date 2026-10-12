@@ -36,6 +36,14 @@ export const authService = {
   },
 };
 
+export const dashboardService = {
+  // Aggregated admin dashboard snapshot (KPIs, alerts, charts, activity).
+  getAdmin: async () => {
+    const response = await api.get('/dashboard/admin');
+    return response.data;
+  },
+};
+
 
 export const usuariosService = {
   
