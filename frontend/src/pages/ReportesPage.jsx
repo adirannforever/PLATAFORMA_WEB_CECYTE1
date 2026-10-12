@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
 import { reportesService, catalogosService, usuariosService, gruposService } from '../services/api';
@@ -19,9 +19,17 @@ export default function ReportesPage() {
   const [visorPdf, setVisorPdf] = useState({
     open: false,
     blob: null,
+    url: null,
     filename: '',
     tipo: '',
   });
+
+  // Ref para poder revocar la object URL al desmontar (evita fuga de memoria)
+  const visorUrlRef = useRef(null);
+  visorUrlRef.current = visorPdf.url;
+  useEffect(() => () => {
+    if (visorUrlRef.current) URL.revokeObjectURL(visorUrlRef.current);
+  }, []);
 
   
   const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
@@ -261,9 +269,12 @@ export default function ReportesPage() {
       const filename = generarNombreArchivo(tipo, requestParams);
 
       if (tipo === 'boleta' || tipo === 'constancia') {
+        // Liberar la URL de un visor previo (si lo hubiera) antes de abrir uno nuevo
+        if (visorPdf.url) URL.revokeObjectURL(visorPdf.url);
         setVisorPdf({
           open: true,
           blob,
+          url: URL.createObjectURL(blob), // URL única: se crea UNA sola vez al abrir
           filename,
           tipo,
         });
@@ -293,19 +304,26 @@ export default function ReportesPage() {
 
   const imprimirDesdeVisor = () => {
     if (!visorPdf.blob) return;
-    const url = window.URL.createObjectURL(visorPdf.blob);
+    // URL propia para la ventana de impresión: no toca la del iframe
+    // y se revoca automáticamente para no acumular fugas.
+    const url = URL.createObjectURL(visorPdf.blob);
     const ventana = window.open(url, '_blank');
     if (ventana) {
       ventana.focus();
-      ventana.print();
+      // Dar tiempo a que el PDF cargue antes de invocar print()
+      setTimeout(() => {
+        try { ventana.print(); } catch { /* el usuario puede imprimir a mano */ }
+      }, 500);
     }
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
   };
 
   const cerrarVisor = () => {
-    if (visorPdf.blob) {
-      URL.revokeObjectURL(URL.createObjectURL(visorPdf.blob));
+    // Revocar LA MISMA URL que se usó en el iframe (antes se creaba otra nueva)
+    if (visorPdf.url) {
+      URL.revokeObjectURL(visorPdf.url);
     }
-    setVisorPdf({ open: false, blob: null, filename: '', tipo: '' });
+    setVisorPdf({ open: false, blob: null, url: null, filename: '', tipo: '' });
   };
 
   
@@ -880,7 +898,7 @@ export default function ReportesPage() {
             </div>
             <div className={styles.visorBody}>
               <iframe
-                src={URL.createObjectURL(visorPdf.blob)}
+                src={visorPdf.url}
                 className={styles.visorIframe}
                 title="Visor PDF"
                 frameBorder="0"
