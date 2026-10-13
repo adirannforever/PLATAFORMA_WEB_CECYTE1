@@ -27,7 +27,7 @@ export default function LoginPage() {
 
       try {
         const resultado = await login(email, password);
-        navigate('/dashboard');
+        navigate(resultado.rol === 'aspirante' ? '/mi-solicitud' : '/dashboard');
       } catch (err) {
         setError(err.response?.data?.message || 'Error al iniciar sesión. Verifica tus datos.');
       } finally {

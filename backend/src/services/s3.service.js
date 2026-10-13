@@ -1,5 +1,6 @@
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { randomUUID } from 'node:crypto';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -63,11 +64,25 @@ export async function generateUploadUrl(fileName, fileType) {
   return { url, key };
 }
 
-export async function generateDownloadUrl(key) {
+export async function generateComunicadoUploadUrl(fileName, fileType) {
+  exigirConfigS3('generar URL de subida');
+  const key = `comunicados/${randomUUID()}-${sanitizarNombreArchivo(fileName)}`;
+  const command = new PutObjectCommand({
+    Bucket: BUCKET,
+    Key: key,
+    ContentType: fileType,
+  });
+  const url = await getSignedUrl(s3Client, command, { expiresIn: EXPIRES_IN });
+  return { url, key };
+}
+
+export async function generateDownloadUrl(key, options = {}) {
   exigirConfigS3('generar URL de descarga');
   const command = new GetObjectCommand({
     Bucket: BUCKET,
     Key: key,
+    ...(options.contentType ? { ResponseContentType: options.contentType } : {}),
+    ...(options.contentDisposition ? { ResponseContentDisposition: options.contentDisposition } : {}),
   });
   const url = await getSignedUrl(s3Client, command, { expiresIn: EXPIRES_IN });
   return url;
@@ -86,6 +101,15 @@ export async function fileExists(key) {
     }
     throw err; // errores de red/config: el caller decide
   }
+}
+
+export async function getFileMetadata(key) {
+  exigirConfigS3('verificar metadata del archivo');
+  const result = await s3Client.send(new HeadObjectCommand({ Bucket: BUCKET, Key: key }));
+  return {
+    size: result.ContentLength,
+    type: result.ContentType,
+  };
 }
 
 export async function deleteFile(key) {

@@ -1,4 +1,5 @@
 import { query } from '../config/db.js';
+import { getPagosAlumnoScope } from '../services/pagos-access.service.js';
 
 export const getConceptosPago = async (req, res) => {
   try {
@@ -11,20 +12,45 @@ export const getConceptosPago = async (req, res) => {
 };
 
 export const getPagosAlumno = async (req, res) => {
-  const { alumno_id } = req.params;
+  const alumnoId = Number(req.params.alumno_id);
+  if (!Number.isSafeInteger(alumnoId) || alumnoId < 1) {
+    return res.status(400).json({ success: false, message: 'ID de alumno inválido.' });
+  }
+
+  const scope = getPagosAlumnoScope(req.user);
   try {
     const result = await query(
       `SELECT pa.*, cp.nombre AS concepto_nombre, ce.nombre AS ciclo
        FROM pagos_alumno pa
+       JOIN alumnos a ON a.id = pa.alumno_id
        JOIN conceptos_pago cp ON pa.concepto_id = cp.id
        LEFT JOIN ciclos_escolares ce ON pa.ciclo_id = ce.id
-       WHERE pa.alumno_id = $1
+       WHERE a.id = $1 ${scope.condition}
        ORDER BY pa.fecha_pago DESC`,
-      [alumno_id]
+      [alumnoId, ...scope.params]
     );
     return res.json({ success: true, data: result.rows });
   } catch (err) {
     console.error('Error en getPagosAlumno:', err);
+    return res.status(500).json({ success: false, message: 'Error interno.' });
+  }
+};
+
+export const getMisPagos = async (req, res) => {
+  try {
+    const result = await query(
+      `SELECT pa.*, cp.nombre AS concepto_nombre, ce.nombre AS ciclo
+       FROM pagos_alumno pa
+       JOIN alumnos a ON a.id = pa.alumno_id
+       JOIN conceptos_pago cp ON pa.concepto_id = cp.id
+       LEFT JOIN ciclos_escolares ce ON pa.ciclo_id = ce.id
+       WHERE a.usuario_id = $1
+       ORDER BY pa.fecha_pago DESC`,
+      [req.user.id]
+    );
+    return res.json({ success: true, data: result.rows });
+  } catch (err) {
+    console.error('Error en getMisPagos:', err);
     return res.status(500).json({ success: false, message: 'Error interno.' });
   }
 };

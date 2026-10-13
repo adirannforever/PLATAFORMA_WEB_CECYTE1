@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { usePermissions } from './hooks/usePermissions';
 
@@ -8,13 +8,16 @@ import DashboardLayout from './components/layout/DashboardLayout';
 
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
+import ActivarCuentaAspirantePage from './pages/ActivarCuentaAspirantePage';
 import DashboardPage from './pages/DashboardPage';
+import MiSolicitudAspirantePage from './pages/MiSolicitudAspirantePage';
 import ComunicadosPage from './pages/ComunicadosPage';
 import CalificacionesPage from './pages/CalificacionesPage';
 import GruposPage from './pages/GruposPage';
 import UsuariosPage from './pages/UsuariosPage';
 import AspirantesPage from './pages/AspirantesPage';
 import InscripcionesPage from './pages/InscripcionesPage';
+import ReinscripcionPage from './pages/ReinscripcionPage';
 import AsistenciaPage from './pages/AsistenciaPage';
 import NotFoundPage from './pages/NotFoundPage';
 import LegalPrivacidad from './pages/LegalPrivacidad';
@@ -58,6 +61,7 @@ const RutaProtegida = ({ children, rolesPermitidos, permisos }) => {
 };
 
 export default function App() {
+  const location = useLocation();
   const { usuario, cargando } = useAuth();
 
   if (cargando) {
@@ -85,7 +89,11 @@ export default function App() {
       <NetworkStatus/>
       <Routes>
         <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={usuario ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
+        <Route path="/activar-cuenta" element={<ActivarCuentaAspirantePage />} />
+        <Route
+          path="/login"
+          element={usuario && !location.search.includes('force=1') ? <Navigate to="/dashboard" replace /> : <LoginPage />}
+        />
         <Route path="/legal/privacidad" element={<LegalPrivacidad />} />
         <Route path="/legal/terminos" element={<LegalTerminos />} />
         <Route path="/legal/cookies" element={<LegalCookies />} />
@@ -97,7 +105,18 @@ export default function App() {
             </RutaProtegida>
           }
         >
-          <Route path="dashboard" element={<DashboardPage />} />
+          <Route
+            path="dashboard"
+            element={usuario?.rol === 'aspirante' ? <Navigate to="/mi-solicitud" replace /> : <DashboardPage />}
+          />
+          <Route
+            path="mi-solicitud"
+            element={
+              <RutaProtegida permisos={['aspirantes.ver_propio']}>
+                <MiSolicitudAspirantePage />
+              </RutaProtegida>
+            }
+          />
           <Route path="comunicados" element={<ComunicadosPage />} />
 
           {/* ===== ALUMNO ===== */}
@@ -222,15 +241,23 @@ export default function App() {
           <Route
             path="inscripciones"
             element={
-              <RutaProtegida permisos={['inscripciones.ver']}>
+              <RutaProtegida permisos={['inscripciones.crear']}>
                 <InscripcionesPage />
+              </RutaProtegida>
+            }
+          />
+          <Route
+            path="reinscripcion"
+            element={
+              <RutaProtegida permisos={['inscripciones.reinscripcion_propia']}>
+                <ReinscripcionPage />
               </RutaProtegida>
             }
           />
           <Route
             path="expediente"
             element={
-              <RutaProtegida permisos={['expediente.ver', 'expediente.ver_todos']}>
+              <RutaProtegida permisos={['expediente.ver_todos', 'expediente.ver_mi_expediente']}>
                 <ExpedientePage />
               </RutaProtegida>
             }

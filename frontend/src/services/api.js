@@ -12,7 +12,10 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      if (window.location.pathname !== '/login') {
+      const path = window.location.pathname;
+      const rutaPublica = path === '/' || path === '/login'
+        || path === '/activar-cuenta' || path.startsWith('/legal/');
+      if (!rutaPublica) {
         window.location.href = '/login';
       }
     }
@@ -32,6 +35,10 @@ export const authService = {
   },
   me: async () => {
     const response = await api.get('/auth/me');
+    return response.data;
+  },
+  activarCuentaAspirante: async (token, password) => {
+    const response = await api.post('/auth/aspirantes/activar-cuenta', { token, password });
     return response.data;
   },
 };
@@ -151,6 +158,14 @@ export const aspirantesService = {
     const response = await api.post('/aspirantes', data);
     return response.data;
   },
+  getMe: async () => {
+    const response = await api.get('/aspirantes/me');
+    return response.data;
+  },
+  reenviarInvitacion: async (id) => {
+    const response = await api.post(`/aspirantes/${id}/invitacion`);
+    return response.data;
+  },
   actualizarEstatus: async (id, estatus) => {
     const response = await api.patch(`/aspirantes/${id}/estatus`, { estatus });
     return response.data;
@@ -207,6 +222,25 @@ export const comunicadosService = {
   crear: async (data) => {
     const response = await api.post('/comunicados', data);
     return response.data;
+  },
+  solicitarUpload: async (file) => {
+    const response = await api.post('/comunicados/upload/solicitar', {
+      nombre: file.name,
+      tipo: file.type,
+      size: file.size,
+    });
+    return response.data;
+  },
+  subirArchivo: async (uploadUrl, file) => {
+    const response = await fetch(uploadUrl, {
+      method: 'PUT',
+      body: file,
+      headers: { 'Content-Type': file.type },
+    });
+    if (!response.ok) {
+      throw new Error(`Error al subir "${file.name}": ${response.status}`);
+    }
+    return response;
   },
   actualizar: async (id, data) => {
     const response = await api.patch(`/comunicados/${id}`, data);
@@ -491,6 +525,10 @@ export const incidenciasService = {
 export const pagosService = {
   getConceptos: async () => {
     const response = await api.get('/pagos/conceptos');
+    return response.data;
+  },
+  getMisPagos: async () => {
+    const response = await api.get('/pagos/mis-pagos');
     return response.data;
   },
   getPorAlumno: async (alumnoId) => {

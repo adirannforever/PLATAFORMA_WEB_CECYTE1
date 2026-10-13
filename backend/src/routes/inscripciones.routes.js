@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { verifyToken, requirePermiso } from '../middlewares/auth.js';
+import { validate } from '../middleware/validate.js';
+import { reinscripcionSchema } from '../schemas/inscripciones.schema.js';
 import {
   getAlumnosDisponibles,
   getGruposDisponibles,
@@ -16,7 +18,12 @@ router.use(verifyToken);
 
 // Pipeline de Reinscripción Digital (Cédula)
 router.get('/estatus-reinscripcion', requirePermiso('inscripciones.ver', 'inscripciones.reinscripcion_propia'), getEstatusReinscripcion);
-router.post('/cedula-reinscripcion', requirePermiso('inscripciones.reinscripcion_propia', 'inscripciones.crear'), procesarCedulaReinscripcion);
+router.post(
+  '/cedula-reinscripcion',
+  requirePermiso('inscripciones.reinscripcion_propia', 'inscripciones.crear'),
+  validate(reinscripcionSchema),
+  procesarCedulaReinscripcion
+);
 
 // Dashboard de Control Escolar
 router.get('/dashboard-control-escolar', requirePermiso('inscripciones.dashboard_control'), getControlEscolarDashboard);

@@ -9,7 +9,15 @@
 // ============================================================
 
 // Roles válidos de usuario (coincide con ROLES en frontend/config/permissions.js)
-export const ROLES_VALIDOS = ['alumno', 'docente', 'administrador'];
+export const ROLES_VALIDOS = [
+  'alumno',
+  'docente',
+  'administrador',
+  'control_escolar',
+  'directivo',
+  'tutor',
+  'aspirante',
+];
 
 // Tipos de incidencia válidos (coincide con TIPO_INCIDENCIA en frontend/config/incidencias.js)
 export const TIPOS_INCIDENCIA = [

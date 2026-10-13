@@ -4,14 +4,31 @@ import { usePermissions } from '../hooks/usePermissions';
 import { comunicadosService, catalogosService } from '../services/api';
 import { INSTITUCION } from '../config/institucion';
 import Skeleton from '../components/Skeleton';
+import ComunicadoAttachments from '../components/ComunicadoAttachments';
 import styles from './ComunicadosPage.module.css';
-import { Plus } from 'lucide-react';
+import { FileText, Plus, X } from 'lucide-react';
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const MAX_FILES = 5;
+const ALLOWED_FILE_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+]);
 
 export default function ComunicadosPage() {
   const { usuario } = useAuth();
   const { isAdmin } = usePermissions(); // ← hook centralizado
   const [grupos, setGrupos] = useState([]);
   const [comunicados, setComunicados] = useState([]);
+  const [archivos, setArchivos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [modalAbierto, setModalAbierto] = useState(false);
   const [form, setForm] = useState({
@@ -57,15 +74,49 @@ export default function ComunicadosPage() {
     setError('');
     setEnviando(true);
     try {
-      await comunicadosService.crear(form);
+      const uploaded = [];
+      for (const file of archivos) {
+        const upload = await comunicadosService.solicitarUpload(file);
+        await comunicadosService.subirArchivo(upload.data.uploadUrl, file);
+        uploaded.push({
+          key: upload.data.key,
+          nombre: file.name,
+          tipo: file.type,
+          size: file.size,
+        });
+      }
+      await comunicadosService.crear({ ...form, archivos: uploaded });
+      setArchivos([]);
       setForm({ titulo: '', contenido: '', dirigido_a_rol: null, dirigido_a_grupo: null });
       setModalAbierto(false);
       await cargarComunicados();
     } catch (err) {
-      setError(err.response?.data?.message || 'Error al publicar.');
+      setError(err.response?.data?.message || err.message || 'Error al publicar.');
     } finally {
       setEnviando(false);
     }
+  };
+
+  const handleFilesChange = (event) => {
+    const selected = Array.from(event.target.files || []);
+    event.target.value = '';
+    if (archivos.length + selected.length > MAX_FILES) {
+      setError(`Puedes adjuntar hasta ${MAX_FILES} archivos.`);
+      return;
+    }
+    const invalidFile = selected.find((file) =>
+      !ALLOWED_FILE_TYPES.has(file.type) || file.size > MAX_FILE_SIZE || file.size === 0,
+    );
+    if (invalidFile) {
+      setError(`"${invalidFile.name}" no es un formato permitido o supera 10 MB.`);
+      return;
+    }
+    setError('');
+    setArchivos((current) => [...current, ...selected]);
+  };
+
+  const removeFile = (index) => {
+    setArchivos((current) => current.filter((_, fileIndex) => fileIndex !== index));
   };
 
   const handleArchivar = async (id) => {
@@ -88,7 +139,8 @@ export default function ComunicadosPage() {
         </div>
         {isAdmin && (
           <button className={styles.btnPrimary} onClick={() => setModalAbierto(true)}>
-            <Plus size={18} strokeWidth={6} style={{ marginRight: '6px' }} />
+            <Plus size={18} aria-hidden="true" style={{ marginRight: '6px' }} />
+            Nuevo comunicado
           </button>
         )}
       </div>
@@ -143,6 +195,7 @@ export default function ComunicadosPage() {
               </div>
               <h2 className={styles.cardTitle}>{c.titulo}</h2>
               <p className={styles.cardContenido}>{c.contenido}</p>
+              <ComunicadoAttachments comunicadoId={c.id} archivos={c.archivos} />
               <div className={styles.cardFooter}>
                 Publicado por: <strong>{c.autor_nombre} {c.autor_apellidos}</strong>
               </div>
@@ -152,7 +205,9 @@ export default function ComunicadosPage() {
       )}
 
       {modalAbierto && (
-        <div className={styles.modalOverlay} onClick={() => setModalAbierto(false)}>
+        <div className={styles.modalOverlay} onClick={() => {
+          if (!enviando) setModalAbierto(false);
+        }}>
           <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
             <h3 className={styles.modalTitle}>Nuevo comunicado</h3>
             {error && <div className={styles.errorMsg}>{error}</div>}
@@ -177,6 +232,38 @@ export default function ComunicadosPage() {
                   rows={5}
                   required
                 />
+              </div>
+              <div className={styles.field}>
+                <label className={styles.label} htmlFor="comunicado-archivos">Imágenes y documentos</label>
+                <input
+                  id="comunicado-archivos"
+                  className={styles.fileInput}
+                  type="file"
+                  multiple
+                  disabled={enviando}
+                  accept="image/jpeg,image/png,image/webp,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+                  onChange={handleFilesChange}
+                />
+                <small className={styles.fileHint}>Hasta {MAX_FILES} archivos; imágenes o documentos de máximo 10 MB cada uno.</small>
+                {archivos.length > 0 && (
+                  <ul className={styles.selectedFiles}>
+                    {archivos.map((file, index) => (
+                      <li key={`${file.name}-${file.lastModified}-${index}`}>
+                        <FileText size={16} aria-hidden="true" />
+                        <span>{file.name}</span>
+                        <button
+                          type="button"
+                          className={styles.removeFile}
+                          onClick={() => removeFile(index)}
+                          aria-label={`Quitar ${file.name}`}
+                          disabled={enviando}
+                        >
+                          <X size={16} aria-hidden="true" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
               <div className={styles.field}>
                 <label className={styles.label}>Dirigido a</label>
@@ -219,6 +306,7 @@ export default function ComunicadosPage() {
                 <button
                   type="button"
                   className={styles.btnSecondary}
+                  disabled={enviando}
                   onClick={() => setModalAbierto(false)}
                 >
                   Cancelar

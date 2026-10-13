@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { aspirantesService, catalogosService } from '../services/api';
+import { usePermissions } from '../hooks/usePermissions';
 import Skeleton from '../components/Skeleton';
 import styles from './AspirantesPage.module.css';
 
@@ -29,6 +30,7 @@ const ETIQUETA_ESTATUS = ESTATUS_OPCIONES.reduce((acc, e) => {
 }, {});
 
 export default function AspirantesPage() {
+  const { tiene } = usePermissions();
   const [aspirantes, setAspirantes] = useState([]);
   const [especialidades, setEspecialidades] = useState([]);
   const [turnos, setTurnos] = useState([]);
@@ -52,6 +54,7 @@ export default function AspirantesPage() {
   });
   const [enviando, setEnviando] = useState(false);
   const [errorCrear, setErrorCrear] = useState('');
+  const [reenviandoId, setReenviandoId] = useState(null);
 
   const [modalEstatusAbierto, setModalEstatusAbierto] = useState(false);
   const [aspiranteEstatus, setAspiranteEstatus] = useState(null);
@@ -116,7 +119,7 @@ export default function AspirantesPage() {
     setEnviando(true);
     setErrorCrear('');
     try {
-      await aspirantesService.crear({
+      const respuesta = await aspirantesService.crear({
         ...form,
         especialidad_id: Number(form.especialidad_id),
         turno_preferido_id: Number(form.turno_preferido_id),
@@ -124,12 +127,34 @@ export default function AspirantesPage() {
       });
       setModalCrearAbierto(false);
       setForm({ nombre: '', apellidos: '', curp: '', email: '', telefono: '', especialidad_id: '', turno_preferido_id: '', ciclo_id: '', folio: '' });
-      setExito('Aspirante registrado correctamente.');
+      setExito(respuesta.message || 'Aspirante registrado. Se envió el enlace de activación.');
       cargar();
     } catch (err) {
+      if (err.response?.data?.code === 'INVITACION_NO_ENTREGADA') {
+        setModalCrearAbierto(false);
+        setForm({ nombre: '', apellidos: '', curp: '', email: '', telefono: '', especialidad_id: '', turno_preferido_id: '', ciclo_id: '', folio: '' });
+        setExito(`Solicitud ${err.response.data.aspirante?.folio || ''} registrada, pero no se entregó la invitación. Reenvíala desde la tabla cuando el correo esté disponible.`);
+        cargar();
+        return;
+      }
       setErrorCrear(err.response?.data?.message || 'Error al registrar el aspirante.');
     } finally {
       setEnviando(false);
+    }
+  };
+
+  const reenviarInvitacion = async (aspirante) => {
+    setReenviandoId(aspirante.id);
+    setError('');
+    setExito('');
+    try {
+      const respuesta = await aspirantesService.reenviarInvitacion(aspirante.id);
+      setExito(respuesta.message);
+      await cargar();
+    } catch (err) {
+      setError(err.response?.data?.message || 'No se pudo reenviar el acceso.');
+    } finally {
+      setReenviandoId(null);
     }
   };
 
@@ -196,7 +221,11 @@ export default function AspirantesPage() {
         </div>
         <div className={styles.headerActions}>
           <button className={styles.btnSecondary} onClick={cargar}>Actualizar</button>
-          <button className={styles.btnPrimary} onClick={() => { setModalCrearAbierto(true); setErrorCrear(''); }}>+ Nuevo aspirante</button>
+          {tiene('aspirantes.crear') && (
+            <button className={styles.btnPrimary} onClick={() => { setModalCrearAbierto(true); setErrorCrear(''); }}>
+              + Nuevo aspirante
+            </button>
+          )}
         </div>
       </div>
 
@@ -268,6 +297,7 @@ export default function AspirantesPage() {
                 <th className={styles.th}>Ciclo</th>
                 <th className={styles.th}>Estatus</th>
                 <th className={styles.th}>Registro</th>
+                <th className={styles.th}>Acceso</th>
                 <th className={styles.th}>Acciones</th>
               </tr>
             </thead>
@@ -294,9 +324,21 @@ export default function AspirantesPage() {
                     </span>
                   </td>
                   <td className={styles.td}><span className={styles.fecha}>{new Date(asp.fecha_registro).toLocaleDateString('es-MX')}</span></td>
+                  <td className={styles.td}>{asp.cuenta_activa ? 'Activo' : 'Invitación pendiente'}</td>
                   <td className={styles.td}>
-                    <button className={styles.btnEditar} onClick={() => abrirEstatus(asp)}>Estatus</button>
-                    {puedeConvertir(asp) && (
+                    {tiene('aspirantes.editar') && (
+                      <button className={styles.btnEditar} onClick={() => abrirEstatus(asp)}>Estatus</button>
+                    )}
+                    {!asp.cuenta_activa && tiene('aspirantes.editar') && (
+                      <button
+                        className={styles.btnEditar}
+                        onClick={() => reenviarInvitacion(asp)}
+                        disabled={reenviandoId === asp.id}
+                      >
+                        {reenviandoId === asp.id ? 'Enviando…' : 'Reenviar acceso'}
+                      </button>
+                    )}
+                    {puedeConvertir(asp) && asp.cuenta_activa && tiene('aspirantes.convertir') && (
                       <button className={styles.btnConvertir} onClick={() => abrirConvertir(asp)}>Convertir</button>
                     )}
                   </td>
@@ -311,6 +353,7 @@ export default function AspirantesPage() {
         <div className={styles.modalOverlay} onClick={() => setModalCrearAbierto(false)}>
           <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
             <h2 className={styles.modalTitle}>Registrar aspirante</h2>
+            <p className={styles.helpText}>Al guardar, se enviará al correo un enlace de activación de un solo uso, válido por 48 horas.</p>
             <form className={styles.form} onSubmit={handleCrear}>
               <div className={styles.row2}>
                 <div className={styles.field}>
@@ -427,7 +470,7 @@ export default function AspirantesPage() {
                       <option key={g.id} value={g.id}>{g.nombre}</option>
                     ))}
                   </select>
-                  <span className={styles.helpText}>Se creará el usuario, la matrícula y se inscribirá al aspirante en el grupo.</span>
+                  <span className={styles.helpText}>Se reutilizará la cuenta activada del aspirante y conservará su contraseña.</span>
                 </div>
                 {errorConvertir && <div className={styles.errorMsg}>{errorConvertir}</div>}
                 <div className={styles.modalActions}>

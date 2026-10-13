@@ -160,6 +160,13 @@ export const crearUsuario = async (req, res) => {
     });
   }
 
+  if (rol === 'aspirante') {
+    return res.status(400).json({
+      success: false,
+      message: 'Las cuentas de aspirante deben habilitarse mediante una invitación de admisión.'
+    });
+  }
+
   if (password.length < 8) {
     return res.status(400).json({
       success: false,

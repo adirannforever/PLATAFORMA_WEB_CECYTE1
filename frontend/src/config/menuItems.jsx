@@ -114,12 +114,20 @@ export const menuItems = [
     order: 1,
   },
   {
+    to: '/mi-solicitud',
+    label: 'Mi solicitud',
+    icon: <ClipboardList size={18} />,
+    permiso: 'aspirantes.ver_propio',
+    category: 'general',
+    order: 2,
+  },
+  {
     to: '/reportes',
     label: 'Reportes',
     icon: <FileText size={18} />,
     permiso: 'reportes.ver',
     category: 'general',
-    order: 2,
+    order: 3,
   },
   {
     to: '/horarios',
@@ -127,7 +135,7 @@ export const menuItems = [
     icon: <Calendar size={18} />,
     permiso: 'horarios.ver',
     category: 'general',
-    order: 3,
+    order: 4,
   },
 
   // ===== ACADÉMICO =====
@@ -166,12 +174,20 @@ export const menuItems = [
     order: 4,
   },
   {
+    to: '/reinscripcion',
+    label: 'Reinscripción',
+    icon: <ClipboardList size={18} />,
+    permiso: 'inscripciones.reinscripcion_propia',
+    category: 'academico',
+    order: 5,
+  },
+  {
     to: '/inscripciones',
     label: 'Inscripciones',
     icon: <IconInscripciones />,
-    permiso: 'inscripciones.ver',
+    permiso: 'inscripciones.crear',
     category: 'academico',
-    order: 5,
+    order: 6,
   },
   {
     to: '/incidencias',
@@ -179,7 +195,7 @@ export const menuItems = [
     icon: <AlertCircle size={18} />,
     permiso: 'incidencias.ver_todas',
     category: 'academico',
-    order: 6,
+    order: 7,
     badge: 'notificaciones',
   },
 

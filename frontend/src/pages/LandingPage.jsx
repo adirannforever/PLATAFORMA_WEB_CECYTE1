@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { publicService } from '../services/api';
+import ComunicadoAttachments from '../components/ComunicadoAttachments';
 import { relativeDate } from '../utils/format';
 import logoCecyte from '../assets/logo_cecyte.png';
 import styles from './LandingPage.module.css';
@@ -563,6 +564,7 @@ export default function LandingPage() {
                 </div>
                 <h3>{aviso.titulo}</h3>
                 <p>{aviso.contenido}</p>
+                <ComunicadoAttachments comunicadoId={aviso.id} archivos={aviso.archivos} publico />
               </article>
             ))}
           </div>

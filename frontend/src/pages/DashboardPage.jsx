@@ -11,6 +11,7 @@ import { INSTITUCION } from '../config/institucion';
 import { relativeDate, longDate } from '../utils/format';
 import { Card, StatCard, Badge, EmptyState, BarChart, GroupedBarChart, DonutChart, Button } from '../components/ui';
 import ErrorBoundary from '../components/ErrorBoundary';
+import ComunicadoAttachments from '../components/ComunicadoAttachments';
 import styles from './DashboardPage.module.css';
 
 const SALUDO = () => {
@@ -340,6 +341,7 @@ function ComunicadosSection({ comunicados, loading }) {
                   <Badge tone={rol.tone}>{rol.label}</Badge>
                 </div>
                 <p className={styles.comBody}>{c.contenido || ''}</p>
+                <ComunicadoAttachments comunicadoId={c.id} archivos={c.archivos} />
                 <p className={styles.comMeta}>{c.autor ? `Por ${c.autor}` : ''}{c.autor && c.fecha_publicacion ? ' · ' : ''}{relativeDate(c.fecha_publicacion)}</p>
               </article>
             );
@@ -472,6 +474,7 @@ function LegacyDashboard({ usuario }) {
               <article key={c.id || idx} className={styles.comItem}>
                 <h4 className={styles.comTitle}>{c.titulo || 'Sin título'}</h4>
                 <p className={styles.comBody}>{c.contenido || ''}</p>
+                <ComunicadoAttachments comunicadoId={c.id} archivos={c.archivos} />
               </article>
             ))}
           </div>
@@ -495,7 +498,6 @@ function LegacyStat({ label, value, to, color }) {
     </Link>
   );
 }
-
 
 
 

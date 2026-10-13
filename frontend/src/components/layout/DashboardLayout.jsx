@@ -37,6 +37,7 @@ const LogoCECyTE = () => (
 
 const ETIQUETA_ROL = {
   administrador: 'Administrador',
+  aspirante: 'Aspirante',
   docente: 'Docente',
   alumno: 'Alumno',
 };
@@ -45,6 +46,7 @@ const ETIQUETA_ROL = {
 const ROUTE_NAMES = {
   '/dashboard': 'Inicio',
   '/comunicados': 'Comunicados',
+  '/mi-solicitud': 'Mi solicitud',
   '/reportes': 'Reportes',
   '/horarios': 'Horarios',
   '/grupos': 'Grupos',
@@ -52,6 +54,7 @@ const ROUTE_NAMES = {
   '/calificaciones': 'Calificaciones',
   '/mis-calificaciones': 'Mis Calificaciones',
   '/inscripciones': 'Inscripciones',
+  '/reinscripcion': 'Reinscripción',
   '/incidencias': 'Incidencias',
   '/usuarios': 'Usuarios',
   '/aspirantes': 'Aspirantes',

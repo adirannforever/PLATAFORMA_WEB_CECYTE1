@@ -3,6 +3,7 @@ import { validate } from '../middleware/validate.js';
 import { createLimiter } from '../middlewares/rateLimit.js';
 import { avisosQuerySchema, resumenQuerySchema } from '../schemas/public.schema.js';
 import {
+  descargarAdjuntoAvisoPublico,
   getAvisos,
   getResumen,
 } from '../controllers/public.controller.js';
@@ -18,6 +19,7 @@ const publicLimiter = createLimiter({
 });
 
 router.get('/avisos', publicLimiter, validate(avisosQuerySchema, 'query'), getAvisos);
+router.get('/avisos/:id/archivos/:index', publicLimiter, descargarAdjuntoAvisoPublico);
 router.get('/resumen', publicLimiter, validate(resumenQuerySchema, 'query'), getResumen);
 
 export default router;

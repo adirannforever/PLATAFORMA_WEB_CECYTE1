@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { usePermissions } from '../hooks/usePermissions';
 import { expedienteService, catalogosService } from '../services/api';
 import { Search, Edit, Save, X, AlertTriangle, CheckCircle, AlertCircle } from 'lucide-react';
 import Skeleton from '../components/Skeleton';
@@ -8,9 +9,11 @@ import styles from './ExpedientePage.module.css';
 
 export default function ExpedientePage() {
   const { usuario } = useAuth();
+  const { tiene } = usePermissions();
   const navigate = useNavigate();
-  const esAdmin = usuario.rol === 'administrador';
   const esAlumno = usuario.rol === 'alumno';
+  const puedeVerTodos = tiene('expediente.ver_todos');
+  const puedeEditar = tiene('expediente.editar') || tiene('expediente.crear');
   const { id } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -90,7 +93,7 @@ export default function ExpedientePage() {
 
   // ── Cargar lista de alumnos ──
   useEffect(() => {
-    if (!esAdmin) return;
+    if (!puedeVerTodos) return;
     const cargarAlumnos = async () => {
       setCargandoAlumnos(true);
       setError('');
@@ -110,7 +113,7 @@ export default function ExpedientePage() {
       }
     };
     cargarAlumnos();
-  }, [esAdmin, filtroSearch, filtroEtapa, filtroAdeuda]);
+  }, [puedeVerTodos, filtroSearch, filtroEtapa, filtroAdeuda]);
 
   // ── Cargar expediente y estado del alumno ──
   useEffect(() => {
@@ -119,14 +122,11 @@ export default function ExpedientePage() {
       setCargando(true);
       setError('');
       try {
-        const [expedienteRes, estadoRes] = await Promise.all([
-          expedienteService.getByAlumnoId(alumnoId),
-          expedienteService.getEstadoAlumno(alumnoId)
-        ]);
+        const expedienteRes = await expedienteService.getByAlumnoId(alumnoId);
         setDocumentos(expedienteRes.data || []);
-        setEstadoAlumno(estadoRes.data || null);
+        setEstadoAlumno(expedienteRes.estado || null);
         setCambiosPendientes({});
-        if (esAdmin) {
+        if (puedeVerTodos) {
           const alumnoInfo = listaAlumnos.find(a => a.alumno_id === alumnoId);
           setAlumnoEstatus(alumnoInfo?.alumno_estatus || 'activo');
         } else {
@@ -141,7 +141,7 @@ export default function ExpedientePage() {
       }
     };
     cargarExpediente();
-  }, [alumnoId, esAdmin, listaAlumnos]);
+  }, [alumnoId, puedeVerTodos, listaAlumnos]);
 
   // ── Si es alumno y no tiene alumnoId, obtenerlo ──
   useEffect(() => {
@@ -303,7 +303,7 @@ export default function ExpedientePage() {
   };
 
   // ── VISTA ADMIN SIN ALUMNO ──
-  if (esAdmin && !alumnoId) {
+  if (puedeVerTodos && !alumnoId) {
     return (
       <div className={styles.page}>
         {/* Toast notifications */}
@@ -669,7 +669,7 @@ export default function ExpedientePage() {
       )}
 
       {/* Panel de control de edición */}
-      {etapaActual && grupos[etapaActual] && grupos[etapaActual].length > 0 && (
+      {puedeEditar && etapaActual && grupos[etapaActual] && grupos[etapaActual].length > 0 && (
         <div className={styles.controlPanel}>
           <div className={styles.controlButtons}>
             {!modoEdicion ? (
@@ -769,7 +769,7 @@ export default function ExpedientePage() {
                         )}
                       </td>
                       <td className={styles.td}>
-                        {esAdmin && modoEdicion ? (
+                        {puedeEditar && modoEdicion ? (
                           <div className={styles.edicionCheckbox}>
                             <input
                               type="checkbox"
@@ -797,7 +797,7 @@ export default function ExpedientePage() {
                         {doc.recibido_por_nombre || '—'}
                       </td>
                       <td className={styles.td}>
-                        {esAdmin && modoEdicion ? (
+                        {puedeEditar && modoEdicion ? (
                           <input
                             type="text"
                             className={`${styles.inputObservacion} ${modificado ? styles.inputModificado : ''}`}

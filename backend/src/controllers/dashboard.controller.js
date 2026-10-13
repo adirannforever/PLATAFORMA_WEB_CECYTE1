@@ -31,7 +31,7 @@ import { query } from '../config/db.js';
  *     asistencia_semanal:[{semana,presentes,ausentes}],
  *     calificaciones_parcial:[{parcial,promedio,aprobados,reprobados}]
  *   },
- *   comunicados_recientes:[{id,titulo,contenido,autor,fecha_publicacion,dirigido_a_rol}],
+ *   comunicados_recientes:[{id,titulo,contenido,archivos,autor,fecha_publicacion,dirigido_a_rol}],
  *   actividad_reciente:[{tipo,titulo,descripcion,fecha}]
  * }
  * ============================================================
@@ -232,7 +232,7 @@ export const getAdminDashboard = async (req, res) => {
     // ---- Comunicados recientes -----------------------------------
     const comRes = await segura(
       query(
-        `SELECT c.id, c.titulo, c.contenido, c.fecha_publicacion, c.dirigido_a_rol,
+        `SELECT c.id, c.titulo, c.contenido, c.archivos, c.fecha_publicacion, c.dirigido_a_rol,
                 (u.nombre || ' ' || u.apellidos) AS autor
            FROM comunicados c
            JOIN usuarios u ON u.id = c.autor_id

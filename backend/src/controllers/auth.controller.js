@@ -1,8 +1,9 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { query } from '../config/db.js';
+import { query, withTransaction } from '../config/db.js';
 import { registrarAuditoria } from '../middlewares/auditoria.js';
 import { listarPermisosDeRol, refrescar as refrescarCache, usandoBD } from '../services/permisos.service.js';
+import { hashAspiranteInvitationToken } from '../services/aspirantes-invitations.service.js';
 
 
 export const login = async (req, res) => {
@@ -148,13 +149,84 @@ export const me = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Usuario no encontrado.' });
     }
 
+    const usuario = result.rows[0];
+    if (req.user.rol !== usuario.rol || req.user.nombre !== usuario.nombre) {
+      const token = jwt.sign(
+        { id: usuario.id, nombre: usuario.nombre, rol: usuario.rol },
+        process.env.JWT_SECRET,
+        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      );
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+    }
+
     return res.status(200).json({
       success: true,
-      usuario: { ...result.rows[0], permisos: listarPermisosDeRol(result.rows[0].rol) },
+      usuario: { ...usuario, permisos: listarPermisosDeRol(usuario.rol) },
     });
   } catch (err) {
     console.error('Error en /me:', err);
     return res.status(500).json({ success: false, message: 'Error interno.' });
+  }
+};
+
+export const activarCuentaAspirante = async (req, res) => {
+  const { token, password } = req.body;
+
+  try {
+    const invitationHash = hashAspiranteInvitationToken(token);
+    const activatedAccount = await withTransaction(async (client) => {
+      const invitationResult = await client.query(
+        `SELECT i.id, i.aspirante_id, a.usuario_id, u.id AS cuenta_id, u.rol, u.activo
+         FROM aspirante_invitaciones i
+         JOIN aspirantes a ON a.id = i.aspirante_id
+         JOIN usuarios u ON u.id = a.usuario_id
+         WHERE i.token_hash = $1 AND i.usado_en IS NULL AND i.vence_en > NOW()
+         FOR UPDATE OF i, u`,
+        [invitationHash]
+      );
+      const invitation = invitationResult.rows[0];
+      if (!invitation || invitation.rol !== 'aspirante' || invitation.activo) {
+        return null;
+      }
+
+      const passwordHash = await bcrypt.hash(password, 12);
+      const accountResult = await client.query(
+        `UPDATE usuarios
+         SET password_hash = $1, activo = TRUE
+         WHERE id = $2 AND rol = 'aspirante' AND activo = FALSE
+         RETURNING id`,
+        [passwordHash, invitation.cuenta_id]
+      );
+      if (!accountResult.rows[0]) {
+        return null;
+      }
+
+      await client.query(
+        'UPDATE aspirante_invitaciones SET usado_en = NOW() WHERE aspirante_id = $1 AND usado_en IS NULL',
+        [invitation.aspirante_id]
+      );
+      return true;
+    });
+
+    if (!activatedAccount) {
+      return res.status(400).json({
+        success: false,
+        message: 'El enlace no es válido, ya fue utilizado o expiró. Solicita uno nuevo a Control Escolar.'
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: 'Cuenta activada. Ya puedes iniciar sesión con tu correo y la contraseña que definiste.'
+    });
+  } catch (err) {
+    console.error('Error activando cuenta de aspirante:', err);
+    return res.status(500).json({ success: false, message: 'No fue posible activar la cuenta.' });
   }
 };
 
