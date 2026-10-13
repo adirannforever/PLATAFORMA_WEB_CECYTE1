@@ -720,6 +720,11 @@
   transform: translateY(-2px);
 }
 
+.locationIcon {
+  flex-shrink: 0;
+  color: var(--color-white);
+}
+
 .locationSubtext {
   font-size: 0.85rem;
   opacity: 0.85;
@@ -737,6 +742,460 @@
 
 .mapIconLink:hover {
   opacity: 0.8;
+}
+
+/* ============================================================
+   10.5 SECCIONES NUEVAS — hero CTA + avisos en vivo
+   ============================================================ */
+
+.heroCtaBar {
+  background: var(--card-bg);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 32px 24px 24px;
+}
+
+.heroCtaInner {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.heroCtaText h2 {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  color: var(--text-main);
+  margin-bottom: 6px;
+}
+
+.heroCtaText p {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  max-width: 540px;
+}
+
+.heroCtaActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.heroCtaPrimary,
+.heroCtaSecondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 22px;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-decoration: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.heroCtaPrimary {
+  background: var(--primary-green);
+  color: var(--color-white);
+  border: 1px solid var(--primary-green-dark);
+}
+
+.heroCtaPrimary:hover {
+  background: var(--primary-green-dark);
+}
+
+.heroCtaSecondary {
+  background: transparent;
+  color: var(--primary-green);
+  border: 1px solid var(--primary-green);
+}
+
+.heroCtaSecondary:hover {
+  background: var(--primary-green);
+  color: var(--color-white);
+}
+
+.trustChips {
+  max-width: 1100px;
+  margin: 20px auto 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.trustChips li {
+  background: var(--bg-color);
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.trustChips strong {
+  color: var(--primary-green);
+  margin-right: 4px;
+}
+
+.sectionTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-color);
+  color: var(--primary-green);
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  padding: 4px 14px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+}
+
+/* --- Avisos (en vivo / respaldo / skeleton) --- */
+
+.avisosGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.avisoCard {
+  background: var(--card-bg);
+  border: 1px solid var(--border-subtle);
+  border-left: 4px solid var(--primary-green);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: box-shadow 0.15s ease;
+}
+
+.avisoCard:hover {
+  box-shadow: var(--shadow-card, 0 2px 8px rgba(0, 0, 0, 0.08));
+}
+
+.avisoMeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--primary-green);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.avisoCard h3 {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  color: var(--text-main);
+}
+
+.avisoCard p {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.avisoCardSkeleton {
+  background: var(--card-bg);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.skeletonBar {
+  height: 14px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, var(--bg-color) 25%, var(--gray-light, #e5e7eb) 50%, var(--bg-color) 75%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes skeletonShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.avisoNota {
+  margin-top: 16px;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ============================================================
+   10.6 PLATAFORMA POR ROL + ADMISIÓN
+   ============================================================ */
+
+.rolesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+}
+
+.rolCard {
+  background: var(--card-bg);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg, 12px);
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.rolCard:hover {
+  border-color: var(--primary-green);
+  box-shadow: var(--shadow-card, 0 2px 8px rgba(0, 0, 0, 0.08));
+}
+
+.rolIconWrap {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-md);
+  background: var(--bg-color);
+  color: var(--primary-green);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rolCard h3 {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  color: var(--text-main);
+}
+
+.rolCard > p {
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.rolPuntos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.rolPuntos li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  color: var(--text-main);
+}
+
+.rolPuntos svg {
+  color: var(--primary-green);
+  flex-shrink: 0;
+}
+
+.rolCta {
+  align-self: flex-start;
+  color: var(--primary-green);
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.rolCta:hover {
+  color: var(--primary-green-dark);
+}
+
+.pasosGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 20px;
+  margin: 0 0 32px;
+  padding: 0;
+  list-style: none;
+}
+
+.pasoCard {
+  background: var(--card-bg);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 24px 20px;
+}
+
+.pasoNum {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--primary-green);
+  color: var(--color-white);
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin-bottom: 14px;
+}
+
+.pasoCard h3 {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  color: var(--text-main);
+  margin-bottom: 8px;
+}
+
+.pasoCard p {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.requisitosBox {
+  background: var(--bg-color);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 24px;
+}
+
+.requisitosBox h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  color: var(--text-main);
+  margin-bottom: 14px;
+}
+
+.requisitosBox h3 svg {
+  color: var(--primary-green);
+}
+
+.requisitosBox ul {
+  columns: 2;
+  column-gap: 32px;
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.requisitosBox li {
+  font-size: 0.9rem;
+  color: var(--text-main);
+  margin-bottom: 8px;
+  break-inside: avoid;
+}
+
+.requisitosCta {
+  display: inline-block;
+  margin-top: 16px;
+  color: var(--primary-green);
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.requisitosCta:hover {
+  text-decoration: underline;
+}
+
+/* ============================================================
+   10.7 FAQ ACORDEÓN + FOOTER LINKS
+   ============================================================ */
+
+.faqList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 780px;
+  margin: 0 auto;
+}
+
+.faqItem {
+  background: var(--card-bg);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.faqItemAbierta {
+  border-color: var(--primary-green);
+}
+
+.faqPregunta {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 0.98rem;
+  font-weight: 600;
+  color: var(--text-main);
+  text-align: left;
+  transition: color 0.15s ease;
+}
+
+.faqPregunta:hover {
+  color: var(--primary-green);
+}
+
+.faqPregunta:focus-visible {
+  outline: 2px solid var(--primary-green);
+  outline-offset: -2px;
+}
+
+.faqChevron {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+}
+
+.faqItemAbierta .faqChevron {
+  transform: rotate(180deg);
+  color: var(--primary-green);
+}
+
+.faqRespuesta {
+  padding: 0 20px 16px;
+}
+
+.faqRespuesta p {
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+.footerLinks {
+  margin-top: 0.75rem;
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.footerLinks a {
+  color: var(--color-white);
+  text-decoration: underline;
+  font-size: 0.875rem;
+}
+
+.footerLinks a:hover {
+  opacity: 0.85;
 }
 
 /* ============================================================
@@ -813,6 +1272,36 @@
 
   .genGrid {
     grid-template-columns: 1fr;
+  }
+
+  .heroCtaInner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .heroCtaActions {
+    width: 100%;
+  }
+
+  .heroCtaPrimary,
+  .heroCtaSecondary {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .avisosGrid,
+  .rolesGrid,
+  .pasosGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .requisitosBox ul {
+    columns: 1;
+  }
+
+  .faqPregunta {
+    font-size: 0.92rem;
+    padding: 14px 16px;
   }
 
   .socialBtn {

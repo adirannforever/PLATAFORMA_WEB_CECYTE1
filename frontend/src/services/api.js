@@ -215,6 +215,26 @@ export const comunicadosService = {
 };
 
 
+// Portal público (landing, sin sesión): usa `fetch` directo en lugar de `api`
+// para que un 401/429 del endpoint público NUNCA dispare el redirect a /login.
+export const publicService = {
+  getAvisos: async (limit = 6) => {
+    const res = await fetch(`/api/public/avisos?limit=${encodeURIComponent(limit)}`, {
+      headers: { Accept: 'application/json' },
+    });
+    if (!res.ok) throw new Error(`Avisos no disponibles (${res.status})`);
+    return res.json();
+  },
+  getResumen: async () => {
+    const res = await fetch('/api/public/resumen', {
+      headers: { Accept: 'application/json' },
+    });
+    if (!res.ok) throw new Error(`Resumen no disponible (${res.status})`);
+    return res.json();
+  },
+};
+
+
 export const asistenciaService = {
   getAsistenciaDiaria: async (params) => {
     const response = await api.get('/asistencia/diaria', { params });

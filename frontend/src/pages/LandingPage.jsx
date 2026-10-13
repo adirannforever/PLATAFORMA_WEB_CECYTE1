@@ -19,8 +19,16 @@ import {
   Palette,
   Cpu,
   FlaskConical,
+  Users,
+  Megaphone,
+  HelpCircle,
+  CheckCircle2,
+  ChevronDown,
+  ClipboardList,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { publicService } from '../services/api';
+import { relativeDate } from '../utils/format';
 import logoCecyte from '../assets/logo_cecyte.png';
 import styles from './LandingPage.module.css';
 
@@ -109,6 +117,108 @@ const especialidadesData = [
 ];
 
 // ============================================================
+// DATOS AUXILIARES — secciones plataforma (estáticos, sin PII)
+// ============================================================
+
+const plataformaRolesData = [
+  {
+    id: 'aspirante',
+    titulo: 'Aspirantes',
+    descripcion: 'Tu puerta de entrada: conoce la oferta, sigue los pasos de admisión y mantente al tanto de los avisos.',
+    puntos: ['Oferta educativa y perfiles', 'Pasos de admisión 1-2-3-4', 'Avisos públicos del plantel'],
+    cta: { etiqueta: 'Ver admisión', href: '#admision' },
+  },
+  {
+    id: 'alumno',
+    titulo: 'Alumnos',
+    descripcion: 'Tu vida académica en un solo lugar: calificaciones, horarios, pagos, becas y tu expediente.',
+    puntos: ['Mis calificaciones y grupos', 'Horarios, pagos y becas', 'Expediente y servicio social'],
+    cta: { etiqueta: 'Iniciar sesión', href: '/login' },
+  },
+  {
+    id: 'docente',
+    titulo: 'Docentes',
+    descripcion: 'Tus clases bajo control: asistencia, calificaciones, incidencias y comunicación con tus grupos.',
+    puntos: ['Mis clases y asistencias', 'Calificaciones por parcial', 'Incidencias y comunicados'],
+    cta: { etiqueta: 'Entrar al panel', href: '/login' },
+  },
+];
+
+const admisionPasosData = [
+  {
+    n: 1,
+    titulo: 'Pre-registro',
+    texto: 'Explora las especialidades y reúne tus documentos: acta, CURP y comprobante de estudios.',
+  },
+  {
+    n: 2,
+    titulo: 'Ficha',
+    texto: 'Solicita tu ficha de admisión en control escolar dentro de las fechas del ciclo activo.',
+  },
+  {
+    n: 3,
+    titulo: 'Examen',
+    texto: 'Presenta tu examen de admisión y mantente atento a los avisos de resultados.',
+  },
+  {
+    n: 4,
+    titulo: 'Inscripción',
+    texto: 'Completa tu inscripción, conoce tu grupo y accede a la plataforma con tu cuenta.',
+  },
+];
+
+const rolIcons = { aspirante: ClipboardList, alumno: GraduationCap, docente: BookOpen };
+
+const requisitosData = [
+  'Acta de nacimiento (original y copia)',
+  'CURP vigente',
+  'Certificado de secundaria o equivalente',
+  '6 fotografías tamaño infantil',
+  'Comprobante de domicilio',
+];
+
+const faqData = [
+  {
+    pregunta: '¿Necesito una cuenta para ver los avisos?',
+    respuesta: 'No. Los avisos públicos del plantel se muestran en esta página sin iniciar sesión. Tu cuenta la necesitarás una vez que seas alumno, docente o administrador.',
+  },
+  {
+    pregunta: '¿Cómo entro a la plataforma si ya soy alumno o docente?',
+    respuesta: 'Usa el botón “Iniciar sesión” con tu correo institucional. Si tienes problemas de acceso, contacta a control escolar o al administrador del plantel.',
+  },
+  {
+    pregunta: '¿Qué puedo hacer dentro de la plataforma?',
+    respuesta: 'Alumnos: ver calificaciones, horarios, pagos, becas y expediente. Docentes: pasar asistencia, registrar calificaciones e incidencias de sus clases. Aspirantes: consultar oferta y pasos de admisión desde aquí.',
+  },
+  {
+    pregunta: '¿Dónde veo becas, pagos o servicio social?',
+    respuesta: 'Esos módulos viven dentro del panel (requieren sesión). Esta página te muestra el camino; el detalle está tras “Iniciar sesión” según tu rol.',
+  },
+];
+
+// Avisos de respaldo (si el API público no responde, la landing jamás se rompe).
+const avisosFallback = [
+  {
+    id: 'fb-1',
+    titulo: 'Bienvenida al ciclo escolar',
+    contenido: 'Les damos la bienvenida al nuevo ciclo escolar. Éxito en sus estudios.',
+    fecha_publicacion: null,
+  },
+  {
+    id: 'fb-2',
+    titulo: 'Fichas de admisión',
+    contenido: 'Mantente atento a las fechas de fichas de admisión publicadas por control escolar.',
+    fecha_publicacion: null,
+  },
+  {
+    id: 'fb-3',
+    titulo: 'Evaluaciones parciales',
+    contenido: 'Recuerda revisar el calendario de evaluaciones parciales de cada mes.',
+    fecha_publicacion: null,
+  },
+];
+
+// ============================================================
 // COMPONENTES INTERNOS
 // ============================================================
 
@@ -142,6 +252,10 @@ export default function LandingPage() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [especialidadSeleccionada, setEspecialidadSeleccionada] = useState(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [avisos, setAvisos] = useState([]);
+  const [avisosEstado, setAvisosEstado] = useState('cargando'); // cargando | listo | respaldo
+  const [resumen, setResumen] = useState(null);
+  const [faqAbierta, setFaqAbierta] = useState(0);
   const slideIntervalRef = useRef(null);
   const carouselRef = useRef(null);
 
@@ -199,6 +313,30 @@ export default function LandingPage() {
     return () => window.removeEventListener('keydown', handleEsc);
   }, [menuAbierto]);
 
+  // ===== Avisos públicos + resumen (B: live data con fallback estático) =====
+  useEffect(() => {
+    let viva = true;
+    const cargar = async () => {
+      try {
+        const [avisosRes, resumenRes] = await Promise.all([
+          publicService.getAvisos(6),
+          publicService.getResumen().catch(() => null),
+        ]);
+        if (!viva) return;
+        const lista = Array.isArray(avisosRes?.data) ? avisosRes.data : [];
+        setAvisos(lista.length > 0 ? lista : avisosFallback);
+        setAvisosEstado(lista.length > 0 ? 'listo' : 'respaldo');
+        if (resumenRes?.data) setResumen(resumenRes.data);
+      } catch {
+        if (!viva) return;
+        setAvisos(avisosFallback);
+        setAvisosEstado('respaldo');
+      }
+    };
+    cargar();
+    return () => { viva = false; };
+  }, []);
+
   // ===== Cerrar drawer al hacer scroll =====
   useEffect(() => {
     const handleScroll = () => {
@@ -240,8 +378,20 @@ export default function LandingPage() {
             <DrawerLink href="#oferta" icon={BookOpen} onClick={() => setMenuAbierto(false)}>
               Oferta Educativa
             </DrawerLink>
+            <DrawerLink href="#plataforma" icon={Users} onClick={() => setMenuAbierto(false)}>
+              La Plataforma
+            </DrawerLink>
+            <DrawerLink href="#admision" icon={ClipboardList} onClick={() => setMenuAbierto(false)}>
+              Admisión
+            </DrawerLink>
+            <DrawerLink href="#avisos" icon={Megaphone} onClick={() => setMenuAbierto(false)}>
+              Avisos
+            </DrawerLink>
             <DrawerLink href="#generalidades" icon={Info} onClick={() => setMenuAbierto(false)}>
               Acerca del Plantel
+            </DrawerLink>
+            <DrawerLink href="#faq" icon={HelpCircle} onClick={() => setMenuAbierto(false)}>
+              Preguntas Frecuentes
             </DrawerLink>
             <DrawerLink href="#contacto" icon={Phone} onClick={() => setMenuAbierto(false)}>
               Contacto
@@ -355,6 +505,75 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ===== Hero CTA + confianza ===== */}
+      <section className={styles.heroCtaBar} aria-label="Acciones rápidas">
+        <div className={styles.heroCtaInner}>
+          <div className={styles.heroCtaText}>
+            <h2>Tu escuela, también en línea</h2>
+            <p>
+              Avisos públicos, oferta educativa y una plataforma completa para aspirantes,
+              alumnos y docentes.
+            </p>
+          </div>
+          <div className={styles.heroCtaActions}>
+            <Link to={usuario ? '/dashboard' : '/login'} className={styles.heroCtaPrimary}>
+              <LogIn size={18} />
+              {usuario ? 'Ir a mi panel' : 'Iniciar sesión'}
+            </Link>
+            <a href="#admision" className={styles.heroCtaSecondary}>
+              <ClipboardList size={18} />
+              Proceso de admisión
+            </a>
+          </div>
+        </div>
+        <ul className={styles.trustChips} aria-label="Datos del ciclo escolar">
+          <li><strong>{resumen?.especialidades ?? '—'}</strong> especialidades</li>
+          <li><strong>{resumen?.grupos_activos ?? '—'}</strong> grupos activos</li>
+          <li><strong>{resumen?.ciclo_activo ?? '2026-2027'}</strong> ciclo escolar</li>
+        </ul>
+      </section>
+
+      {/* ===== Avisos públicos (en vivo con respaldo) ===== */}
+      <section id="avisos" className={styles.sectionContainer}>
+        <div className={styles.sectionHeader}>
+          <span className={styles.sectionTag}><Megaphone size={16} /> Avisos</span>
+          <h2>Lo último del plantel</h2>
+          <p>Publicaciones oficiales visibles para todos, sin necesidad de cuenta.</p>
+        </div>
+
+        {avisosEstado === 'cargando' ? (
+          <div className={styles.avisosGrid} aria-busy="true" aria-label="Cargando avisos">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className={styles.avisoCardSkeleton}>
+                <span className={styles.skeletonBar} style={{ width: '40%' }} />
+                <span className={styles.skeletonBar} style={{ width: '80%' }} />
+                <span className={styles.skeletonBar} style={{ width: '60%' }} />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className={styles.avisosGrid}>
+            {avisos.map((aviso) => (
+              <article key={aviso.id} className={styles.avisoCard}>
+                <div className={styles.avisoMeta}>
+                  <Megaphone size={16} aria-hidden="true" />
+                  <time dateTime={aviso.fecha_publicacion || undefined}>
+                    {aviso.fecha_publicacion ? relativeDate(aviso.fecha_publicacion) : 'Reciente'}
+                  </time>
+                </div>
+                <h3>{aviso.titulo}</h3>
+                <p>{aviso.contenido}</p>
+              </article>
+            ))}
+          </div>
+        )}
+        {avisosEstado === 'respaldo' && (
+          <p className={styles.avisoNota} role="status">
+            Mostrando avisos de referencia — el servicio público no respondió.
+          </p>
+        )}
+      </section>
+
       {/* ===== Oferta Educativa ===== */}
       <section id="oferta" className={styles.sectionContainer}>
         <div className={styles.sectionHeader}>
@@ -438,6 +657,78 @@ export default function LandingPage() {
         )}
       </section>
 
+      {/* ===== Tu plataforma (por rol) ===== */}
+      <section id="plataforma" className={styles.sectionContainer}>
+        <div className={styles.sectionHeader}>
+          <span className={styles.sectionTag}><Users size={16} /> Plataforma</span>
+          <h2>Un sistema para toda la comunidad escolar</h2>
+          <p>Esto es lo que encontrarás dentro según tu rol:</p>
+        </div>
+
+        <div className={styles.rolesGrid}>
+          {plataformaRolesData.map((rol) => {
+            const Icon = rolIcons[rol.id] ?? Users;
+            const esInterno = rol.cta.href.startsWith('#');
+            return (
+              <div key={rol.id} className={styles.rolCard}>
+                <div className={styles.rolIconWrap} aria-hidden="true">
+                  <Icon size={28} strokeWidth={1.75} />
+                </div>
+                <h3>{rol.titulo}</h3>
+                <p>{rol.descripcion}</p>
+                <ul className={styles.rolPuntos}>
+                  {rol.puntos.map((p) => (
+                    <li key={p}>
+                      <CheckCircle2 size={15} aria-hidden="true" />
+                      {p}
+                    </li>
+                  ))}
+                </ul>
+                {esInterno ? (
+                  <a href={rol.cta.href} className={styles.rolCta}>{rol.cta.etiqueta} →</a>
+                ) : (
+                  <Link to={rol.cta.href} className={styles.rolCta}>{rol.cta.etiqueta} →</Link>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ===== Admisión ===== */}
+      <section id="admision" className={styles.sectionContainer}>
+        <div className={styles.sectionHeader}>
+          <span className={styles.sectionTag}><ClipboardList size={16} /> Admisión</span>
+          <h2>¿Cómo ingreso? En 4 pasos</h2>
+          <p>El proceso completo, de la exploración de especialidades a tu cuenta en la plataforma.</p>
+        </div>
+
+        <ol className={styles.pasosGrid}>
+          {admisionPasosData.map((paso) => (
+            <li key={paso.n} className={styles.pasoCard}>
+              <span className={styles.pasoNum} aria-hidden="true">{paso.n}</span>
+              <h3>{paso.titulo}</h3>
+              <p>{paso.texto}</p>
+            </li>
+          ))}
+        </ol>
+
+        <div className={styles.requisitosBox}>
+          <h3>
+            <CheckCircle2 size={20} aria-hidden="true" />
+            Documentos que necesitas
+          </h3>
+          <ul>
+            {requisitosData.map((doc) => (
+              <li key={doc}>{doc}</li>
+            ))}
+          </ul>
+          <a href="#contacto" className={styles.requisitosCta}>
+            ¿Dudas? Contáctanos →
+          </a>
+        </div>
+      </section>
+
       {/* ===== Generalidades ===== */}
       <section id="generalidades" className={styles.generalitiesSection}>
         <div className={styles.sectionHeader}>
@@ -478,6 +769,39 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ===== Preguntas frecuentes ===== */}
+      <section id="faq" className={styles.sectionContainer}>
+        <div className={styles.sectionHeader}>
+          <span className={styles.sectionTag}><HelpCircle size={16} /> FAQ</span>
+          <h2>Preguntas frecuentes</h2>
+          <p>Lo que más nos preguntan aspirantes, padres y alumnos.</p>
+        </div>
+
+        <div className={styles.faqList}>
+          {faqData.map((item, index) => {
+            const abierta = faqAbierta === index;
+            return (
+              <div key={item.pregunta} className={`${styles.faqItem} ${abierta ? styles.faqItemAbierta : ''}`}>
+                <button
+                  className={styles.faqPregunta}
+                  onClick={() => setFaqAbierta(abierta ? -1 : index)}
+                  aria-expanded={abierta}
+                  aria-controls={`faq-panel-${index}`}
+                >
+                  <span>{item.pregunta}</span>
+                  <ChevronDown size={20} aria-hidden="true" className={styles.faqChevron} />
+                </button>
+                {abierta && (
+                  <div id={`faq-panel-${index}`} className={styles.faqRespuesta}>
+                    <p>{item.respuesta}</p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
       {/* ===== Contacto ===== */}
       <section id="contacto" className={styles.contactSection}>
         <div className={styles.contactContainer}>
@@ -489,7 +813,7 @@ export default function LandingPage() {
 
           <div className={styles.socialIconsCentered}>
             <SocialButton
-            <SocialButton href="#" icon={() => (<svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" /></svg>)} label="Facebook (demo)" aria-disabled="true">Facebook (demo)</SocialButton>
+              href="#"
               icon={() => (
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
@@ -501,7 +825,7 @@ export default function LandingPage() {
             </SocialButton>
 
             <SocialButton
-            <SocialButton href="#" icon={() => (<svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12.713l-11.985-7.713h23.97l-11.985 7.713zm11.985-5.713l-11.985 7.713-11.985-7.713v10h23.985v-10z" /></svg>)} label="Correo electr�nico (demo)" aria-disabled="true">Correo (demo)</SocialButton>
+              href="#"
               icon={() => (
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 12.713l-11.985-7.713h23.97l-11.985 7.713zm11.985-5.713l-11.985 7.713-11.985-7.713v10h23.985v-10z" />
@@ -513,13 +837,13 @@ export default function LandingPage() {
             </SocialButton>
           </div>
 
-            <a
-              href={INSTITUCION_LEGAL_URLS.mapa}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={styles.mapIconLink}
-              aria-label="Ver ubicación de la institución en Google Maps (enlace de demostración)"
-            >
+          <a
+            href={urlMap}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.mapIconLink}
+            aria-label="Ver ubicación de la institución en Google Maps"
+          >
             <span className={styles.locationSubtext}>
               <MapPin size={20} className={styles.locationIcon} />
               Ubicación: Carretera Benito Juárez - Tepetitan - 20 de Noviembre 85, Macuspana, Tabasco
@@ -530,12 +854,17 @@ export default function LandingPage() {
 
       {/* ===== Footer ===== */}
       <footer className={styles.mainFooter}>
-        <p>&copy; {new Date().getFullYear()} {INSTITUCION.nombre} � Plantilla educativa (demo). Todos los derechos reservados.</p>
-        <div style={{ marginTop: '0.75rem', display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-          <a href="/legal/privacidad" style={{ color: '#fff', textDecoration: 'underline', fontSize: '0.875rem' }}>Aviso de Privacidad</a>
-          <a href="/legal/terminos" style={{ color: '#fff', textDecoration: 'underline', fontSize: '0.875rem' }}>T�rminos y Condiciones</a>
-          <a href="/legal/cookies" style={{ color: '#fff', textDecoration: 'underline', fontSize: '0.875rem' }}>Pol�tica de Cookies</a>
+        <p>&copy; {new Date().getFullYear()} {INSTITUCION.nombre} · Plataforma educativa (demo). Todos los derechos reservados.</p>
+        <div className={styles.footerLinks}>
+          <a href="/legal/privacidad">Aviso de Privacidad</a>
+          <a href="/legal/terminos">Términos y Condiciones</a>
+          <a href="/legal/cookies">Política de Cookies</a>
         </div>
+        <button
+          className={styles.scrollTopBtn}
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          aria-label="Volver arriba"
+        >
           ↑
         </button>
       </footer>
