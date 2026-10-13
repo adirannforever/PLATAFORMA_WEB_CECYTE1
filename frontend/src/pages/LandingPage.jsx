@@ -489,7 +489,7 @@ export default function LandingPage() {
 
           <div className={styles.socialIconsCentered}>
             <SocialButton
-              href="https://www.facebook.com/people/Cecyte-Tabasco-Plantel-1-Aquiles-Serd%C3%A1n-Macuspana/100064800004242/"
+            <SocialButton href="#" icon={() => (<svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" /></svg>)} label="Facebook (demo)" aria-disabled="true">Facebook (demo)</SocialButton>
               icon={() => (
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
@@ -501,7 +501,7 @@ export default function LandingPage() {
             </SocialButton>
 
             <SocialButton
-              href="https://mail.google.com/mail/?view=cm&fs=1&to=dirpla01@cecytab.edu.mx&su=Consulta+sobre+Inscripciones+y+Fichas"
+            <SocialButton href="#" icon={() => (<svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12.713l-11.985-7.713h23.97l-11.985 7.713zm11.985-5.713l-11.985 7.713-11.985-7.713v10h23.985v-10z" /></svg>)} label="Correo electrónico (demo)" aria-disabled="true">Correo (demo)</SocialButton>
               icon={() => (
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 12.713l-11.985-7.713h23.97l-11.985 7.713zm11.985-5.713l-11.985 7.713-11.985-7.713v10h23.985v-10z" />
