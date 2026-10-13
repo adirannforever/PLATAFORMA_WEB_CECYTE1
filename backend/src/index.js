@@ -35,6 +35,7 @@ import auditoriaRoutes from './routes/auditoria.routes.js';
 import reportesRoutes from './routes/reportes.routes.js';
 import materiasGrupoRoutes from './routes/materiasGrupo.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
+import publicRoutes from './routes/public.routes.js';
 import { auditoriaGlobal } from './middlewares/auditoriaGlobal.js';
 import { apiLimiter } from './middlewares/rateLimit.js';
 import { refrescar as refrescarPermisos } from './services/permisos.service.js';
@@ -130,6 +131,7 @@ app.get('/metrics', (req, res) => {
 // Middleware de auditoría global y rate limiting general
 app.use(auditoriaGlobal);
 app.use('/api', apiLimiter);
+app.use('/api/public', publicRoutes);
 
 // Rutas de la API
 app.use('/api/auth', authRoutes);

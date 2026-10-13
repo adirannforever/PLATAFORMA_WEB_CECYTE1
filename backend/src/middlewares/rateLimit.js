@@ -3,7 +3,7 @@
 
 const stores = new Map();
 
-function createLimiter({
+export function createLimiter({
   windowMs = 60 * 1000,
   max = 100,
   message = 'Demasiadas solicitudes desde esta IP, por favor intenta más tarde.',
