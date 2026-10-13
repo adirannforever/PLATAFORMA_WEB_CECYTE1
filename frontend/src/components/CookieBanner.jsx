@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { POLITICA_COOKIES, LEGAL_NOTES } from '../../config/legal';
+import { POLITICA_COOKIES, LEGAL_NOTES } from '../config/legal';
 import styles from './CookieBanner.module.css';
 
 const COOKIE_CONSENT_KEY = 'cookie_consent_demo_educativo';
