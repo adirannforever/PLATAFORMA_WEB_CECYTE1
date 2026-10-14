@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { INSTITUCION } from '../config/institucion';
+import { INSTITUCION_LEGAL } from '../config/legal';
 import {
   Menu,
   X,
@@ -26,6 +27,8 @@ import {
   ChevronDown,
   ClipboardList,
   Loader2,
+  Quote,
+  Mail,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { publicService } from '../services/api';
@@ -202,6 +205,25 @@ const faqData = [
   },
 ];
 
+// Voces de la comunidad (contenido demo, sin datos personales reales).
+const testimoniosData = [
+  {
+    texto: 'Desde primer semestre reviso mis calificaciones y los avisos del plantel en la plataforma. Todo está en un solo lugar y ya no se me pasan fechas.',
+    autor: 'Daniela M.',
+    rol: 'Alumna · 6to semestre, Diseño Gráfico Digital',
+  },
+  {
+    texto: 'Los talleres y el apoyo de mis docentes me dieron la base técnica que necesitaba para trabajar desde el primer día como técnico en electrónica.',
+    autor: 'Miguel A.',
+    rol: 'Egresado · Electrónica',
+  },
+  {
+    texto: 'El proceso de admisión fue claro: hice el pre-registro en línea, obtuve mi folio y en Control Escolar me siguieron paso a paso hasta la inscripción.',
+    autor: 'Laura R.',
+    rol: 'Madre de familia',
+  },
+];
+
 // Avisos de respaldo (si el API público no responde, la landing jamás se rompe).
 const avisosFallback = [
   {
@@ -235,19 +257,6 @@ const DrawerLink = ({ href, icon: Icon, children, onClick }) => (
   </a>
 );
 
-const SocialButton = ({ href, icon: Icon, label, children }) => (
-  <a
-    href={href}
-    target="_blank"
-    rel="noopener noreferrer"
-    className={styles.socialBtn}
-    aria-label={label}
-  >
-    <Icon size={26} />
-    <span>{children}</span>
-  </a>
-);
-
 // ============================================================
 // PÁGINA PRINCIPAL
 // ============================================================
@@ -261,6 +270,7 @@ export default function LandingPage() {
   const [avisos, setAvisos] = useState([]);
   const [avisosEstado, setAvisosEstado] = useState('cargando'); // cargando | listo | respaldo
   const [resumen, setResumen] = useState(null);
+  const [avisosAgotados, setAvisosAgotados] = useState(false);
   const [faqAbierta, setFaqAbierta] = useState(0);
   // Pre-registro público (C): catálogos + estados del formulario
   const [catalogos, setCatalogos] = useState({ especialidades: [], turnos: [] });
@@ -346,6 +356,21 @@ export default function LandingPage() {
     }
   };
 
+  // ===== Avisos: ampliar el feed público (máx. 12) =====
+  const ampliarAvisos = async () => {
+    try {
+      const res = await publicService.getAvisos(12);
+      const lista = Array.isArray(res?.data) ? res.data : [];
+      if (lista.length <= avisos.length) {
+        setAvisosAgotados(true);
+        return;
+      }
+      setAvisos(lista);
+    } catch {
+      setAvisosAgotados(true);
+    }
+  };
+
   // ===== Escape para cerrar drawer =====
   useEffect(() => {
     const handleEsc = (e) => {
@@ -410,6 +435,11 @@ export default function LandingPage() {
 
   return (
     <div className={styles.pageWrapper}>
+      {/* Accesibilidad: salto directo al contenido (teclado) */}
+      <a href="#contenido-principal" className={styles.skipLink}>
+        Saltar al contenido principal
+      </a>
+
       {/* ===== Botón hamburguesa fijo ===== */}
       <button
         className={styles.fixedHamburger}
@@ -451,6 +481,9 @@ export default function LandingPage() {
             </DrawerLink>
             <DrawerLink href="#generalidades" icon={Info} onClick={() => setMenuAbierto(false)}>
               Acerca del Plantel
+            </DrawerLink>
+            <DrawerLink href="#testimonios" icon={Trophy} onClick={() => setMenuAbierto(false)}>
+              Testimonios
             </DrawerLink>
             <DrawerLink href="#faq" icon={HelpCircle} onClick={() => setMenuAbierto(false)}>
               Preguntas Frecuentes
@@ -495,6 +528,15 @@ export default function LandingPage() {
               <span>{INSTITUCION.ciudad}, {INSTITUCION.estado} · Aquiles Serdán</span>
             </div>
           </div>
+          <nav className={styles.topNav} aria-label="Secciones del portal">
+            <a href="#carrusel">Inicio</a>
+            <a href="#oferta">Oferta</a>
+            <a href="#plataforma">Plataforma</a>
+            <a href="#admision">Admisión</a>
+            <a href="#avisos">Avisos</a>
+            <a href="#faq">FAQ</a>
+            <a href="#contacto">Contacto</a>
+          </nav>
           <div className={styles.headerAction}>
             <Link to={usuario ? '/dashboard' : '/login'} className={styles.headerLoginBtn}>
               {usuario ? (
@@ -513,6 +555,7 @@ export default function LandingPage() {
         </div>
       </header>
 
+      <main id="contenido-principal" className={styles.mainContent}>
       <section
         id="carrusel"
         className={styles.carouselSection}
@@ -628,6 +671,13 @@ export default function LandingPage() {
                 <ComunicadoAttachments comunicadoId={aviso.id} archivos={aviso.archivos} publico />
               </article>
             ))}
+          </div>
+        )}
+        {avisosEstado === 'listo' && !avisosAgotados && avisos.length >= 6 && (
+          <div className={styles.avisosMore}>
+            <button type="button" className={styles.avisosMoreBtn} onClick={ampliarAvisos}>
+              Ver más avisos
+            </button>
           </div>
         )}
         {avisosEstado === 'respaldo' && (
@@ -1010,6 +1060,30 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ===== Testimonios ===== */}
+      <section id="testimonios" className={styles.sectionContainer}>
+        <div className={styles.sectionHeader}>
+          <span className={styles.sectionTag}><Users size={16} /> Testimonios</span>
+          <h2>Voces de la comunidad lince</h2>
+          <p>Alumnos, egresados y familias comparten su experiencia en el plantel.</p>
+        </div>
+
+        <div className={styles.testiGrid}>
+          {testimoniosData.map((t) => (
+            <figure key={t.autor} className={styles.testiCard}>
+              <Quote size={26} aria-hidden="true" className={styles.testiQuote} />
+              <blockquote>
+                <p>{t.texto}</p>
+              </blockquote>
+              <figcaption>
+                <strong>{t.autor}</strong>
+                <span>{t.rol}</span>
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      </section>
+
       {/* ===== Preguntas frecuentes ===== */}
       <section id="faq" className={styles.sectionContainer}>
         <div className={styles.sectionHeader}>
@@ -1052,49 +1126,49 @@ export default function LandingPage() {
             de nuestros canales oficiales:
           </p>
 
-          <div className={styles.socialIconsCentered}>
-            <SocialButton
-              href="#"
-              icon={() => (
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-                </svg>
-              )}
-              label="Facebook Oficial"
-            >
-              Facebook Oficial
-            </SocialButton>
+          <div className={styles.contactGrid}>
+            <a className={styles.contactCard} href={`mailto:${INSTITUCION_LEGAL.contactoEmail}`}>
+              <Mail size={26} aria-hidden="true" />
+              <h3>Correo institucional</h3>
+              <p>Dudas sobre admisión, trámites y control escolar.</p>
+              <span>{INSTITUCION_LEGAL.contactoEmail}</span>
+            </a>
 
-            <SocialButton
-              href="#"
-              icon={() => (
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 12.713l-11.985-7.713h23.97l-11.985 7.713zm11.985-5.713l-11.985 7.713-11.985-7.713v10h23.985v-10z" />
-                </svg>
-              )}
-              label="Correo Electrónico"
+            <a className={styles.contactCard} href={`mailto:${INSTITUCION_LEGAL.soporteEmail}`}>
+              <HelpCircle size={26} aria-hidden="true" />
+              <h3>Soporte de la plataforma</h3>
+              <p>Problemas de acceso, cuentas y uso del portal.</p>
+              <span>{INSTITUCION_LEGAL.soporteEmail}</span>
+            </a>
+
+            <a
+              className={styles.contactCard}
+              href={urlMap}
+              target="_blank"
+              rel="noopener noreferrer"
             >
-              Correo Electrónico
-            </SocialButton>
+              <MapPin size={26} aria-hidden="true" />
+              <h3>Ubicación del plantel</h3>
+              <p>Carretera Benito Juárez - Tepetitan - 20 de Noviembre 85, Macuspana, Tabasco.</p>
+              <span>Ver en Google Maps →</span>
+            </a>
           </div>
-
-          <a
-            href={urlMap}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.mapIconLink}
-            aria-label="Ver ubicación de la institución en Google Maps"
-          >
-            <span className={styles.locationSubtext}>
-              <MapPin size={20} className={styles.locationIcon} />
-              Ubicación: Carretera Benito Juárez - Tepetitan - 20 de Noviembre 85, Macuspana, Tabasco
-            </span>
-          </a>
         </div>
       </section>
 
+      </main>
+
       {/* ===== Footer ===== */}
       <footer className={styles.mainFooter}>
+        <nav className={styles.footerLinks} aria-label="Mapa del sitio">
+          <a href="#oferta">Oferta Educativa</a>
+          <a href="#plataforma">La Plataforma</a>
+          <a href="#admision">Admisión</a>
+          <a href="#avisos">Avisos</a>
+          <a href="#testimonios">Testimonios</a>
+          <a href="#faq">Preguntas Frecuentes</a>
+          <a href="#contacto">Contacto</a>
+        </nav>
         <p>&copy; {new Date().getFullYear()} {INSTITUCION.nombre} · Plataforma educativa (demo). Todos los derechos reservados.</p>
         <div className={styles.footerLinks}>
           <a href="/legal/privacidad">Aviso de Privacidad</a>

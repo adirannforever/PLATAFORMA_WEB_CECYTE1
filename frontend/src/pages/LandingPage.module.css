@@ -17,7 +17,8 @@
   background-color: var(--bg-color);
   color: var(--text-main);
   font-family: var(--font-sans);
-  overflow-x: hidden;
+  /* Sin overflow-x: hidden — rompería position:sticky del header.
+     El recorte horizontal lo hace cada sección (p.ej. .carouselSection). */
 }
 
 /* ============================================================
@@ -158,6 +159,9 @@
   border-bottom: 3px solid var(--accent-orange);
   padding: 12px 16px;
   box-sizing: border-box;
+  position: sticky;
+  top: 0;
+  z-index: 90;
 }
 
 .headerContent {
@@ -668,7 +672,7 @@
 }
 
 .contactContainer {
-  max-width: 700px;
+  max-width: 900px;
   margin: 0 auto;
   text-align: center;
   display: flex;
@@ -689,59 +693,6 @@
   opacity: 0.9;
   line-height: 1.5;
   margin: 0;
-}
-
-.socialIconsCentered {
-  display: flex;
-  gap: 20px;
-  justify-content: center;
-  margin: 16px 0;
-  flex-wrap: wrap;
-}
-
-.socialBtn {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background-color: rgba(255, 255, 255, 0.12);
-  border: 2px solid rgba(255, 255, 255, 0.25);
-  color: var(--color-white);
-  padding: 12px 24px;
-  border-radius: var(--radius-sm);
-  font-weight: 600;
-  font-size: 0.9rem;
-  text-decoration: none;
-  transition: background-color 0.2s, border-color 0.2s, transform 0.15s;
-}
-
-.socialBtn:hover {
-  background-color: var(--accent-orange);
-  border-color: var(--accent-orange);
-  transform: translateY(-2px);
-}
-
-.locationIcon {
-  flex-shrink: 0;
-  color: var(--color-white);
-}
-
-.locationSubtext {
-  font-size: 0.85rem;
-  opacity: 0.85;
-  margin-top: 8px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.mapIconLink {
-  color: var(--color-white);
-  text-decoration: none;
-  transition: opacity 0.15s;
-}
-
-.mapIconLink:hover {
-  opacity: 0.8;
 }
 
 /* ============================================================
@@ -1438,7 +1389,214 @@
 }
 
 /* ============================================================
-   13. RESPONSIVE
+   13. PORTAL — NAV, SKIP-LINK, TESTIMONIOS, CONTACTO
+   ============================================================ */
+
+.mainContent {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+/* Las anclas no quedan debajo del header sticky */
+.carouselSection,
+.sectionContainer,
+.generalitiesSection,
+.contactSection {
+  scroll-margin-top: 84px;
+}
+
+.skipLink {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 300;
+  background: var(--primary-green);
+  color: var(--color-white);
+  padding: 10px 18px;
+  border-radius: 0 0 8px 0;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.skipLink:focus {
+  left: 0;
+}
+
+.topNav {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+}
+
+.topNav a {
+  padding: 8px 11px;
+  border-radius: var(--radius-sm);
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-main);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.topNav a:hover {
+  color: var(--primary-green);
+  background: rgba(26, 107, 53, 0.08);
+}
+
+.topNav a:focus-visible {
+  outline: 2px solid var(--primary-green);
+  outline-offset: -2px;
+}
+
+@media (min-width: 1025px) {
+  .topNav {
+    display: flex;
+  }
+
+  .fixedHamburger {
+    display: none;
+  }
+
+  .headerBrandInfo {
+    padding-left: 0;
+  }
+}
+
+.avisosMore {
+  display: flex;
+  justify-content: center;
+  margin-top: 22px;
+}
+
+.avisosMoreBtn {
+  background: transparent;
+  color: var(--primary-green);
+  border: 2px solid var(--primary-green);
+  border-radius: var(--radius-sm);
+  padding: 10px 22px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.avisosMoreBtn:hover {
+  background: var(--primary-green);
+  color: var(--color-white);
+}
+
+.avisosMoreBtn:focus-visible {
+  outline: 2px solid var(--primary-green);
+  outline-offset: 2px;
+}
+
+.testiGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.testiCard {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 24px;
+}
+
+.testiQuote {
+  color: var(--primary-green);
+}
+
+.testiCard blockquote p {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 0.95rem;
+  line-height: 1.65;
+}
+
+.testiCard figcaption {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: auto;
+}
+
+.testiCard figcaption strong {
+  font-size: 0.92rem;
+  color: var(--text-main);
+}
+
+.testiCard figcaption span {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.contactGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.contactCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.22);
+  border-radius: var(--radius-sm);
+  padding: 22px 18px;
+  color: var(--color-white);
+  text-decoration: none;
+  text-align: center;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+}
+
+.contactCard:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: var(--accent-orange);
+  transform: translateY(-2px);
+}
+
+.contactCard:focus-visible {
+  outline: 2px solid var(--color-white);
+  outline-offset: 2px;
+}
+
+.contactCard h3 {
+  font-size: 1rem;
+  margin: 4px 0 0;
+}
+
+.contactCard p {
+  font-size: 0.82rem;
+  opacity: 0.85;
+  margin: 0;
+  line-height: 1.45;
+}
+
+.contactCard span {
+  font-size: 0.82rem;
+  font-weight: 700;
+  word-break: break-all;
+  margin-top: auto;
+}
+
+/* ============================================================
+   14. RESPONSIVE
    ============================================================ */
 
 @media (max-width: 768px) {
@@ -1512,9 +1670,13 @@
     grid-template-columns: 1fr;
   }
 
-  .socialBtn {
+  .testiGrid,
+  .contactGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .contactCard {
     width: 100%;
-    justify-content: center;
   }
 
   .carouselArrow {
