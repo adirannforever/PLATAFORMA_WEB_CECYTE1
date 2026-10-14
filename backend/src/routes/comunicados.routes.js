@@ -1,11 +1,23 @@
 import { Router } from 'express';
 import { verifyToken, requirePermiso } from '../middlewares/auth.js';
-import { getComunicados, getComunicadoById, createComunicado, updateComunicado, deleteComunicado } from '../controllers/comunicados.controller.js';
+import {
+  descargarAdjuntoComunicado,
+  getComunicados,
+  getComunicadoById,
+  createComunicado,
+  solicitarUploadComunicado,
+  solicitarUploadsComunicado,
+  updateComunicado,
+  deleteComunicado,
+} from '../controllers/comunicados.controller.js';
 
 const router = Router();
 router.use(verifyToken);
 
 router.get('/', getComunicados);
+router.post('/upload/solicitar', requirePermiso('comunicados.crear'), solicitarUploadComunicado);
+router.post('/upload/lote', requirePermiso('comunicados.crear'), solicitarUploadsComunicado);
+router.get('/:id/archivos/:index', descargarAdjuntoComunicado);
 router.get('/:id', getComunicadoById);
 router.post('/', requirePermiso('comunicados.crear'), createComunicado);
 router.patch('/:id', requirePermiso('comunicados.editar'), updateComunicado);

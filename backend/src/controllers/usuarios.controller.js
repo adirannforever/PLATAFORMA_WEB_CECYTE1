@@ -1,6 +1,12 @@
 import bcrypt from 'bcryptjs';
 import { query, withTransaction } from '../config/db.js';
 import { ROLES_VALIDOS } from '../config/catalogos.js';
+import {
+  crearUsuarioEnTransaccion,
+  parseImportacionUsuariosCsv,
+  PLANTILLA_IMPORTACION_USUARIOS,
+  validarFilaImportacionUsuario,
+} from '../services/usuarios.service.js';
 
 export const getUsuarios = async (req, res) => {
   try {
@@ -160,6 +166,13 @@ export const crearUsuario = async (req, res) => {
     });
   }
 
+  if (rol === 'aspirante') {
+    return res.status(400).json({
+      success: false,
+      message: 'Las cuentas de aspirante deben habilitarse mediante una invitación de admisión.'
+    });
+  }
+
   if (password.length < 8) {
     return res.status(400).json({
       success: false,
@@ -168,31 +181,9 @@ export const crearUsuario = async (req, res) => {
   }
 
   try {
-    const nuevoUsuario = await withTransaction(async (client) => {
-      const hash = await bcrypt.hash(password, 12);
-      const result = await client.query(
-        `INSERT INTO usuarios (nombre, apellidos, email, password_hash, rol)
-         VALUES ($1, $2, $3, $4, $5)
-         RETURNING id, nombre, apellidos, email, rol`,
-        [nombre.trim(), apellidos.trim(), email.toLowerCase().trim(), hash, rol]
-      );
-
-      const usuarioCreado = result.rows[0];
-
-      if (rol === 'alumno') {
-        const matriculaFinal =
-          matricula && matricula.trim() !== ''
-            ? matricula.trim()
-            : `A${String(usuarioCreado.id).padStart(4, '0')}`;
-
-        await client.query(
-          `INSERT INTO alumnos (usuario_id, matricula, estatus) VALUES ($1, $2, 'activo')`,
-          [usuarioCreado.id, matriculaFinal]
-        );
-      }
-
-      return usuarioCreado;
-    });
+    const { usuario: nuevoUsuario } = await withTransaction((client) =>
+      crearUsuarioEnTransaccion(client, { nombre, apellidos, email, password, rol, matricula })
+    );
 
     return res.status(201).json({
       success: true,
@@ -210,6 +201,67 @@ export const crearUsuario = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Error interno.' });
   }
 };
+
+export const importarUsuarios = async (req, res) => {
+  let filas;
+  try {
+    filas = parseImportacionUsuariosCsv(req.body.csv);
+  } catch (err) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+
+  const resultados = [];
+  for (const fila of filas) {
+    const { errors, usuario } = validarFilaImportacionUsuario(fila.data, req.body.defaultPassword);
+    const erroresFila = [...fila.errors, ...errors];
+    if (erroresFila.length) {
+      resultados.push({ row: fila.line, status: 'invalid', errors: erroresFila });
+      continue;
+    }
+
+    try {
+      const creado = await withTransaction((client) => crearUsuarioEnTransaccion(client, usuario));
+      resultados.push({
+        row: fila.line,
+        status: 'created',
+        usuario: creado.usuario,
+        matricula: creado.matricula,
+      });
+    } catch (err) {
+      if (err.code === '23505') {
+        resultados.push({
+          row: fila.line,
+          status: 'conflict',
+          code: 'DUPLICATE_RECORD',
+          errors: ['Ya existe un usuario con ese correo electrónico o matrícula.'],
+        });
+      } else {
+        console.error(`Error al importar usuario en la línea ${fila.line}:`, err);
+        resultados.push({
+          row: fila.line,
+          status: 'error',
+          code: 'CREATE_FAILED',
+          errors: ['No se pudo crear el usuario.'],
+        });
+      }
+    }
+  }
+
+  const createdCount = resultados.filter((item) => item.status === 'created').length;
+  const failedCount = resultados.length - createdCount;
+  return res.status(200).json({
+    success: failedCount === 0,
+    message: 'Importación procesada; cada fila se guardó o rechazó de forma independiente.',
+    summary: { total: resultados.length, created: createdCount, failed: failedCount },
+    results: resultados,
+  });
+};
+
+export const descargarPlantillaImportacionUsuarios = (_req, res) =>
+  res
+    .type('text/csv')
+    .set('Content-Disposition', 'attachment; filename="plantilla-usuarios.csv"')
+    .send(PLANTILLA_IMPORTACION_USUARIOS);
 
 export const actualizarUsuario = async (req, res) => {
   const { nombre, apellidos, email, rol, activo } = req.body;

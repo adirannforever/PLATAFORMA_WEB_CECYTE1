@@ -1,0 +1,15 @@
+{
+  "$schema": "https://app.kilo.ai/config.json",
+  "mcpServers": {
+    "graphify": {
+      "command": "python",
+      "args": [
+        "-m",
+        "graphify.serve",
+        "C:/Users/adria/cecyte-platform/graphify-out/graph.json"
+      ]
+    }
+  }
+}
+
+

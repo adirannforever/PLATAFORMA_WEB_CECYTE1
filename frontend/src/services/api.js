@@ -12,7 +12,10 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      if (window.location.pathname !== '/login') {
+      const path = window.location.pathname;
+      const rutaPublica = path === '/' || path === '/login'
+        || path === '/activar-cuenta' || path.startsWith('/legal/');
+      if (!rutaPublica) {
         window.location.href = '/login';
       }
     }
@@ -34,6 +37,18 @@ export const authService = {
     const response = await api.get('/auth/me');
     return response.data;
   },
+  activarCuentaAspirante: async (token, password) => {
+    const response = await api.post('/auth/aspirantes/activar-cuenta', { token, password });
+    return response.data;
+  },
+};
+
+export const dashboardService = {
+  // Aggregated admin dashboard snapshot (KPIs, alerts, charts, activity).
+  getAdmin: async () => {
+    const response = await api.get('/dashboard/admin');
+    return response.data;
+  },
 };
 
 
@@ -49,6 +64,17 @@ export const usuariosService = {
   },
   crear: async (data) => {
     const response = await api.post('/usuarios', data);
+    return response.data;
+  },
+  importar: async (csv, defaultPassword) => {
+    const response = await api.post('/usuarios/importar', {
+      csv,
+      ...(defaultPassword ? { defaultPassword } : {}),
+    });
+    return response.data;
+  },
+  descargarPlantillaImportacion: async () => {
+    const response = await api.get('/usuarios/importar/plantilla', { responseType: 'blob' });
     return response.data;
   },
   actualizar: async (id, data) => {
@@ -143,6 +169,14 @@ export const aspirantesService = {
     const response = await api.post('/aspirantes', data);
     return response.data;
   },
+  getMe: async () => {
+    const response = await api.get('/aspirantes/me');
+    return response.data;
+  },
+  reenviarInvitacion: async (id) => {
+    const response = await api.post(`/aspirantes/${id}/invitacion`);
+    return response.data;
+  },
   actualizarEstatus: async (id, estatus) => {
     const response = await api.patch(`/aspirantes/${id}/estatus`, { estatus });
     return response.data;
@@ -200,9 +234,75 @@ export const comunicadosService = {
     const response = await api.post('/comunicados', data);
     return response.data;
   },
+  solicitarUpload: async (file) => {
+    const response = await api.post('/comunicados/upload/solicitar', {
+      nombre: file.name,
+      tipo: file.type,
+      size: file.size,
+    });
+    return response.data;
+  },
+  solicitarUploads: async (files) => {
+    const response = await api.post('/comunicados/upload/lote', {
+      archivos: files.map((file) => ({
+        nombre: file.name,
+        tipo: file.type,
+        size: file.size,
+      })),
+    });
+    return response.data;
+  },
+  subirArchivo: async (uploadUrl, file) => {
+    const response = await fetch(uploadUrl, {
+      method: 'PUT',
+      body: file,
+      headers: { 'Content-Type': file.type },
+    });
+    if (!response.ok) {
+      throw new Error(`Error al subir "${file.name}": ${response.status}`);
+    }
+    return response;
+  },
   actualizar: async (id, data) => {
     const response = await api.patch(`/comunicados/${id}`, data);
     return response.data;
+  },
+};
+
+
+// Portal público (landing, sin sesión): usa `fetch` directo en lugar de `api`
+// para que un 401/429 del endpoint público NUNCA dispare el redirect a /login.
+export const publicService = {
+  getAvisos: async (limit = 6) => {
+    const res = await fetch(`/api/public/avisos?limit=${encodeURIComponent(limit)}`, {
+      headers: { Accept: 'application/json' },
+    });
+    if (!res.ok) throw new Error(`Avisos no disponibles (${res.status})`);
+    return res.json();
+  },
+  getResumen: async () => {
+    const res = await fetch('/api/public/resumen', {
+      headers: { Accept: 'application/json' },
+    });
+    if (!res.ok) throw new Error(`Resumen no disponible (${res.status})`);
+    return res.json();
+  },
+  getCatalogos: async () => {
+    const res = await fetch('/api/public/catalogos', {
+      headers: { Accept: 'application/json' },
+    });
+    if (!res.ok) throw new Error(`Catálogos no disponibles (${res.status})`);
+    return res.json();
+  },
+  preRegistro: async (payload) => {
+    const res = await fetch('/api/public/pre-registro', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const body = await res.json().catch(() => null);
+    if (!res.ok) throw new Error(body?.message || `No se pudo enviar el pre-registro (${res.status})`);
+    return body;
   },
 };
 
@@ -463,6 +563,10 @@ export const incidenciasService = {
 export const pagosService = {
   getConceptos: async () => {
     const response = await api.get('/pagos/conceptos');
+    return response.data;
+  },
+  getMisPagos: async () => {
+    const response = await api.get('/pagos/mis-pagos');
     return response.data;
   },
   getPorAlumno: async (alumnoId) => {

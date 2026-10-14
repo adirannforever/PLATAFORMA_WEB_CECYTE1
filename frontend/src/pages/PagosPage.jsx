@@ -4,12 +4,14 @@ import { pagosService, usuariosService, catalogosService } from '../services/api
 import { Plus, Eye, ArrowLeft, X } from 'lucide-react';
 import Skeleton from '../components/Skeleton';
 import styles from './PagosPage.module.css';
+import uiStyles from '../components/ui/ui.module.css';
 
 const ITEMS_PER_PAGE = 10;
 
 export default function PagosPage() {
   const { usuario } = useAuth();
   const esAdmin = usuario.rol === 'administrador';
+  const esAlumno = usuario.rol === 'alumno';
 
   const [alumnos, setAlumnos] = useState([]);
   const [alumnoSeleccionado, setAlumnoSeleccionado] = useState(null);
@@ -22,7 +24,7 @@ export default function PagosPage() {
   const [cargandoPagos, setCargandoPagos] = useState(false);
   const [error, setError] = useState('');
   const [exito, setExito] = useState('');
-  const [vista, setVista] = useState('lista');
+  const [vista, setVista] = useState(esAlumno ? 'detalle' : 'lista');
 
   // Filtros de pagos (solo aplican en vista detalle)
   const [filtroConcepto, setFiltroConcepto] = useState('');
@@ -53,6 +55,11 @@ export default function PagosPage() {
   // Cargar catálogos
   useEffect(() => {
     const cargarCatalogos = async () => {
+      if (esAlumno) {
+        setAlumnoSeleccionado(usuario);
+        return;
+      }
+
       try {
         const [alumnosRes, conceptosRes, ciclosRes, espRes, turnRes] = await Promise.all([
           usuariosService.getAll({ rol: 'alumno' }),
@@ -74,7 +81,7 @@ export default function PagosPage() {
       }
     };
     cargarCatalogos();
-  }, []);
+  }, [esAlumno, usuario]);
 
   // Función para extraer la letra del grupo
   const extraerLetra = (grupoNombre) => {
@@ -167,7 +174,9 @@ export default function PagosPage() {
     }
     setCargandoPagos(true);
     try {
-      const res = await pagosService.getPorAlumno(alumnoId);
+      const res = esAlumno
+        ? await pagosService.getMisPagos()
+        : await pagosService.getPorAlumno(alumnoId);
       let pagosData = res.data || [];
       if (filtroConcepto) {
         pagosData = pagosData.filter(p => p.concepto_id === parseInt(filtroConcepto));
@@ -191,7 +200,7 @@ export default function PagosPage() {
     } else {
       setPagos([]);
     }
-  }, [alumnoSeleccionado, filtroConcepto, filtroCiclo]);
+  }, [alumnoSeleccionado, filtroConcepto, filtroCiclo, esAlumno]);
 
   const handleVerPagos = (alumno) => {
     setAlumnoSeleccionado(alumno);
@@ -476,18 +485,20 @@ export default function PagosPage() {
           </p>
         </div>
         <div className={styles.headerActions}>
-          <button className={styles.btnVolver} onClick={handleVolverLista}>
-            <ArrowLeft size={16} /> Volver a lista
-          </button>
+          {!esAlumno && (
+            <button className={styles.btnVolver} onClick={handleVolverLista}>
+              <ArrowLeft size={16} /> Volver a lista
+            </button>
+          )}
           {esAdmin && (
-            <button className={styles.btnPrimary} onClick={handleAbrirModal}>
+            <button className={uiStyles.btnPrimary} onClick={handleAbrirModal}>
               <Plus size={18} /> Nuevo pago
             </button>
           )}
         </div>
       </div>
 
-      {alumnoSeleccionado && (
+      {alumnoSeleccionado && !esAlumno && (
         <div className={styles.alumnoInfoPanel}>
           <div className={styles.alumnoInfoRow}>
             <span className={styles.alumnoInfoLabel}>Nombre:</span>
@@ -705,10 +716,10 @@ export default function PagosPage() {
                 />
               </div>
               <div className={styles.modalActions}>
-                <button type="button" className={styles.btnSecondary} onClick={() => setModalAbierto(false)}>
+                <button type="button" className={uiStyles.btnSecondary} onClick={() => setModalAbierto(false)}>
                   Cancelar
                 </button>
-                <button type="submit" className={styles.btnPrimary} disabled={enviando}>
+                <button type="submit" className={uiStyles.btnPrimary} disabled={enviando}>
                   {enviando ? 'Registrando...' : 'Registrar pago'}
                 </button>
               </div>

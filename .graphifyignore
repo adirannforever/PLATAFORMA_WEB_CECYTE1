@@ -1,0 +1,5 @@
+node_modules
+.env*
+*.dump
+backend/src/db/snapshots
+.agents/COMPLIANCE_AUDIT.md

@@ -76,6 +76,8 @@ temp/
 # Dumps/pruebas locales de base de datos y salidas de investigacion
 /test_usuario.sql
 backend/scripts/*.txt
+# Reportes JSON generados por las herramientas de esquema/migraciones
+backend/scripts/reports/
 
 # Salidas de previsualizacion del motor de documentos (backend/python)
 backend/python/previsualizaciones/

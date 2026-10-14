@@ -1,0 +1,3 @@
+# Portal publico CECyTE Plantel 1 (proyecto academico, demo)
+User-agent: *
+Allow: /

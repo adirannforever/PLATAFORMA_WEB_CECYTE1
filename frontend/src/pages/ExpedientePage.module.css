@@ -10,14 +10,6 @@
   composes: errorAlert from '../styles/shared.module.css';
 }
 
-.btnDanger {
-  composes: dangerButton from '../styles/shared.module.css';
-}
-
-.btnSecondary {
-  composes: secondaryButton from '../styles/shared.module.css';
-}
-
 .subtitle {
   composes: pageSubtitle from '../styles/shared.module.css';
 }

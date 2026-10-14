@@ -14,14 +14,6 @@
   composes: formControl from '../styles/shared.module.css';
 }
 
-.btnSecondary {
-  composes: secondaryButton from '../styles/shared.module.css';
-}
-
-.btnPrimary {
-  composes: primaryButton from '../styles/shared.module.css';
-}
-
 .subtitle {
   composes: pageSubtitle from '../styles/shared.module.css';
 }

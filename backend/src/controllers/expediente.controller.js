@@ -1,17 +1,33 @@
 import { query } from '../config/db.js';
+import { tienePermiso } from '../services/permisos.service.js';
 
 export const getExpedienteAlumno = async (req, res) => {
-  const { alumno_id } = req.params;
+  const alumnoId = Number(req.params.alumno_id);
   const { user } = req;
+  if (!Number.isSafeInteger(alumnoId) || alumnoId < 1) {
+    return res.status(400).json({ success: false, message: 'ID de alumno inválido.' });
+  }
 
   try {
-    // Validar acceso (admin o el propio alumno)
     if (user.rol === 'alumno') {
       const alumno = await query('SELECT id FROM alumnos WHERE usuario_id = $1', [user.id]);
-      if (!alumno.rows[0] || alumno.rows[0].id !== parseInt(alumno_id)) {
+      if (!alumno.rows[0] || alumno.rows[0].id !== alumnoId) {
         return res.status(403).json({ success: false, message: 'Acceso denegado a este expediente.' });
       }
-    } else if (user.rol !== 'administrador') {
+    } else if (user.rol === 'administrador' || tienePermiso(user.rol, 'expediente.ver_todos')) {
+      // Control escolar, directivos y administradores pueden consultar todos los expedientes.
+    } else if (tienePermiso(user.rol, 'expediente.ver')) {
+      const tutorAcceso = await query(
+        `SELECT 1
+         FROM alumnos a
+         JOIN grupos g ON g.id = a.grupo_actual_id
+         WHERE a.id = $1 AND g.tutor_id = $2 AND g.activo = TRUE`,
+        [alumnoId, user.id]
+      );
+      if (!tutorAcceso.rows[0]) {
+        return res.status(403).json({ success: false, message: 'Acceso denegado a este expediente.' });
+      }
+    } else {
       return res.status(403).json({ success: false, message: 'Acceso denegado.' });
     }
 
@@ -19,7 +35,7 @@ export const getExpedienteAlumno = async (req, res) => {
     // Para evitar duplicar código, moveremos la lógica a un helper, pero por ahora la importamos directamente.
     // Aquí usamos la función que está en periodos.controller.js, pero como no podemos importar fácilmente,
     // la reescribimos inline o la extraemos a un helper.
-    const estado = await obtenerEstadoAlumno(alumno_id);
+    const estado = await obtenerEstadoAlumno(alumnoId);
 
     // Obtener documentos
     const sql = `
@@ -39,7 +55,7 @@ export const getExpedienteAlumno = async (req, res) => {
       ORDER BY cd.etapa, cd.nombre
     `;
 
-    const result = await query(sql, [alumno_id]);
+    const result = await query(sql, [alumnoId]);
 
     return res.json({
       success: true,
@@ -148,7 +164,11 @@ const obtenerEstadoAlumno = async (alumno_id) => {
 export const actualizarDocumentoExpediente = async (req, res) => {
   const { alumno_id, documento_id, entregado, observaciones } = req.body;
 
-  if (req.user.rol !== 'administrador') {
+  if (
+    req.user.rol !== 'administrador' &&
+    !tienePermiso(req.user.rol, 'expediente.editar') &&
+    !tienePermiso(req.user.rol, 'expediente.crear')
+  ) {
     return res.status(403).json({ success: false, message: 'Acceso denegado.' });
   }
 

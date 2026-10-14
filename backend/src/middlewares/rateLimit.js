@@ -3,7 +3,7 @@
 
 const stores = new Map();
 
-function createLimiter({
+export function createLimiter({
   windowMs = 60 * 1000,
   max = 100,
   message = 'Demasiadas solicitudes desde esta IP, por favor intenta más tarde.',
@@ -22,7 +22,7 @@ function createLimiter({
   }, 5 * 60 * 1000).unref();
 
   return (req, res, next) => {
-    const ip = req.ip || req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown';
+    const ip = req.ip || req.socket?.remoteAddress || 'unknown';
     const now = Date.now();
 
     let record = store.get(ip);

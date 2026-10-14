@@ -84,6 +84,73 @@
   --color-gray-600: #4a6357;
   --color-gray-800: var(--color-text);
   --color-gray-900: #111a15;
+
+  /* ============================================================
+     DESIGN TOKENS (derived) — Phase 1 admin dashboard redesign.
+     No new brand colors: only tints/shades of the existing greens
+     and orange, plus sparing semantic colors. Documented in the
+     final design-token table.
+     ============================================================ */
+
+  /* Green scale (primary family) — hover, subtle bg, borders */
+  --green-50: #f2f9f4;
+  --green-100: #e8f5ed;   /* = --color-primary-muted */
+  --green-200: #cfe7d8;
+  --green-300: #a7d4b8;
+  --green-400: #6bb388;
+  --green-500: #2d8a4e;   /* = --color-primary-light */
+  --green-600: #1a6b35;   /* = --color-primary */
+  --green-700: #135228;   /* = --color-primary-dark */
+  --green-800: #0d421a;   /* = --color-primary-darker */
+
+  /* Orange accent scale */
+  --orange-50: #fef3ec;
+  --orange-100: #fde3d4;
+  --orange-400: #f79259;
+  --orange-500: #f37238;  /* = --color-accent-orange */
+  --orange-600: #d95c2a;  /* = --color-accent-orange-dark */
+  --orange-700: #b3491f;
+
+  /* Semantic status (sparing, harmonized) */
+  --status-success: #1a6b35;
+  --status-success-bg: #e8f5ed;
+  --status-warning: #b6791f;
+  --status-warning-bg: #fdf3df;
+  --status-danger: #b91c1c;
+  --status-danger-bg: #fdecec;
+  --status-info: #1a5276;
+  --status-info-bg: #eaf2f8;
+
+  /* Chart series (brand-first, distinguishable, AA on white labels) */
+  --chart-1: #1a6b35;
+  --chart-2: #f37238;
+  --chart-3: #2d8a4e;
+  --chart-4: #c8992a;
+  --chart-5: #1a5276;
+  --chart-6: #6bb388;
+
+  /* Radii (soft) */
+  --radius-card: 0.875rem;
+
+  /* Shadows (soft, low elevation) */
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 6%), 0 1px 3px rgb(15 23 42 / 4%);
+  --shadow-card-hover: 0 4px 12px rgb(15 23 42 / 10%);
+  --shadow-popover: 0 12px 32px rgb(15 23 42 / 18%);
+
+  /* Transitions (150-200ms) */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 180ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Z-index scale */
+  --z-base: 1;
+  --z-sticky: 100;
+  --z-drawer: 200;
+  --z-overlay: 900;
+  --z-modal: 1000;
+  --z-toast: 1100;
+
+  /* Focus ring (visible, AA) */
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--color-accent-orange) 55%, transparent);
 }
 
 *,

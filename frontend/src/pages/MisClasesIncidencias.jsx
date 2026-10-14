@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { gruposService, incidenciasService } from '../services/api';
 import Skeleton from '../components/Skeleton';
 import styles from './MisClasesPage.module.css';
+import uiStyles from '../components/ui/ui.module.css';
 import { TIPO_INCIDENCIA, getSubtipos } from '../config/incidencias';
 
 export default function MisClasesIncidencias({ grupoId }) {
@@ -165,7 +166,7 @@ export default function MisClasesIncidencias({ grupoId }) {
       {exito && <div className={styles.successMsg}>{exito}</div>}
 
       <div className={styles.headerAcciones}>
-        <button className={styles.btnPrimary} onClick={handleAbrirCrear}>
+        <button className={uiStyles.btnPrimary} onClick={handleAbrirCrear}>
           + Nueva incidencia
         </button>
       </div>
@@ -313,10 +314,10 @@ export default function MisClasesIncidencias({ grupoId }) {
               </div>
 
               <div className={styles.modalActions}>
-                <button type="button" className={styles.btnSecondary} onClick={() => setModalAbierto(false)}>
+                <button type="button" className={uiStyles.btnSecondary} onClick={() => setModalAbierto(false)}>
                   Cancelar
                 </button>
-                <button type="submit" className={styles.btnPrimary} disabled={enviando}>
+                <button type="submit" className={uiStyles.btnPrimary} disabled={enviando}>
                   {enviando ? 'Guardando...' : 'Guardar'}
                 </button>
               </div>

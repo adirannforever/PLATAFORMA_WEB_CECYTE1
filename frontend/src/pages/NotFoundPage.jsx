@@ -1,6 +1,7 @@
 // src/pages/NotFoundPage.jsx
 import { useNavigate } from 'react-router-dom';
 import styles from './NotFoundPage.module.css';
+import uiStyles from '../components/ui/ui.module.css';
 
 export default function NotFoundPage() {
   const navigate = useNavigate();
@@ -22,10 +23,10 @@ export default function NotFoundPage() {
         </p>
 
         <div className={styles.actions}>
-          <button className={styles.btnPrimary} onClick={() => navigate('/dashboard')}>
+          <button className={uiStyles.btnPrimary} onClick={() => navigate('/dashboard')}>
             Ir al inicio
           </button>
-          <button className={styles.btnSecondary} onClick={() => navigate(-1)}>
+          <button className={uiStyles.btnSecondary} onClick={() => navigate(-1)}>
             Regresar
           </button>
         </div>

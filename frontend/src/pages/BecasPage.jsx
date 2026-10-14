@@ -5,6 +5,7 @@ import { becasService, catalogosService } from '../services/api';
 import { Plus, Edit, Trash2, Eye, Search, X } from 'lucide-react';
 import Skeleton from '../components/Skeleton';
 import styles from './BecasPage.module.css';
+import uiStyles from '../components/ui/ui.module.css';
 
 const ESTATUS_OPCIONES = ['activo', 'suspendido', 'concluido'];
 const ESTATUS_ETIQUETA = { activo: 'Activo', suspendido: 'Suspendido', concluido: 'Concluido' };
@@ -219,7 +220,7 @@ export default function BecasPage() {
           <p className={styles.subtitle}>{totalRegistros} beca(s) registrada(s)</p>
         </div>
         {esAdmin && (
-          <button className={styles.btnPrimary} onClick={handleAbrirCrear}>
+          <button className={uiStyles.btnPrimary} onClick={handleAbrirCrear}>
             <Plus size={18} /> Nueva beca
           </button>
         )}
@@ -502,10 +503,10 @@ export default function BecasPage() {
                 </select>
               </div>
               <div className={styles.modalActions}>
-                <button type="button" className={styles.btnSecondary} onClick={() => setModalAbierto(false)}>
+                <button type="button" className={uiStyles.btnSecondary} onClick={() => setModalAbierto(false)}>
                   Cancelar
                 </button>
-                <button type="submit" className={styles.btnPrimary} disabled={enviando}>
+                <button type="submit" className={uiStyles.btnPrimary} disabled={enviando}>
                   {enviando ? 'Guardando...' : 'Guardar'}
                 </button>
               </div>

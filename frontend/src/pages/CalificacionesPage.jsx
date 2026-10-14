@@ -8,6 +8,7 @@ import {
 } from '../services/api';
 import Skeleton from '../components/Skeleton';
 import styles from './CalificacionesPage.module.css';
+import uiStyles from '../components/ui/ui.module.css';
 import { parcialesDesdePeriodos, semestresDesdeGrupos } from '../config/academicos';
 
 
@@ -661,7 +662,7 @@ export default function CalificacionesPage() {
                   {expandida && (
                     <div className={styles.materiaCardAcciones}>
                       <button
-                        className={styles.btnPrimary}
+                        className={uiStyles.btnPrimary}
                         onClick={() => verCalificacionesMateria(materia.id)}
                       >
                         Ver calificaciones
@@ -734,20 +735,20 @@ export default function CalificacionesPage() {
               />
               {inputError && <span className={styles.inputErrorText}>{inputError}</span>}
             </div>
-            <button className={styles.btnPrimary} onClick={handleGuardarIndividual} disabled={guardando || !!inputError}>
+            <button className={uiStyles.btnPrimary} onClick={handleGuardarIndividual} disabled={guardando || !!inputError}>
               {guardando ? 'Guardando...' : 'Guardar'}
             </button>
-            <button className={styles.btnSecondary} onClick={handleCancelarIndividual}>Cancelar</button>
+            <button className={uiStyles.btnSecondary} onClick={handleCancelarIndividual}>Cancelar</button>
           </div>
         )}
 
         {modoColumna && (
           <div className={styles.columnaActions}>
             <span className={styles.columnaLabel}>️ Editando Parcial {parcialSeleccionado} – {alumnosList.length} alumnos</span>
-            <button className={styles.btnPrimary} onClick={guardarColumna} disabled={guardandoColumna}>
+            <button className={uiStyles.btnPrimary} onClick={guardarColumna} disabled={guardandoColumna}>
               <IconSave /> {guardandoColumna ? 'Guardando...' : 'Guardar todos'}
             </button>
-            <button className={styles.btnSecondary} onClick={cancelarColumna}>Cancelar</button>
+            <button className={uiStyles.btnSecondary} onClick={cancelarColumna}>Cancelar</button>
           </div>
         )}
 

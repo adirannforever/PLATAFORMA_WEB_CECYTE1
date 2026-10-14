@@ -11,11 +11,22 @@ export const validate = (schema, target = 'body') => async (req, res, next) => {
     if (!parsed.success) {
       return res.status(400).json({
         success: false,
+        code: 'VALIDATION_ERROR',
         message: 'Datos inválidos',
-        errors: parsed.error.issues,
+        requestId: req.requestId,
+        errors: parsed.error.issues.map((issue) => ({
+          path: issue.path.join('.'),
+          code: issue.code,
+          message: issue.message,
+        })),
       });
     }
-    req[target] = parsed.data;
+    Object.defineProperty(req, target, {
+      configurable: true,
+      enumerable: true,
+      writable: true,
+      value: parsed.data,
+    });
     next();
   } catch (err) {
     next(err);

@@ -5,6 +5,7 @@ import { becasService, catalogosService, usuariosService } from '../services/api
 import { Search, ArrowLeft, Plus, X, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import Skeleton from '../components/Skeleton';
 import styles from './BecasDetallePage.module.css';
+import uiStyles from '../components/ui/ui.module.css';
 
 const ESTATUS_PAGO_ETIQUETA = {
   cursando: 'Cursando',
@@ -598,10 +599,10 @@ export default function BecasDetallePage() {
               </div>
 
               <div className={styles.modalActions}>
-                <button type="button" className={styles.btnSecondary} onClick={() => setModalAsignarAbierto(false)}>
+                <button type="button" className={uiStyles.btnSecondary} onClick={() => setModalAsignarAbierto(false)}>
                   Cancelar
                 </button>
-                <button type="submit" className={styles.btnPrimary} disabled={enviando}>
+                <button type="submit" className={uiStyles.btnPrimary} disabled={enviando}>
                   {enviando ? 'Asignando...' : 'Asignar beca'}
                 </button>
               </div>

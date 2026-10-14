@@ -93,7 +93,7 @@ CREATE TABLE usuarios (
   apellidos       VARCHAR(150) NOT NULL,
   email           VARCHAR(255) NOT NULL UNIQUE,
   password_hash   VARCHAR(255) NOT NULL,
-  rol             VARCHAR(20)  NOT NULL CHECK (rol IN ('alumno','docente','administrador')),
+  rol             VARCHAR(20)  NOT NULL CHECK (rol IN ('alumno','docente','administrador','control_escolar','directivo','tutor','aspirante')),
   telefono        VARCHAR(20),
   activo          BOOLEAN DEFAULT TRUE,
   fecha_registro  TIMESTAMPTZ DEFAULT NOW()
@@ -175,11 +175,26 @@ CREATE TABLE aspirantes (
   especialidad_id    INTEGER NOT NULL REFERENCES especialidades(id),
   turno_preferido_id INTEGER NOT NULL REFERENCES turnos(id),
   ciclo_id           INTEGER NOT NULL REFERENCES ciclos_escolares(id),
+  usuario_id         INTEGER UNIQUE REFERENCES usuarios(id) ON DELETE SET NULL,
   estatus            VARCHAR(30) NOT NULL DEFAULT 'registrado' CHECK (
                        estatus IN ('registrado','documentos_pendientes','ficha_pagada','examen_aprobado','aceptado','rechazado','inscrito')
                      ),
   fecha_registro     TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE TABLE aspirante_invitaciones (
+  id                 BIGSERIAL PRIMARY KEY,
+  aspirante_id       INTEGER NOT NULL REFERENCES aspirantes(id) ON DELETE CASCADE,
+  token_hash         CHAR(64) NOT NULL UNIQUE,
+  vence_en           TIMESTAMPTZ NOT NULL,
+  usado_en           TIMESTAMPTZ,
+  creado_por         INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
+  creado_en          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_aspirante_invitaciones_pendientes
+  ON aspirante_invitaciones (aspirante_id, vence_en)
+  WHERE usado_en IS NULL;
 
 
 CREATE TABLE historial_grupos_alumno (
@@ -386,7 +401,10 @@ CREATE TABLE comunicados (
   fecha_publicacion  TIMESTAMPTZ DEFAULT NOW(),
   activo             BOOLEAN DEFAULT TRUE,
   dirigido_a_rol     VARCHAR(20) CHECK (dirigido_a_rol IN ('alumno','docente','administrador')),
-  dirigido_a_grupo   INTEGER REFERENCES grupos(id)
+  dirigido_a_grupo   INTEGER REFERENCES grupos(id),
+  archivos           JSONB NOT NULL DEFAULT '[]'::jsonb
+                     CONSTRAINT comunicados_archivos_array_check
+                     CHECK (jsonb_typeof(archivos) = 'array')
 );
 
 
@@ -563,4 +581,3 @@ CREATE INDEX idx_auditoria_tabla ON auditoria_logs(tabla_afectada);
 CREATE INDEX idx_aspirantes_curp ON aspirantes(curp);
 CREATE INDEX idx_aspirantes_ciclo ON aspirantes(ciclo_id);
 CREATE INDEX idx_aspirantes_estatus ON aspirantes(estatus);
-
