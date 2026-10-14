@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { gruposService, asistenciaService } from '../services/api';
 import Skeleton from '../components/Skeleton';
 import styles from './MisClasesPage.module.css';
+import uiStyles from '../components/ui/ui.module.css';
 
 export default function MisClasesAsistencias({ grupoId }) {
   const { usuario } = useAuth();
@@ -173,7 +174,7 @@ export default function MisClasesAsistencias({ grupoId }) {
 
         {materiaSeleccionada && !cargando && (
           <button
-            className={styles.btnPrimary}
+            className={uiStyles.btnPrimary}
             onClick={handleGuardar}
             disabled={guardando || alumnos.length === 0}
           >

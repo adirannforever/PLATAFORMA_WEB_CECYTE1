@@ -1,42 +1,45 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { usePermissions } from './hooks/usePermissions';
+import { Suspense, lazy } from 'react';
+import React from 'react';
 
 import CookieBanner from './components/CookieBanner';
+import Skeleton from './components/Skeleton';
 
 import DashboardLayout from './components/layout/DashboardLayout';
-
-import LandingPage from './pages/LandingPage';
-import LoginPage from './pages/LoginPage';
-import ActivarCuentaAspirantePage from './pages/ActivarCuentaAspirantePage';
-import DashboardPage from './pages/DashboardPage';
-import MiSolicitudAspirantePage from './pages/MiSolicitudAspirantePage';
-import ComunicadosPage from './pages/ComunicadosPage';
-import CalificacionesPage from './pages/CalificacionesPage';
-import GruposPage from './pages/GruposPage';
-import UsuariosPage from './pages/UsuariosPage';
-import AspirantesPage from './pages/AspirantesPage';
-import InscripcionesPage from './pages/InscripcionesPage';
-import ReinscripcionPage from './pages/ReinscripcionPage';
-import AsistenciaPage from './pages/AsistenciaPage';
-import NotFoundPage from './pages/NotFoundPage';
-import LegalPrivacidad from './pages/LegalPrivacidad';
-import LegalTerminos from './pages/LegalTerminos';
-import LegalCookies from './pages/LegalCookies';
-import ExpedientePage from './pages/ExpedientePage';
-import BecasPage from './pages/BecasPage';
-import BecasDetallePage from './pages/BecasDetallePage';
-import PagosPage from './pages/PagosPage';
-import ServicioSocialPage from './pages/ServicioSocialPage';
-import TitulacionPage from './pages/TitulacionPage';
-import ConfiguracionAcademicaPage from './pages/ConfiguracionAcademicaPage';
-import IncidenciasPage from './pages/IncidenciasPage';
-import AuditoriaPage from './pages/AuditoriaPage';
-import ReportesPage from './pages/ReportesPage';
-import HorariosPage from './pages/HorariosPage';
-import MisClasesPage from './pages/MisClasesPage';
-import MisClasesDetallePage from './pages/MisClasesDetallePage';
 import NetworkStatus from './components/NetworkStatus';
+
+const LandingPage = React.lazy(() => import('./pages/LandingPage'));
+const LoginPage = React.lazy(() => import('./pages/LoginPage'));
+const ActivarCuentaAspirantePage = React.lazy(() => import('./pages/ActivarCuentaAspirantePage'));
+const DashboardPage = React.lazy(() => import('./pages/DashboardPage'));
+const MiSolicitudAspirantePage = React.lazy(() => import('./pages/MiSolicitudAspirantePage'));
+const ComunicadosPage = React.lazy(() => import('./pages/ComunicadosPage'));
+const CalificacionesPage = React.lazy(() => import('./pages/CalificacionesPage'));
+const GruposPage = React.lazy(() => import('./pages/GruposPage'));
+const UsuariosPage = React.lazy(() => import('./pages/UsuariosPage'));
+const AspirantesPage = React.lazy(() => import('./pages/AspirantesPage'));
+const InscripcionesPage = React.lazy(() => import('./pages/InscripcionesPage'));
+const ReinscripcionPage = React.lazy(() => import('./pages/ReinscripcionPage'));
+const AsistenciaPage = React.lazy(() => import('./pages/AsistenciaPage'));
+const NotFoundPage = React.lazy(() => import('./pages/NotFoundPage'));
+const LegalPrivacidad = React.lazy(() => import('./pages/LegalPrivacidad'));
+const LegalTerminos = React.lazy(() => import('./pages/LegalTerminos'));
+const LegalCookies = React.lazy(() => import('./pages/LegalCookies'));
+const ExpedientePage = React.lazy(() => import('./pages/ExpedientePage'));
+const BecasPage = React.lazy(() => import('./pages/BecasPage'));
+const BecasDetallePage = React.lazy(() => import('./pages/BecasDetallePage'));
+const PagosPage = React.lazy(() => import('./pages/PagosPage'));
+const ServicioSocialPage = React.lazy(() => import('./pages/ServicioSocialPage'));
+const TitulacionPage = React.lazy(() => import('./pages/TitulacionPage'));
+const ConfiguracionAcademicaPage = React.lazy(() => import('./pages/ConfiguracionAcademicaPage'));
+const IncidenciasPage = React.lazy(() => import('./pages/IncidenciasPage'));
+const AuditoriaPage = React.lazy(() => import('./pages/AuditoriaPage'));
+const ReportesPage = React.lazy(() => import('./pages/ReportesPage'));
+const HorariosPage = React.lazy(() => import('./pages/HorariosPage'));
+const MisClasesPage = React.lazy(() => import('./pages/MisClasesPage'));
+const MisClasesDetallePage = React.lazy(() => import('./pages/MisClasesDetallePage'));
 
 const RutaProtegida = ({ children, rolesPermitidos, permisos }) => {
   const { usuario, cargando } = useAuth();
@@ -87,7 +90,8 @@ export default function App() {
     <>
       <CookieBanner />
       <NetworkStatus/>
-      <Routes>
+      <Suspense fallback={<div className="loading-screen" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--color-gray-50)' }}><Skeleton variant="text" width="200px" height="1.5rem" /><Skeleton variant="text" width="200px" height="1.5rem" /><Skeleton variant="text" width="200px" height="1.5rem" /></div>}>
+        <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/activar-cuenta" element={<ActivarCuentaAspirantePage />} />
         <Route
@@ -340,6 +344,7 @@ export default function App() {
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>
+      </Suspense>
     </>
   );
 }

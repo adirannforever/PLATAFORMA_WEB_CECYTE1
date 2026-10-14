@@ -6,6 +6,7 @@ import { INSTITUCION } from '../config/institucion';
 import Skeleton from '../components/Skeleton';
 import ComunicadoAttachments from '../components/ComunicadoAttachments';
 import styles from './ComunicadosPage.module.css';
+import uiStyles from '../components/ui/ui.module.css';
 import { FileText, Plus, X } from 'lucide-react';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -74,17 +75,20 @@ export default function ComunicadosPage() {
     setError('');
     setEnviando(true);
     try {
-      const uploaded = [];
-      for (const file of archivos) {
-        const upload = await comunicadosService.solicitarUpload(file);
-        await comunicadosService.subirArchivo(upload.data.uploadUrl, file);
-        uploaded.push({
-          key: upload.data.key,
-          nombre: file.name,
-          tipo: file.type,
-          size: file.size,
-        });
-      }
+      const upload = await comunicadosService.solicitarUploads(archivos);
+      const subidas = await Promise.allSettled(
+        upload.data.archivos.map((archivo, index) =>
+          comunicadosService.subirArchivo(archivo.uploadUrl, archivos[index]),
+        ),
+      );
+      const fallida = subidas.find((resultado) => resultado.status === 'rejected');
+      if (fallida) throw fallida.reason;
+      const uploaded = upload.data.archivos.map(({ key, nombre, tipo, size }) => ({
+        key,
+        nombre,
+        tipo,
+        size,
+      }));
       await comunicadosService.crear({ ...form, archivos: uploaded });
       setArchivos([]);
       setForm({ titulo: '', contenido: '', dirigido_a_rol: null, dirigido_a_grupo: null });
@@ -138,7 +142,7 @@ export default function ComunicadosPage() {
           <p className={styles.subtitle}>Avisos y noticias del {INSTITUCION.nombre}</p>
         </div>
         {isAdmin && (
-          <button className={styles.btnPrimary} onClick={() => setModalAbierto(true)}>
+          <button className={uiStyles.btnPrimary} onClick={() => setModalAbierto(true)}>
             <Plus size={18} aria-hidden="true" style={{ marginRight: '6px' }} />
             Nuevo comunicado
           </button>
@@ -234,7 +238,9 @@ export default function ComunicadosPage() {
                 />
               </div>
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="comunicado-archivos">Imágenes y documentos</label>
+                <label className={styles.label} htmlFor="comunicado-archivos">
+                  Adjuntar varios archivos (opcional)
+                </label>
                 <input
                   id="comunicado-archivos"
                   className={styles.fileInput}
@@ -244,7 +250,9 @@ export default function ComunicadosPage() {
                   accept="image/jpeg,image/png,image/webp,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
                   onChange={handleFilesChange}
                 />
-                <small className={styles.fileHint}>Hasta {MAX_FILES} archivos; imágenes o documentos de máximo 10 MB cada uno.</small>
+                <small className={styles.fileHint}>
+                  Selecciona varios archivos juntos (hasta {MAX_FILES}); imágenes o documentos de máximo 10 MB cada uno.
+                </small>
                 {archivos.length > 0 && (
                   <ul className={styles.selectedFiles}>
                     {archivos.map((file, index) => (
@@ -305,13 +313,13 @@ export default function ComunicadosPage() {
               <div className={styles.modalActions}>
                 <button
                   type="button"
-                  className={styles.btnSecondary}
+                  className={uiStyles.btnSecondary}
                   disabled={enviando}
                   onClick={() => setModalAbierto(false)}
                 >
                   Cancelar
                 </button>
-                <button type="submit" className={styles.btnPrimary} disabled={enviando}>
+                <button type="submit" className={uiStyles.btnPrimary} disabled={enviando}>
                   {enviando ? 'Publicando...' : 'Publicar'}
                 </button>
               </div>

@@ -66,6 +66,17 @@ export const usuariosService = {
     const response = await api.post('/usuarios', data);
     return response.data;
   },
+  importar: async (csv, defaultPassword) => {
+    const response = await api.post('/usuarios/importar', {
+      csv,
+      ...(defaultPassword ? { defaultPassword } : {}),
+    });
+    return response.data;
+  },
+  descargarPlantillaImportacion: async () => {
+    const response = await api.get('/usuarios/importar/plantilla', { responseType: 'blob' });
+    return response.data;
+  },
   actualizar: async (id, data) => {
     const response = await api.patch(`/usuarios/${id}`, data);
     return response.data;
@@ -228,6 +239,16 @@ export const comunicadosService = {
       nombre: file.name,
       tipo: file.type,
       size: file.size,
+    });
+    return response.data;
+  },
+  solicitarUploads: async (files) => {
+    const response = await api.post('/comunicados/upload/lote', {
+      archivos: files.map((file) => ({
+        nombre: file.name,
+        tipo: file.type,
+        size: file.size,
+      })),
     });
     return response.data;
   },

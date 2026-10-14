@@ -5,6 +5,7 @@ import { incidenciasService, usuariosService, catalogosService } from '../servic
 import { Plus, Edit, Trash2, X, Search, Filter, CheckCircle, AlertCircle, User } from 'lucide-react';
 import Skeleton from '../components/Skeleton';
 import styles from './IncidenciasPage.module.css';
+import uiStyles from '../components/ui/ui.module.css';
 import { TIPO_INCIDENCIA, SUBTIPOS_POR_TIPO, TIPO_COLORS } from '../config/incidencias';
 import { semestresDesdeGrupos } from '../config/academicos';
 
@@ -368,7 +369,7 @@ export default function IncidenciasPage() {
           <h1 className={styles.title}>Incidencias</h1>
         </div>
         {(esAdmin || esDocente) && (
-          <button className={styles.btnPrimary} onClick={handleAbrirCrear}>
+          <button className={uiStyles.btnPrimary} onClick={handleAbrirCrear}>
             <Plus size={18} /> Nueva incidencia
           </button>
         )}
@@ -856,12 +857,12 @@ export default function IncidenciasPage() {
               <div className={styles.modalActions}>
                 <button
                   type="button"
-                  className={styles.btnSecondary}
+                  className={uiStyles.btnSecondary}
                   onClick={() => setModalAbierto(false)}
                 >
                   Cancelar
                 </button>
-                <button type="submit" className={styles.btnPrimary} disabled={enviando}>
+                <button type="submit" className={uiStyles.btnPrimary} disabled={enviando}>
                   {enviando ? 'Guardando...' : 'Guardar'}
                 </button>
               </div>
@@ -899,12 +900,12 @@ export default function IncidenciasPage() {
               <div className={styles.modalActions}>
                 <button
                   type="button"
-                  className={styles.btnSecondary}
+                  className={uiStyles.btnSecondary}
                   onClick={() => setResolverModal({ open: false, id: null })}
                 >
                   Cancelar
                 </button>
-                <button type="submit" className={styles.btnPrimary} disabled={resolviendo}>
+                <button type="submit" className={uiStyles.btnPrimary} disabled={resolviendo}>
                   {resolviendo ? 'Resolviendo...' : 'Resolver'}
                 </button>
               </div>
@@ -927,10 +928,10 @@ export default function IncidenciasPage() {
               <p>{confirmModal.message}</p>
             </div>
             <div className={styles.modalActions}>
-              <button className={styles.btnSecondary} onClick={cerrarConfirmacion}>
+              <button className={uiStyles.btnSecondary} onClick={cerrarConfirmacion}>
                 Cancelar
               </button>
-              <button className={styles.btnDanger} onClick={confirmModal.onConfirm}>
+              <button className={uiStyles.btnDanger} onClick={confirmModal.onConfirm}>
                 Confirmar
               </button>
             </div>

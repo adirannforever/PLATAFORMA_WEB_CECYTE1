@@ -10,6 +10,7 @@ import {
   Clock
 } from 'lucide-react';
 import styles from './HorariosPage.module.css';
+import uiStyles from '../components/ui/ui.module.css';
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
 
@@ -556,6 +557,11 @@ export default function HorariosPage() {
     if (validFiles.length !== files.length) {
       setError('Algunos archivos no son válidos (formato o tamaño)');
     }
+    if (batchItems.length + batchForm.archivos.length + validFiles.length > 100) {
+      setError('Puedes cargar hasta 100 horarios en cada lote.');
+      e.target.value = '';
+      return;
+    }
     setBatchForm(prev => ({ ...prev, archivos: [...prev.archivos, ...validFiles] }));
     e.target.value = '';
   };
@@ -613,47 +619,36 @@ export default function HorariosPage() {
       setError('No hay elementos para guardar');
       return;
     }
+    if (batchItems.length > 100) {
+      setError('Puedes cargar hasta 100 horarios en cada lote.');
+      return;
+    }
 
     setBatchSubiendo(true);
     setError('');
     try {
-      const resultados = [];
-      const errores = [];
+      const solicitudes = batchItems.map(({ archivo, _tempId, ...horario }) => horario);
+      const response = await horariosService.uploadBatch(solicitudes);
+      if (!response.success) throw new Error(response.message || 'No se pudo iniciar la carga masiva.');
 
-      for (const item of batchItems) {
-        try {
-          const res = await horariosService.solicitarUpload(
-            item.nombre,
-            item.tipo_mime,
-            item.grupo_id,
-            item.semestre,
-            item.ciclo_id,
-            item.especialidad_id,
-            item.turno_id,
-            item.tipo_horario,
-            item.descripcion
-          );
-          if (!res.success) {
-            errores.push({ nombre: item.nombre, error: res.message || 'Error al solicitar subida' });
-            continue;
-          }
-
-          const uploadRes = await horariosService.subirArchivo(res.data.uploadUrl, item.archivo);
-          if (!uploadRes.ok) {
-            errores.push({ nombre: item.nombre, error: `Error al subir archivo: ${uploadRes.status}` });
-            continue;
-          }
-
-          resultados.push({ nombre: item.nombre, success: true });
-        } catch (err) {
-          errores.push({ nombre: item.nombre, error: err.message });
+      const creados = response.data.creados || [];
+      const errores = [...(response.data.errores || [])];
+      const subidas = await Promise.allSettled(creados.map((item) =>
+        horariosService.subirArchivo(item.uploadUrl, batchItems[item.index].archivo),
+      ));
+      subidas.forEach((resultado, index) => {
+        if (resultado.status === 'rejected') {
+          errores.push({
+            nombre: creados[index].nombre,
+            error: resultado.reason?.message || 'No se pudo subir el archivo.',
+          });
         }
-      }
+      });
 
       if (errores.length > 0) {
-        setError(`${errores.length} archivos fallaron. Revisa los logs.`);
+        setError(`${errores.length} de ${batchItems.length} archivos no se pudieron cargar. ${errores[0].error || ''}`);
       } else {
-        setExito(`${resultados.length} horarios subidos correctamente`);
+        setExito(`${creados.length} horarios subidos correctamente`);
       }
 
       setModalBatchOpen(false);
@@ -799,10 +794,10 @@ export default function HorariosPage() {
             <p>{confirmModal.message}</p>
           </div>
           <div className={styles.modalActions}>
-            <button className={styles.btnSecondary} onClick={() => setConfirmModal({ open: false, message: '', onConfirm: null })}>
+            <button className={uiStyles.btnSecondary} onClick={() => setConfirmModal({ open: false, message: '', onConfirm: null })}>
               Cancelar
             </button>
-            <button className={styles.btnDanger} onClick={confirmModal.onConfirm}>
+            <button className={uiStyles.btnDanger} onClick={confirmModal.onConfirm}>
               Confirmar
             </button>
           </div>
@@ -945,8 +940,8 @@ export default function HorariosPage() {
             </div>
 
             <div className={styles.modalActions}>
-              <button className={styles.btnSecondary} onClick={() => setModalUploadOpen(false)}>Cancelar</button>
-              <button className={styles.btnPrimary} onClick={handleSubmitUpload} disabled={subiendo || !grupoEncontrado}>
+              <button className={uiStyles.btnSecondary} onClick={() => setModalUploadOpen(false)}>Cancelar</button>
+              <button className={uiStyles.btnPrimary} onClick={handleSubmitUpload} disabled={subiendo || !grupoEncontrado}>
                 {subiendo ? 'Subiendo...' : 'Subir horario'}
               </button>
             </div>
@@ -1077,8 +1072,8 @@ export default function HorariosPage() {
             </div>
 
             <div className={styles.modalActions}>
-              <button className={styles.btnSecondary} onClick={() => setModalEditOpen(false)}>Cancelar</button>
-              <button className={styles.btnPrimary} onClick={handleSubmitEditar} disabled={subiendo || !editGrupoEncontrado}>
+              <button className={uiStyles.btnSecondary} onClick={() => setModalEditOpen(false)}>Cancelar</button>
+              <button className={uiStyles.btnPrimary} onClick={handleSubmitEditar} disabled={subiendo || !editGrupoEncontrado}>
                 {subiendo ? 'Guardando...' : 'Guardar cambios'}
               </button>
             </div>
@@ -1219,7 +1214,7 @@ export default function HorariosPage() {
                   <span className={styles.fileCount}>{batchForm.archivos.length} archivo(s) pendientes</span>
                 </div>
               </div>
-              <button className={styles.btnPrimary} onClick={generarBatchItems} disabled={!batchGrupoEncontrado} style={{ alignSelf: 'flex-end' }}>
+              <button className={uiStyles.btnPrimary} onClick={generarBatchItems} disabled={!batchGrupoEncontrado} style={{ alignSelf: 'flex-end' }}>
                 <Plus size={16} /> Generar
               </button>
             </div>
@@ -1262,8 +1257,8 @@ export default function HorariosPage() {
                 </table>
               </div>
               <div className={styles.batchActions}>
-                <button className={styles.btnSecondary} onClick={() => setBatchItems([])}>Vaciar</button>
-                <button className={styles.btnPrimary} onClick={guardarBatch} disabled={batchSubiendo}>
+                <button className={uiStyles.btnSecondary} onClick={() => setBatchItems([])}>Vaciar</button>
+                <button className={uiStyles.btnPrimary} onClick={guardarBatch} disabled={batchSubiendo}>
                   {batchSubiendo ? 'Guardando...' : `Guardar ${batchItems.length} horario(s)`}
                 </button>
               </div>
@@ -1382,9 +1377,9 @@ export default function HorariosPage() {
             )}
 
             <div className={styles.modalActions}>
-              <button className={styles.btnSecondary} onClick={() => setModalPlantillaOpen(false)}>Cancelar</button>
+              <button className={uiStyles.btnSecondary} onClick={() => setModalPlantillaOpen(false)}>Cancelar</button>
               <button
-                className={styles.btnPrimary}
+                className={uiStyles.btnPrimary}
                 onClick={handleGenerarPlantilla}
                 disabled={
                   generandoPlantilla ||
@@ -1569,16 +1564,16 @@ export default function HorariosPage() {
           <p className={styles.subtitle}>Gestión de horarios para grupos, maestros y laboratorios</p>
         </div>
         <div className={styles.headerActions}>
-          <button className={styles.btnSecondary} onClick={abrirModalPlantilla}>
+          <button className={uiStyles.btnSecondary} onClick={abrirModalPlantilla}>
             <FileText size={16} /> Descargar plantilla
           </button>
-          <button className={styles.btnPrimary} onClick={abrirModalUpload}>
+          <button className={uiStyles.btnPrimary} onClick={abrirModalUpload}>
             <Upload size={16} /> Subir horario
           </button>
-          <button className={styles.btnSecondary} onClick={abrirModalBatch}>
-            <Plus size={16} /> Subida masiva
+          <button className={uiStyles.btnAccent} onClick={abrirModalBatch}>
+            <Plus size={16} /> Carga masiva: varios horarios
           </button>
-          <button className={styles.btnSecondary} onClick={cargarHorarios}>
+          <button className={uiStyles.btnSecondary} onClick={cargarHorarios}>
             <RefreshCw size={16} /> Actualizar
           </button>
         </div>

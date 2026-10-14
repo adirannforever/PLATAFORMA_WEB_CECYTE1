@@ -3,6 +3,7 @@ import { aspirantesService, catalogosService } from '../services/api';
 import { usePermissions } from '../hooks/usePermissions';
 import Skeleton from '../components/Skeleton';
 import styles from './AspirantesPage.module.css';
+import uiStyles from '../components/ui/ui.module.css';
 
 const ESTATUS_OPCIONES = [
   { valor: 'registrado', etiqueta: 'Registrado' },
@@ -220,9 +221,9 @@ export default function AspirantesPage() {
           <p className={styles.subtitle}>Gestión de aspirantes y conversión a alumnos</p>
         </div>
         <div className={styles.headerActions}>
-          <button className={styles.btnSecondary} onClick={cargar}>Actualizar</button>
+          <button className={uiStyles.btnSecondary} onClick={cargar}>Actualizar</button>
           {tiene('aspirantes.crear') && (
-            <button className={styles.btnPrimary} onClick={() => { setModalCrearAbierto(true); setErrorCrear(''); }}>
+            <button className={uiStyles.btnPrimary} onClick={() => { setModalCrearAbierto(true); setErrorCrear(''); }}>
               + Nuevo aspirante
             </button>
           )}
@@ -416,8 +417,8 @@ export default function AspirantesPage() {
               </div>
               {errorCrear && <div className={styles.errorMsg}>{errorCrear}</div>}
               <div className={styles.modalActions}>
-                <button type="button" className={styles.btnSecondary} onClick={() => setModalCrearAbierto(false)}>Cancelar</button>
-                <button type="submit" className={styles.btnPrimary} disabled={enviando}>{enviando ? 'Guardando...' : 'Registrar'}</button>
+                <button type="button" className={uiStyles.btnSecondary} onClick={() => setModalCrearAbierto(false)}>Cancelar</button>
+                <button type="submit" className={uiStyles.btnPrimary} disabled={enviando}>{enviando ? 'Guardando...' : 'Registrar'}</button>
               </div>
             </form>
           </div>
@@ -440,8 +441,8 @@ export default function AspirantesPage() {
               </div>
               {errorEstatus && <div className={styles.errorMsg}>{errorEstatus}</div>}
               <div className={styles.modalActions}>
-                <button type="button" className={styles.btnSecondary} onClick={() => setModalEstatusAbierto(false)}>Cancelar</button>
-                <button type="submit" className={styles.btnPrimary} disabled={enviandoEstatus}>{enviandoEstatus ? 'Guardando...' : 'Guardar'}</button>
+                <button type="button" className={uiStyles.btnSecondary} onClick={() => setModalEstatusAbierto(false)}>Cancelar</button>
+                <button type="submit" className={uiStyles.btnPrimary} disabled={enviandoEstatus}>{enviandoEstatus ? 'Guardando...' : 'Guardar'}</button>
               </div>
             </form>
           </div>
@@ -457,7 +458,7 @@ export default function AspirantesPage() {
               <>
                 <div className={styles.successMsg}>{exitoConvertir}</div>
                 <div className={styles.modalActions}>
-                  <button type="button" className={styles.btnSecondary} onClick={() => setModalConvertirAbierto(false)}>Cerrar</button>
+                  <button type="button" className={uiStyles.btnSecondary} onClick={() => setModalConvertirAbierto(false)}>Cerrar</button>
                 </div>
               </>
             ) : (
@@ -474,8 +475,8 @@ export default function AspirantesPage() {
                 </div>
                 {errorConvertir && <div className={styles.errorMsg}>{errorConvertir}</div>}
                 <div className={styles.modalActions}>
-                  <button type="button" className={styles.btnSecondary} onClick={() => setModalConvertirAbierto(false)}>Cancelar</button>
-                  <button type="submit" className={styles.btnPrimary} disabled={enviandoConvertir}>{enviandoConvertir ? 'Convirtiendo...' : 'Convertir'}</button>
+                  <button type="button" className={uiStyles.btnSecondary} onClick={() => setModalConvertirAbierto(false)}>Cancelar</button>
+                  <button type="submit" className={uiStyles.btnPrimary} disabled={enviandoConvertir}>{enviandoConvertir ? 'Convirtiendo...' : 'Convertir'}</button>
                 </div>
               </form>
             )}

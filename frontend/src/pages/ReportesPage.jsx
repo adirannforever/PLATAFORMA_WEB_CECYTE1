@@ -6,6 +6,7 @@ import { semestresDesdeGrupos } from '../config/academicos';
 import { downloadExcel, downloadPDF } from '../utils/downloadHelper';
 import { FileText, Download, Users, BarChart3, CheckCircle, Search, X, Eye, Printer, Calendar, Filter } from 'lucide-react';
 import styles from './ReportesPage.module.css';
+import uiStyles from '../components/ui/ui.module.css';
 
 export default function ReportesPage() {
   const { usuario } = useAuth();
@@ -499,7 +500,7 @@ export default function ReportesPage() {
 
         <div className={styles.actions}>
           <button
-            className={styles.btnPrimary}
+            className={uiStyles.btnPrimary}
             onClick={() => {
               const params = { ciclo_id: cicloId };
               if (!isAlumno && alumnoId) {

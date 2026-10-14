@@ -6,6 +6,7 @@ import {
   getComunicadoById,
   createComunicado,
   solicitarUploadComunicado,
+  solicitarUploadsComunicado,
   updateComunicado,
   deleteComunicado,
 } from '../controllers/comunicados.controller.js';
@@ -15,6 +16,7 @@ router.use(verifyToken);
 
 router.get('/', getComunicados);
 router.post('/upload/solicitar', requirePermiso('comunicados.crear'), solicitarUploadComunicado);
+router.post('/upload/lote', requirePermiso('comunicados.crear'), solicitarUploadsComunicado);
 router.get('/:id/archivos/:index', descargarAdjuntoComunicado);
 router.get('/:id', getComunicadoById);
 router.post('/', requirePermiso('comunicados.crear'), createComunicado);

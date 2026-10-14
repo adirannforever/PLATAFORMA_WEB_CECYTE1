@@ -34,10 +34,6 @@
   composes: formLabel from '../styles/shared.module.css';
 }
 
-.btnPrimary {
-  composes: primaryButton from '../styles/shared.module.css';
-}
-
 .page {
   font-family: var(--font-sans);
   color: var(--color-text);

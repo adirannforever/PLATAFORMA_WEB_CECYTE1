@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { usuariosService, catalogosService } from '../services/api';
 import { semestresDesdeGrupos } from '../config/academicos';
+import { downloadBlob } from '../utils/downloadHelper';
 import Skeleton from '../components/Skeleton';
 import styles from './UsuariosPage.module.css';
 
@@ -38,6 +39,12 @@ export default function UsuariosPage() {
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState('');
   const [exito, setExito] = useState('');
+  const [modalImportacionAbierto, setModalImportacionAbierto] = useState(false);
+  const [archivoCsv, setArchivoCsv] = useState(null);
+  const [passwordImportacion, setPasswordImportacion] = useState('');
+  const [importando, setImportando] = useState(false);
+  const [errorImportacion, setErrorImportacion] = useState('');
+  const [resultadoImportacion, setResultadoImportacion] = useState(null);
 
   const [modalEditarAbierto, setModalEditarAbierto] = useState(false);
   const [usuarioEditando, setUsuarioEditando] = useState(null);
@@ -116,6 +123,53 @@ export default function UsuariosPage() {
       setError(err.response?.data?.message || 'Error al crear usuario.');
     } finally {
       setEnviando(false);
+    }
+  };
+
+  const abrirImportacion = () => {
+    setArchivoCsv(null);
+    setPasswordImportacion('');
+    setErrorImportacion('');
+    setResultadoImportacion(null);
+    setModalImportacionAbierto(true);
+  };
+
+  const descargarPlantilla = async () => {
+    setErrorImportacion('');
+    try {
+      const plantilla = await usuariosService.descargarPlantillaImportacion();
+      downloadBlob(plantilla, 'plantilla-usuarios.csv');
+    } catch (err) {
+      setErrorImportacion(err.response?.data?.message || 'No se pudo descargar la plantilla.');
+    }
+  };
+
+  const handleImportarUsuarios = async (e) => {
+    e.preventDefault();
+    if (!archivoCsv) {
+      setErrorImportacion('Selecciona un archivo CSV antes de continuar.');
+      return;
+    }
+    if (archivoCsv.size > 1_000_000) {
+      setErrorImportacion('El archivo CSV no debe superar 1 MB.');
+      return;
+    }
+
+    setImportando(true);
+    setErrorImportacion('');
+    setResultadoImportacion(null);
+    try {
+      const csv = await archivoCsv.text();
+      const response = await usuariosService.importar(csv, passwordImportacion.trim());
+      setResultadoImportacion(response);
+      await cargar();
+      if (response.summary?.created) {
+        setExito(`Se registraron ${response.summary.created} usuario(s) correctamente.`);
+      }
+    } catch (err) {
+      setErrorImportacion(err.response?.data?.message || 'No se pudo procesar el archivo CSV.');
+    } finally {
+      setImportando(false);
     }
   };
 
@@ -204,6 +258,9 @@ export default function UsuariosPage() {
           </button>
           <button className={styles.btnPrimary} onClick={() => setModalAbierto(true)}>
             + Nuevo usuario
+          </button>
+          <button className={styles.btnBulk} onClick={abrirImportacion}>
+            <span aria-hidden="true">⇧</span> Carga masiva: registrar varios usuarios/alumnos
           </button>
         </div>
       </div>
@@ -423,6 +480,115 @@ export default function UsuariosPage() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {modalImportacionAbierto && (
+        <div
+          className={styles.modalOverlay}
+          onClick={() => !importando && setModalImportacionAbierto(false)}
+        >
+          <div
+            className={`${styles.modal} ${styles.importModal}`}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="import-users-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 id="import-users-title" className={styles.modalTitle}>
+              Registrar varios usuarios o alumnos
+            </h3>
+            <p className={styles.importIntro}>
+              Importa una lista CSV y registra hasta 500 personas en una sola operación.
+              Cada fila se valida por separado; los errores no bloquean las demás.
+            </p>
+            <button
+              type="button"
+              className={styles.btnSecondary}
+              onClick={descargarPlantilla}
+              disabled={importando}
+            >
+              Descargar plantilla CSV
+            </button>
+            {errorImportacion && <div className={styles.errorMsg} role="alert">{errorImportacion}</div>}
+            <form className={styles.form} onSubmit={handleImportarUsuarios}>
+              <div className={styles.field}>
+                <label className={styles.label} htmlFor="usuarios-csv">Archivo CSV</label>
+                <input
+                  id="usuarios-csv"
+                  className={styles.input}
+                  type="file"
+                  accept=".csv,text/csv"
+                  onChange={(e) => {
+                    setArchivoCsv(e.target.files?.[0] || null);
+                    setErrorImportacion('');
+                    setResultadoImportacion(null);
+                  }}
+                  disabled={importando}
+                  required
+                />
+                <span className={styles.helpText}>
+                  Columnas obligatorias: nombre, apellidos y email. Puedes incluir password, rol y matricula.
+                  Si dejas rol vacío, se registrará como alumno; la matrícula se genera automáticamente.
+                </span>
+              </div>
+              <div className={styles.field}>
+                <label className={styles.label} htmlFor="usuarios-default-password">
+                  Contraseña inicial común (opcional)
+                </label>
+                <input
+                  id="usuarios-default-password"
+                  className={styles.input}
+                  type="password"
+                  minLength={8}
+                  maxLength={72}
+                  autoComplete="new-password"
+                  value={passwordImportacion}
+                  onChange={(e) => setPasswordImportacion(e.target.value)}
+                  placeholder="Usar solo si el CSV no incluye password"
+                  disabled={importando}
+                />
+                <span className={styles.helpText}>
+                  Compártela individualmente por un canal seguro. También puedes incluir contraseñas distintas en el CSV.
+                </span>
+              </div>
+              <div className={styles.modalActions}>
+                <button
+                  type="button"
+                  className={styles.btnSecondary}
+                  onClick={() => setModalImportacionAbierto(false)}
+                  disabled={importando}
+                >
+                  Cerrar
+                </button>
+                <button type="submit" className={styles.btnBulk} disabled={importando || !archivoCsv}>
+                  {importando ? 'Registrando usuarios…' : 'Registrar varios usuarios'}
+                </button>
+              </div>
+            </form>
+            {resultadoImportacion && (
+              <section className={styles.importResults} aria-live="polite">
+                <h4>Resultado de la carga</h4>
+                <p>
+                  {resultadoImportacion.summary?.created || 0} registrados ·{' '}
+                  {resultadoImportacion.summary?.failed || 0} con errores ·{' '}
+                  {resultadoImportacion.summary?.total || 0} filas procesadas
+                </p>
+                {resultadoImportacion.results?.some((fila) => fila.status !== 'created') && (
+                  <ul className={styles.importErrors}>
+                    {resultadoImportacion.results
+                      .filter((fila) => fila.status !== 'created')
+                      .map((fila) => (
+                        <li key={`${fila.row}-${fila.status}`}>
+                          <strong>Fila {fila.row}:</strong>{' '}
+                          {(fila.errors || ['No se pudo registrar.']).join(' ')}
+                        </li>
+                      ))}
+                  </ul>
+                )}
+              </section>
+            )}
+          </div>
         </div>
       )}
 

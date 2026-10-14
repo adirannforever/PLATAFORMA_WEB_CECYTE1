@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { gruposService, calificacionesService } from '../services/api';
 import Skeleton from '../components/Skeleton';
 import styles from './MisClasesPage.module.css';
+import uiStyles from '../components/ui/ui.module.css';
 
 
 const calcularPromedioSeguro = (calificaciones) => {
@@ -267,10 +268,10 @@ export default function MisClasesCalificaciones({ grupoId }) {
             />
             {inputError && <span className={styles.inputErrorText}>{inputError}</span>}
           </div>
-          <button className={styles.btnPrimary} onClick={handleGuardarIndividual} disabled={guardando || !!inputError}>
+          <button className={uiStyles.btnPrimary} onClick={handleGuardarIndividual} disabled={guardando || !!inputError}>
             {guardando ? 'Guardando...' : 'Guardar'}
           </button>
-          <button className={styles.btnSecondary} onClick={handleCancelarIndividual}>Cancelar</button>
+          <button className={uiStyles.btnSecondary} onClick={handleCancelarIndividual}>Cancelar</button>
         </div>
       )}
 

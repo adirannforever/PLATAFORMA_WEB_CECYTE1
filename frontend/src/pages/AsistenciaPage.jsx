@@ -5,6 +5,7 @@ import { asistenciaService, materiasService, catalogosService, reportesService }
 import Skeleton from '../components/Skeleton';
 import { Clock, FileText, Calendar, User, BookOpen, CheckCircle, Download } from 'lucide-react';
 import styles from './AsistenciaPage.module.css';
+import uiStyles from '../components/ui/ui.module.css';
 
 const ESTADOS = [
   { value: 'presente', label: 'Presente' },
@@ -365,7 +366,7 @@ export default function AsistenciaPage() {
         {materiaSeleccionada && !cargando && (isAdmin || isDocente) && (
           <>
             <button
-              className={styles.btnPrimary}
+              className={uiStyles.btnPrimary}
               onClick={handleGuardar}
               disabled={guardando || alumnos.length === 0}
             >

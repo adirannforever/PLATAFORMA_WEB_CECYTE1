@@ -4,6 +4,7 @@ import { auditoriaService, usuariosService } from '../services/api';
 import { Search, Filter, Eye, X } from 'lucide-react';
 import Skeleton from '../components/Skeleton';
 import styles from './AuditoriaPage.module.css';
+import uiStyles from '../components/ui/ui.module.css';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -470,7 +471,7 @@ export default function AuditoriaPage() {
             </div>
             <div className={styles.modalActions}>
               <button
-                className={styles.btnPrimary}
+                className={uiStyles.btnPrimary}
                 onClick={() => setDetalleModal({ open: false, log: null })}
               >
                 Cerrar

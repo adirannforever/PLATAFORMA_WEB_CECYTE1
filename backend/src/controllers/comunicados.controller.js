@@ -6,6 +6,7 @@ import {
   InvalidComunicadoAttachmentError,
   MAX_COMUNICADO_FILE_SIZE,
   parseComunicadoAttachments,
+  parseComunicadoUploadRequests,
   serializarArchivosComunicado,
   verificarComunicadoAttachments,
 } from '../services/comunicados-attachments.service.js';
@@ -100,6 +101,28 @@ export const solicitarUploadComunicado = async (req, res) => {
   } catch (err) {
     console.error('Error al solicitar subida de adjunto de comunicado:', err);
     return res.status(500).json({ success: false, message: 'No se pudo preparar la subida del archivo.' });
+  }
+};
+
+export const solicitarUploadsComunicado = async (req, res) => {
+  let archivos;
+  try {
+    archivos = parseComunicadoUploadRequests(req.body?.archivos);
+  } catch (err) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+
+  try {
+    const uploads = await Promise.all(
+      archivos.map(async (archivo) => {
+        const { url, key } = await generateComunicadoUploadUrl(archivo.nombre, archivo.tipo);
+        return { ...archivo, uploadUrl: url, key, expiresIn: 300 };
+      }),
+    );
+    return res.json({ success: true, data: { archivos: uploads } });
+  } catch (err) {
+    console.error('Error al solicitar subida de archivos de comunicado:', err);
+    return res.status(500).json({ success: false, message: 'No se pudieron preparar las subidas.' });
   }
 };
 

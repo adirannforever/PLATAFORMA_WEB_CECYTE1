@@ -18,6 +18,33 @@ export const COMUNICADO_FILE_TYPES = new Set([
 
 export class InvalidComunicadoAttachmentError extends Error {}
 
+export function parseComunicadoUploadRequests(value) {
+  if (!Array.isArray(value) || value.length === 0 || value.length > MAX_COMUNICADO_FILES) {
+    throw new InvalidComunicadoAttachmentError(
+      `Selecciona de 1 a ${MAX_COMUNICADO_FILES} archivos para subir.`,
+    );
+  }
+
+  return value.map((file) => {
+    const { nombre, tipo, size } = file || {};
+    if (
+      typeof nombre !== 'string' ||
+      nombre.trim().length === 0 ||
+      nombre.length > 180 ||
+      !COMUNICADO_FILE_TYPES.has(tipo) ||
+      !Number.isInteger(size) ||
+      size < 1 ||
+      size > MAX_COMUNICADO_FILE_SIZE
+    ) {
+      throw new InvalidComunicadoAttachmentError(
+        'Uno o más archivos no son válidos. Adjunta imágenes o documentos de hasta 10 MB.',
+      );
+    }
+
+    return { nombre: nombre.trim(), tipo, size };
+  });
+}
+
 export function serializarArchivosComunicado(attachments) {
   if (!Array.isArray(attachments)) return [];
   return attachments.map(({ nombre, tipo }) => ({ nombre, tipo }));

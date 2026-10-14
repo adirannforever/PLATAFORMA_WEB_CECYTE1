@@ -10,14 +10,6 @@
   composes: fieldGroup from '../styles/shared.module.css';
 }
 
-.btnSecondary {
-  composes: secondaryButton from '../styles/shared.module.css';
-}
-
-.btnPrimary {
-  composes: primaryButton from '../styles/shared.module.css';
-}
-
 .table {
   composes: dataTable from '../styles/shared.module.css';
 }

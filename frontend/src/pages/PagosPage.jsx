@@ -4,6 +4,7 @@ import { pagosService, usuariosService, catalogosService } from '../services/api
 import { Plus, Eye, ArrowLeft, X } from 'lucide-react';
 import Skeleton from '../components/Skeleton';
 import styles from './PagosPage.module.css';
+import uiStyles from '../components/ui/ui.module.css';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -490,7 +491,7 @@ export default function PagosPage() {
             </button>
           )}
           {esAdmin && (
-            <button className={styles.btnPrimary} onClick={handleAbrirModal}>
+            <button className={uiStyles.btnPrimary} onClick={handleAbrirModal}>
               <Plus size={18} /> Nuevo pago
             </button>
           )}
@@ -715,10 +716,10 @@ export default function PagosPage() {
                 />
               </div>
               <div className={styles.modalActions}>
-                <button type="button" className={styles.btnSecondary} onClick={() => setModalAbierto(false)}>
+                <button type="button" className={uiStyles.btnSecondary} onClick={() => setModalAbierto(false)}>
                   Cancelar
                 </button>
-                <button type="submit" className={styles.btnPrimary} disabled={enviando}>
+                <button type="submit" className={uiStyles.btnPrimary} disabled={enviando}>
                   {enviando ? 'Registrando...' : 'Registrar pago'}
                 </button>
               </div>

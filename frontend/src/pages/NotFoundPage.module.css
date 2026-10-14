@@ -1,9 +1,3 @@
-.btnSecondary {
-  composes: secondaryButton from '../styles/shared.module.css';
-}
-.btnPrimary {
-  composes: primaryButton from '../styles/shared.module.css';
-}
 .title {
   composes: pageTitle from '../styles/shared.module.css';
 }

@@ -160,6 +160,9 @@ export default function DashboardLayout() {
 
   return (
     <div className={styles.shell}>
+      <a href="#main-content" className={styles.skipLink}>
+        Saltar al contenido principal
+      </a>
       {sidebarAbierto && <div className={styles.overlay} onClick={() => setSidebarAbierto(false)} />}
 
       <aside className={`${styles.sidebar} ${sidebarAbierto ? styles.sidebarOpen : ''} ${rail ? styles.sidebarRail : ''}`} role="navigation" aria-label="Menú principal">
@@ -343,6 +346,6 @@ export default function DashboardLayout() {
           </div>
         </div>
       )}
-    </div>
+      </div>
   );
 }

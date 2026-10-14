@@ -3,6 +3,7 @@ import { inscripcionesService, catalogosService } from '../services/api';
 import { Users, Search, ChevronDown, ChevronUp } from 'lucide-react';
 import Skeleton from '../components/Skeleton';
 import styles from './InscripcionesPage.module.css';
+import uiStyles from '../components/ui/ui.module.css';
 
 export default function InscripcionesPage() {
   const [alumnos, setAlumnos] = useState([]);
@@ -383,7 +384,7 @@ export default function InscripcionesPage() {
 
             <button
               type="submit"
-              className={styles.btnPrimary}
+              className={uiStyles.btnPrimary}
               disabled={enviando || alumnos.length === 0 || grupos.length === 0}
             >
               {enviando ? 'Inscribiendo...' : 'Inscribir alumno'}

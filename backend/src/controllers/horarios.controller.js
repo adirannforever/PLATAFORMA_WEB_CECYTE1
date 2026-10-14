@@ -2,6 +2,13 @@ import { query } from '../config/db.js';
 import { generateUploadUrl, generateDownloadUrl, fileExists, deleteFile } from '../services/s3.service.js';
 import { generarPlantillaHorarioDOCX } from '../utils/docxGenerator.js';
 
+const TIPOS_HORARIO_VALIDOS_MIME = [
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-excel',
+];
+const MAX_HORARIOS_POR_LOTE = 100;
+
 
 export const getConfiguracion = async (req, res) => {
   try {
@@ -324,12 +331,7 @@ export const solicitarUploadHorario = async (req, res) => {
       });
     }
 
-    const tiposValidosMIME = [
-      'application/pdf',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'application/vnd.ms-excel',
-    ];
-    if (!tiposValidosMIME.includes(tipo)) {
+    if (!TIPOS_HORARIO_VALIDOS_MIME.includes(tipo)) {
       return res.status(400).json({ success: false, message: 'Formato no permitido. Solo PDF o Excel' });
     }
 
@@ -448,12 +450,18 @@ export const uploadMultipleHorarios = async (req, res) => {
     if (!horarios || !Array.isArray(horarios) || horarios.length === 0) {
       return res.status(400).json({ success: false, message: 'Se requiere un array de horarios' });
     }
+    if (horarios.length > MAX_HORARIOS_POR_LOTE) {
+      return res.status(400).json({
+        success: false,
+        message: `Se permiten hasta ${MAX_HORARIOS_POR_LOTE} horarios por lote.`,
+      });
+    }
 
     const resultados = [];
     const errores = [];
     const tiposHorarioValidos = ['grupo', 'maestro', 'laboratorio'];
 
-    for (const h of horarios) {
+    for (const [index, h] of horarios.entries()) {
       const {
         nombre,
         tipo_mime,
@@ -467,7 +475,11 @@ export const uploadMultipleHorarios = async (req, res) => {
       } = h;
 
       if (!nombre || !tipo_mime || !grupo_id || !semestre || !ciclo_id || !turno_id) {
-        errores.push({ nombre, error: 'Faltan campos requeridos' });
+        errores.push({ index, nombre, error: 'Faltan campos requeridos' });
+        continue;
+      }
+      if (!TIPOS_HORARIO_VALIDOS_MIME.includes(tipo_mime)) {
+        errores.push({ index, nombre, error: 'Formato no permitido. Solo PDF o Excel.' });
         continue;
       }
 
@@ -475,10 +487,12 @@ export const uploadMultipleHorarios = async (req, res) => {
         const tipoHorarioFinal = tiposHorarioValidos.includes(tipo_horario) ? tipo_horario : 'grupo';
         const { url, key } = await generateUploadUrl(nombre, tipo_mime);
 
+        const grupoResult = await query('SELECT letra FROM grupos WHERE id = $1', [grupo_id]);
+        const letra = h.letra || grupoResult.rows[0]?.letra || null;
         await query(
           `INSERT INTO horario_archivos 
-           (nombre, key, tipo, grupo_id, semestre, ciclo_id, especialidad_id, turno_id, tipo_horario, descripcion, subido_por, fecha)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())`,
+           (nombre, key, tipo, grupo_id, semestre, ciclo_id, especialidad_id, turno_id, tipo_horario, descripcion, subido_por, fecha, letra)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), $12)`,
           [
             nombre,
             key,
@@ -491,13 +505,14 @@ export const uploadMultipleHorarios = async (req, res) => {
             tipoHorarioFinal,
             descripcion || null,
             req.user.id,
+            letra,
           ]
         );
 
-        resultados.push({ nombre, key, success: true });
+        resultados.push({ index, nombre, key, uploadUrl: url, expiresIn: 300, success: true });
       } catch (err) {
         console.error('Error en batch item:', err);
-        errores.push({ nombre, error: err.message });
+        errores.push({ index, nombre, error: err.message });
       }
     }
 

@@ -10,6 +10,7 @@ import {
 } from '../services/api';
 import { Plus, Edit, Trash2, X, RefreshCw, Filter, Layers, Calendar } from 'lucide-react';
 import styles from './ConfiguracionAcademicaPage.module.css';
+import uiStyles from '../components/ui/ui.module.css';
 
 const TIPO_ETIQUETA = {
   preinscripcion: 'Preinscripción',
@@ -480,7 +481,7 @@ export default function ConfiguracionAcademicaPage() {
           <div>
             <div className={styles.tabHeader}>
               <h2 className={styles.sectionTitle}>Ciclos escolares</h2>
-              <button className={styles.btnPrimary} onClick={() => abrirModalCrear('ciclo')}>
+              <button className={uiStyles.btnPrimary} onClick={() => abrirModalCrear('ciclo')}>
                 <Plus size={16} /> Nuevo ciclo
               </button>
             </div>
@@ -524,7 +525,7 @@ export default function ConfiguracionAcademicaPage() {
               >
                 {ciclos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
               </select>
-              <button className={styles.btnSecondary} onClick={handleRegenerarPeriodos}>
+              <button className={uiStyles.btnSecondary} onClick={handleRegenerarPeriodos}>
                 <RefreshCw size={16} /> Regenerar
               </button>
             </div>
@@ -560,10 +561,10 @@ export default function ConfiguracionAcademicaPage() {
             <div className={styles.tabHeader}>
               <h3 className={styles.subsectionTitle}>Períodos escolares</h3>
               <div className={styles.headerActions}>
-                <button className={styles.btnPrimary} onClick={abrirBatchModal}>
+                <button className={uiStyles.btnPrimary} onClick={abrirBatchModal}>
                   <Layers size={16} /> Agregar múltiples
                 </button>
-                <button className={styles.btnPrimary} onClick={() => abrirModalCrear('periodo_escolar')}>
+                <button className={uiStyles.btnPrimary} onClick={() => abrirModalCrear('periodo_escolar')}>
                   <Plus size={16} /> Nuevo período
                 </button>
               </div>
@@ -600,7 +601,7 @@ export default function ConfiguracionAcademicaPage() {
 
             <div className={styles.tabHeader}>
               <h3 className={styles.subsectionTitle}>Períodos de evaluación</h3>
-              <button className={styles.btnPrimary} onClick={() => abrirModalCrear('periodo_evaluacion')}>
+              <button className={uiStyles.btnPrimary} onClick={() => abrirModalCrear('periodo_evaluacion')}>
                 <Plus size={16} /> Nuevo período
               </button>
             </div>
@@ -672,7 +673,7 @@ export default function ConfiguracionAcademicaPage() {
           <div>
             <div className={styles.tabHeader}>
               <h2 className={styles.sectionTitle}>Catálogo de materias</h2>
-              <button className={styles.btnPrimary} onClick={() => abrirModalCrear('materia')}>
+              <button className={uiStyles.btnPrimary} onClick={() => abrirModalCrear('materia')}>
                 <Plus size={16} /> Nueva materia
               </button>
             </div>
@@ -862,8 +863,8 @@ export default function ConfiguracionAcademicaPage() {
               );
             })}
             <div className={styles.modalActions}>
-              <button type="button" className={styles.btnSecondary} onClick={() => setModalAbierto(false)}>Cancelar</button>
-              <button type="submit" className={styles.btnPrimary} disabled={enviando}>
+              <button type="button" className={uiStyles.btnSecondary} onClick={() => setModalAbierto(false)}>Cancelar</button>
+              <button type="submit" className={uiStyles.btnPrimary} disabled={enviando}>
                 {enviando ? 'Guardando...' : 'Guardar'}
               </button>
             </div>
@@ -971,7 +972,7 @@ export default function ConfiguracionAcademicaPage() {
                   </div>
                 </>
               )}
-              <button className={styles.btnPrimary} onClick={generarBatchItems} style={{ alignSelf: 'flex-end' }}>
+              <button className={uiStyles.btnPrimary} onClick={generarBatchItems} style={{ alignSelf: 'flex-end' }}>
                 <Plus size={16} /> Generar
               </button>
             </div>
@@ -1004,8 +1005,8 @@ export default function ConfiguracionAcademicaPage() {
                 </table>
               </div>
               <div className={styles.batchActions}>
-                <button className={styles.btnSecondary} onClick={() => setBatchItems([])}>Vaciar lista</button>
-                <button className={styles.btnPrimary} onClick={guardarBatch} disabled={batchEnviando}>
+                <button className={uiStyles.btnSecondary} onClick={() => setBatchItems([])}>Vaciar lista</button>
+                <button className={uiStyles.btnPrimary} onClick={guardarBatch} disabled={batchEnviando}>
                   {batchEnviando ? 'Guardando...' : `Guardar ${batchItems.length} períodos`}
                 </button>
               </div>
@@ -1058,8 +1059,8 @@ export default function ConfiguracionAcademicaPage() {
               <p>{confirmModal.message}</p>
             </div>
             <div className={styles.modalActions}>
-              <button className={styles.btnSecondary} onClick={cerrarConfirmacion}>Cancelar</button>
-              <button className={styles.btnDanger} onClick={confirmModal.onConfirm}>Confirmar</button>
+              <button className={uiStyles.btnSecondary} onClick={cerrarConfirmacion}>Cancelar</button>
+              <button className={uiStyles.btnDanger} onClick={confirmModal.onConfirm}>Confirmar</button>
             </div>
           </div>
         </div>

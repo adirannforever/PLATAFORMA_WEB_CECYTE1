@@ -5,6 +5,7 @@ import { gruposService, catalogosService, materiasCatalogoService } from '../ser
 import { semestresDesdeGrupos } from '../config/academicos';
 import Skeleton from '../components/Skeleton';
 import styles from './GruposPage.module.css';
+import uiStyles from '../components/ui/ui.module.css';
 import { useNavigate } from 'react-router-dom';
 import { X, Plus, Search } from 'lucide-react';
 
@@ -461,7 +462,7 @@ export default function GruposPage() {
           </p>
         </div>
         {isAdmin && (
-          <button className={styles.btnPrimary} onClick={handleAbrirModalCrear}>
+          <button className={uiStyles.btnPrimary} onClick={handleAbrirModalCrear}>
             + Crear grupo
           </button>
         )}
@@ -625,10 +626,10 @@ export default function GruposPage() {
                 </select>
               </div>
               <div className={styles.modalActions}>
-                <button type="button" className={styles.btnSecondary} onClick={() => setModalAbierto(false)}>
+                <button type="button" className={uiStyles.btnSecondary} onClick={() => setModalAbierto(false)}>
                   Cancelar
                 </button>
-                <button type="submit" className={styles.btnPrimary} disabled={enviandoGrupo}>
+                <button type="submit" className={uiStyles.btnPrimary} disabled={enviandoGrupo}>
                   {enviandoGrupo ? 'Creando...' : 'Crear grupo'}
                 </button>
               </div>
@@ -738,10 +739,10 @@ export default function GruposPage() {
                 </select>
               </div>
               <div className={styles.modalActions}>
-                <button type="button" className={styles.btnSecondary} onClick={() => setModalEdicionAbierto(false)}>
+                <button type="button" className={uiStyles.btnSecondary} onClick={() => setModalEdicionAbierto(false)}>
                   Cancelar
                 </button>
-                <button type="submit" className={styles.btnPrimary} disabled={enviandoEdicion}>
+                <button type="submit" className={uiStyles.btnPrimary} disabled={enviandoEdicion}>
                   {enviandoEdicion ? 'Actualizando...' : 'Actualizar grupo'}
                 </button>
               </div>
@@ -803,7 +804,7 @@ export default function GruposPage() {
                   </select>
                 </div>
                 <button
-                  className={styles.btnSecondary}
+                  className={uiStyles.btnSecondary}
                   onClick={() => cargarMateriasDisponibles()}
                   disabled={cargandoMateriasDisponibles}
                 >
@@ -862,23 +863,23 @@ export default function GruposPage() {
 
             <div className={styles.modalActions}>
               <div className={styles.batchActions}>
-                <button className={styles.btnSecondary} onClick={handleSeleccionarTodas} disabled={cargandoMateriasDisponibles || materiasDisponibles.length === 0}>
+                <button className={uiStyles.btnSecondary} onClick={handleSeleccionarTodas} disabled={cargandoMateriasDisponibles || materiasDisponibles.length === 0}>
                   Seleccionar todas
                 </button>
-                <button className={styles.btnSecondary} onClick={handleDeseleccionarTodas} disabled={cargandoMateriasDisponibles || materiasDisponibles.length === 0}>
+                <button className={uiStyles.btnSecondary} onClick={handleDeseleccionarTodas} disabled={cargandoMateriasDisponibles || materiasDisponibles.length === 0}>
                   Deseleccionar
                 </button>
               </div>
               <div className={styles.modalActionsRight}>
                 <button
-                  className={styles.btnSecondary}
+                  className={uiStyles.btnSecondary}
                   onClick={() => setModalAsignarMaterias(false)}
                   disabled={enviandoAsignacion}
                 >
                   Cancelar
                 </button>
                 <button
-                  className={styles.btnPrimary}
+                  className={uiStyles.btnPrimary}
                   onClick={handleAsignarMaterias}
                   disabled={enviandoAsignacion || cargandoMateriasDisponibles || materiasSeleccionadas.length === 0}
                 >

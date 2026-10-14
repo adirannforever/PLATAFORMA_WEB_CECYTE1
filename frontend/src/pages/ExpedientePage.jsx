@@ -6,6 +6,7 @@ import { expedienteService, catalogosService } from '../services/api';
 import { Search, Edit, Save, X, AlertTriangle, CheckCircle, AlertCircle } from 'lucide-react';
 import Skeleton from '../components/Skeleton';
 import styles from './ExpedientePage.module.css';
+import uiStyles from '../components/ui/ui.module.css';
 
 export default function ExpedientePage() {
   const { usuario } = useAuth();
@@ -434,13 +435,13 @@ export default function ExpedientePage() {
               <p className={styles.modalConfirmMessage}>{modalConfirm.message}</p>
               <div className={styles.modalConfirmActions}>
                 <button
-                  className={styles.btnSecondary}
+                  className={uiStyles.btnSecondary}
                   onClick={() => setModalConfirm({ open: false, message: '', onConfirm: null })}
                 >
                   Cancelar
                 </button>
                 <button
-                  className={styles.btnDanger}
+                  className={uiStyles.btnDanger}
                   onClick={() => {
                     if (modalConfirm.onConfirm) modalConfirm.onConfirm();
                   }}
@@ -601,13 +602,13 @@ export default function ExpedientePage() {
             <p className={styles.modalConfirmMessage}>{modalConfirm.message}</p>
             <div className={styles.modalConfirmActions}>
               <button
-                className={styles.btnSecondary}
+                className={uiStyles.btnSecondary}
                 onClick={() => setModalConfirm({ open: false, message: '', onConfirm: null })}
               >
                 Cancelar
               </button>
               <button
-                className={styles.btnDanger}
+                className={uiStyles.btnDanger}
                 onClick={() => {
                   if (modalConfirm.onConfirm) modalConfirm.onConfirm();
                 }}
