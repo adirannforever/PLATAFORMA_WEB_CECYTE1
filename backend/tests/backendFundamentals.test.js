@@ -9,6 +9,7 @@ import { authLimiter } from '../src/middlewares/rateLimit.js';
 import { auditoriaQuerySchema } from '../src/schemas/auditoria.schema.js';
 import { activateAccountSchema, loginSchema } from '../src/schemas/auth.schema.js';
 import { crearAspiranteSchema } from '../src/schemas/aspirantes.schema.js';
+import { preRegistroSchema } from '../src/schemas/public.schema.js';
 import { reinscripcionSchema } from '../src/schemas/inscripciones.schema.js';
 import {
   buildAttachmentDisposition,
@@ -96,6 +97,37 @@ test('applicant invite and activation input are bounded', () => {
     token: 'x',
     password: 'short',
   }).success, false);
+});
+
+test('public pre-registration input is bounded and honeypot-aware', () => {
+  const base = {
+    nombre: ' Ana ',
+    apellidos: ' Pérez Gómez ',
+    curp: 'abco010101mxxxyza9',
+    email: ' ANA@example.edu ',
+    especialidad_id: '1',
+    turno_preferido_id: '2',
+  };
+  assert.deepEqual(preRegistroSchema.parse(base), {
+    nombre: 'Ana',
+    apellidos: 'Pérez Gómez',
+    curp: 'ABCO010101MXXXYZA9',
+    email: 'ana@example.edu',
+    especialidad_id: 1,
+    turno_preferido_id: 2,
+    website: '',
+  });
+  // Teléfono vacío se acepta (formato de formularios) y se normaliza.
+  assert.equal(preRegistroSchema.parse({ ...base, telefono: ' 55 1234 5678 ' }).telefono, '55 1234 5678');
+  assert.equal(preRegistroSchema.parse({ ...base, telefono: '' }).telefono, '');
+  // El público no puede mandar ciclo_id ni folio: los resuelve el server.
+  assert.equal(preRegistroSchema.safeParse({ ...base, ciclo_id: 3 }).success, false);
+  assert.equal(preRegistroSchema.safeParse({ ...base, folio: 'ASP-999999' }).success, false);
+  // CURP mal formada y correo inválido se rechazan.
+  assert.equal(preRegistroSchema.safeParse({ ...base, curp: 'ABC' }).success, false);
+  assert.equal(preRegistroSchema.safeParse({ ...base, email: 'no-es-correo' }).success, false);
+  // Honeypot: el schema lo acepta relleno; quien lo filtra es el controller.
+  assert.equal(preRegistroSchema.parse({ ...base, website: 'http://spam' }).website, 'http://spam');
 });
 
 test('public limiter throttles unauthenticated flood', () => {

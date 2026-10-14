@@ -266,6 +266,23 @@ export const publicService = {
     if (!res.ok) throw new Error(`Resumen no disponible (${res.status})`);
     return res.json();
   },
+  getCatalogos: async () => {
+    const res = await fetch('/api/public/catalogos', {
+      headers: { Accept: 'application/json' },
+    });
+    if (!res.ok) throw new Error(`Catálogos no disponibles (${res.status})`);
+    return res.json();
+  },
+  preRegistro: async (payload) => {
+    const res = await fetch('/api/public/pre-registro', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const body = await res.json().catch(() => null);
+    if (!res.ok) throw new Error(body?.message || `No se pudo enviar el pre-registro (${res.status})`);
+    return body;
+  },
 };
 
 

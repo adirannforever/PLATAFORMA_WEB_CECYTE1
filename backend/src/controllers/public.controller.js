@@ -1,4 +1,4 @@
-import { query } from '../config/db.js';
+import { query, withTransaction } from '../config/db.js';
 import { generateDownloadUrl } from '../services/s3.service.js';
 import {
   buildAttachmentDisposition,
@@ -93,5 +93,118 @@ export const getResumen = async (req, res) => {
   } catch (err) {
     console.error('Error en getResumen (public):', err);
     return res.status(500).json({ success: false, message: 'Error interno.' });
+  }
+};
+
+// Catálogos mínimos para el formulario de pre-registro de la landing.
+// Solo id/nombre: sin PII, sin datos internos, cacheable.
+export const getCatalogosPublicos = async (req, res) => {
+  try {
+    const [espRes, turnosRes] = await Promise.all([
+      query('SELECT id, clave, nombre FROM especialidades ORDER BY nombre'),
+      query('SELECT id, nombre FROM turnos ORDER BY id'),
+    ]);
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    return res.json({
+      success: true,
+      data: {
+        especialidades: espRes.rows,
+        turnos: turnosRes.rows,
+      },
+    });
+  } catch (err) {
+    console.error('Error en getCatalogosPublicos:', err);
+    return res.status(500).json({ success: false, message: 'Error interno.' });
+  }
+};
+
+/**
+ * POST /api/public/pre-registro — alta pública de aspirante (estatus 'registrado').
+ * - NO envía invitación: requiere un usuario autenticado como creador y correo
+ *   verificado; Control Escolar la reenvía desde el panel de aspirantes.
+ * - Resuelve ciclo activo y folio en el server; el público solo manda datos personales.
+ * - Honeypot `website`: si viene relleno, responder como un éxito real sin insertar.
+ */
+export const preRegistro = async (req, res) => {
+  const { nombre, apellidos, curp, email, telefono, especialidad_id, turno_preferido_id, website } = req.body;
+
+  if (website && website.trim() !== '') {
+    return res.status(201).json({
+      success: true,
+      message: 'Pre-registro recibido.',
+      data: { folio: `ASP-${Date.now().toString().slice(-6)}` },
+    });
+  }
+
+  try {
+    const cicloRes = await query(
+      'SELECT id, nombre FROM ciclos_escolares WHERE activo = TRUE LIMIT 1'
+    );
+    const ciclo = cicloRes.rows[0];
+    if (!ciclo) {
+      return res.status(503).json({
+        success: false,
+        message: 'No hay un ciclo de admisión activo en este momento. Consulta los avisos o contáctanos.',
+      });
+    }
+
+    const folio = `ASP-${Date.now().toString().slice(-6)}`;
+    await withTransaction(async (client) => {
+      const existente = await client.query(
+        'SELECT id FROM aspirantes WHERE LOWER(email) = LOWER($1) OR UPPER(curp) = UPPER($2) LIMIT 1',
+        [email, curp]
+      );
+      if (existente.rows[0]) {
+        const conflict = new Error('Ya existe una solicitud con ese correo o CURP.');
+        conflict.code = 'ASPIRANTE_DUPLICADO';
+        throw conflict;
+      }
+
+      await client.query(
+        `INSERT INTO aspirantes
+          (nombre, apellidos, curp, email, telefono, especialidad_id, turno_preferido_id, ciclo_id, folio, estatus)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'registrado')`,
+        [
+          nombre.trim(),
+          apellidos.trim(),
+          curp.trim().toUpperCase(),
+          email.trim().toLowerCase(),
+          telefono?.trim() || null,
+          especialidad_id,
+          turno_preferido_id,
+          ciclo.id,
+          folio.trim(),
+        ]
+      );
+    });
+
+    res.setHeader('Cache-Control', 'no-store');
+    return res.status(201).json({
+      success: true,
+      message:
+        'Pre-registro recibido. Guarda tu folio: Control Escolar revisará tu solicitud y recibirás aviso de los siguientes pasos.',
+      data: { folio, ciclo: ciclo.nombre },
+    });
+  } catch (err) {
+    if (err.code === 'ASPIRANTE_DUPLICADO') {
+      return res.status(409).json({
+        success: false,
+        message: 'Ya existe una solicitud con ese correo o CURP. Contacta a Control Escolar para recuperar tu folio.',
+      });
+    }
+    if (err.code === '23503') {
+      return res.status(400).json({
+        success: false,
+        message: 'La especialidad o el turno seleccionado no es válido. Actualiza la página e inténtalo de nuevo.',
+      });
+    }
+    if (err.code === '23505') {
+      return res.status(409).json({
+        success: false,
+        message: 'No se pudo generar tu folio. Intenta de nuevo en unos segundos.',
+      });
+    }
+    console.error('Error en preRegistro (public):', err);
+    return res.status(500).json({ success: false, message: 'Error interno. Intenta de nuevo más tarde.' });
   }
 };

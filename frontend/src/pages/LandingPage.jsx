@@ -25,6 +25,7 @@ import {
   CheckCircle2,
   ChevronDown,
   ClipboardList,
+  Loader2,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { publicService } from '../services/api';
@@ -149,7 +150,7 @@ const admisionPasosData = [
   {
     n: 1,
     titulo: 'Pre-registro',
-    texto: 'Explora las especialidades y reúne tus documentos: acta, CURP y comprobante de estudios.',
+    texto: 'Haz tu pre-registro en línea (recibes tu folio al instante) y reúne tus documentos: acta, CURP y comprobante de estudios.',
   },
   {
     n: 2,
@@ -194,6 +195,10 @@ const faqData = [
   {
     pregunta: '¿Dónde veo becas, pagos o servicio social?',
     respuesta: 'Esos módulos viven dentro del panel (requieren sesión). Esta página te muestra el camino; el detalle está tras “Iniciar sesión” según tu rol.',
+  },
+  {
+    pregunta: '¿Cómo hago mi pre-registro y qué es el folio?',
+    respuesta: 'En la sección “Admisión” está el formulario “Pre-registro en línea”. Al enviarlo recibes al instante un folio (ej. ASP-123456): guárdalo y acude a Control Escolar para tu ficha de admisión.',
   },
 ];
 
@@ -257,6 +262,22 @@ export default function LandingPage() {
   const [avisosEstado, setAvisosEstado] = useState('cargando'); // cargando | listo | respaldo
   const [resumen, setResumen] = useState(null);
   const [faqAbierta, setFaqAbierta] = useState(0);
+  // Pre-registro público (C): catálogos + estados del formulario
+  const [catalogos, setCatalogos] = useState({ especialidades: [], turnos: [] });
+  const [catalogosEstado, setCatalogosEstado] = useState('cargando'); // cargando | listo | error
+  const [preEstado, setPreEstado] = useState('idle'); // idle | enviando | exito | error
+  const [preMensaje, setPreMensaje] = useState('');
+  const [preFolio, setPreFolio] = useState('');
+  const [preForm, setPreForm] = useState({
+    nombre: '',
+    apellidos: '',
+    curp: '',
+    email: '',
+    telefono: '',
+    especialidad_id: '',
+    turno_preferido_id: '',
+    website: '',
+  });
   const slideIntervalRef = useRef(null);
   const carouselRef = useRef(null);
 
@@ -305,6 +326,26 @@ export default function LandingPage() {
     startAutoSlide();
   };
 
+  // ===== Pre-registro público: envío del formulario =====
+  const enviarPreRegistro = async (e) => {
+    e.preventDefault();
+    if (preEstado === 'enviando') return;
+    setPreEstado('enviando');
+    setPreMensaje('');
+    try {
+      const res = await publicService.preRegistro({
+        ...preForm,
+        especialidad_id: Number(preForm.especialidad_id),
+        turno_preferido_id: Number(preForm.turno_preferido_id),
+      });
+      setPreFolio(res?.data?.folio || '');
+      setPreEstado('exito');
+    } catch (err) {
+      setPreMensaje(err.message || 'No se pudo enviar tu pre-registro. Intenta de nuevo.');
+      setPreEstado('error');
+    }
+  };
+
   // ===== Escape para cerrar drawer =====
   useEffect(() => {
     const handleEsc = (e) => {
@@ -335,6 +376,26 @@ export default function LandingPage() {
       }
     };
     cargar();
+    return () => { viva = false; };
+  }, []);
+
+  // ===== Catálogos públicos del pre-registro (especialidades + turnos) =====
+  useEffect(() => {
+    let viva = true;
+    publicService
+      .getCatalogos()
+      .then((res) => {
+        if (!viva) return;
+        setCatalogos({
+          especialidades: Array.isArray(res?.data?.especialidades) ? res.data.especialidades : [],
+          turnos: Array.isArray(res?.data?.turnos) ? res.data.turnos : [],
+        });
+        setCatalogosEstado('listo');
+      })
+      .catch(() => {
+        if (!viva) return;
+        setCatalogosEstado('error');
+      });
     return () => { viva = false; };
   }, []);
 
@@ -728,6 +789,184 @@ export default function LandingPage() {
           <a href="#contacto" className={styles.requisitosCta}>
             ¿Dudas? Contáctanos →
           </a>
+        </div>
+
+        {/* ===== Pre-registro público (paso 1) ===== */}
+        <div className={styles.preRegistroBox} id="pre-registro">
+          <div className={styles.preRegistroHead}>
+            <h3>
+              <ClipboardList size={20} aria-hidden="true" />
+              Paso 1 · Pre-registro en línea
+            </h3>
+            <p>
+              Llena tus datos y recibe tu folio al instante. Con él acude a Control Escolar
+              para continuar con tu ficha de admisión.
+            </p>
+          </div>
+
+          {preEstado === 'exito' ? (
+            <div className={styles.preExito} role="status">
+              <CheckCircle2 size={28} aria-hidden="true" />
+              <div>
+                <strong>¡Pre-registro recibido!</strong>
+                <p>
+                  Tu folio es <span className={styles.preFolio}>{preFolio}</span>. Guárdalo:
+                  es tu referencia para dar seguimiento en Control Escolar.
+                </p>
+                <p className={styles.preExitoNota}>
+                  Siguiente paso: solicita tu ficha de admisión (paso 2) dentro de las fechas del ciclo activo.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <form className={styles.preForm} onSubmit={enviarPreRegistro}>
+              <div className={styles.preCampo}>
+                <label htmlFor="pre-nombre">Nombre(s)</label>
+                <input
+                  id="pre-nombre"
+                  name="nombre"
+                  type="text"
+                  maxLength={100}
+                  autoComplete="given-name"
+                  required
+                  value={preForm.nombre}
+                  onChange={(e) => setPreForm({ ...preForm, nombre: e.target.value })}
+                />
+              </div>
+              <div className={styles.preCampo}>
+                <label htmlFor="pre-apellidos">Apellidos</label>
+                <input
+                  id="pre-apellidos"
+                  name="apellidos"
+                  type="text"
+                  maxLength={150}
+                  autoComplete="family-name"
+                  required
+                  value={preForm.apellidos}
+                  onChange={(e) => setPreForm({ ...preForm, apellidos: e.target.value })}
+                />
+              </div>
+              <div className={styles.preCampo}>
+                <label htmlFor="pre-curp">CURP</label>
+                <input
+                  id="pre-curp"
+                  name="curp"
+                  type="text"
+                  minLength={18}
+                  maxLength={18}
+                  pattern="[A-Za-zÑñ]{4}[0-9]{6}[HM][A-Za-zÑñ]{5}[A-Za-z0-9]{2}"
+                  title="Ejemplo: GPAE010101MDFRRR01 (18 caracteres)"
+                  required
+                  value={preForm.curp}
+                  onChange={(e) => setPreForm({ ...preForm, curp: e.target.value.toUpperCase() })}
+                />
+              </div>
+              <div className={styles.preCampo}>
+                <label htmlFor="pre-email">Correo electrónico</label>
+                <input
+                  id="pre-email"
+                  name="email"
+                  type="email"
+                  maxLength={254}
+                  autoComplete="email"
+                  required
+                  value={preForm.email}
+                  onChange={(e) => setPreForm({ ...preForm, email: e.target.value })}
+                />
+              </div>
+              <div className={styles.preCampo}>
+                <label htmlFor="pre-telefono">Teléfono (opcional)</label>
+                <input
+                  id="pre-telefono"
+                  name="telefono"
+                  type="tel"
+                  maxLength={20}
+                  autoComplete="tel"
+                  value={preForm.telefono}
+                  onChange={(e) => setPreForm({ ...preForm, telefono: e.target.value })}
+                />
+              </div>
+              <div className={styles.preCampo}>
+                <label htmlFor="pre-especialidad">Especialidad de interés</label>
+                <select
+                  id="pre-especialidad"
+                  name="especialidad_id"
+                  required
+                  disabled={catalogosEstado !== 'listo'}
+                  value={preForm.especialidad_id}
+                  onChange={(e) => setPreForm({ ...preForm, especialidad_id: e.target.value })}
+                >
+                  <option value="">
+                    {catalogosEstado === 'error' ? 'No disponible' : 'Cargando...'}
+                  </option>
+                  {catalogos.especialidades.map((esp) => (
+                    <option key={esp.id} value={esp.id}>
+                      {esp.nombre}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className={styles.preCampo}>
+                <label htmlFor="pre-turno">Turno preferido</label>
+                <select
+                  id="pre-turno"
+                  name="turno_preferido_id"
+                  required
+                  disabled={catalogosEstado !== 'listo'}
+                  value={preForm.turno_preferido_id}
+                  onChange={(e) => setPreForm({ ...preForm, turno_preferido_id: e.target.value })}
+                >
+                  <option value="">
+                    {catalogosEstado === 'error' ? 'No disponible' : 'Cargando...'}
+                  </option>
+                  {catalogos.turnos.map((turno) => (
+                    <option key={turno.id} value={turno.id}>
+                      {turno.nombre}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Honeypot anti-bots: invisible para humanos y lectores de pantalla */}
+              <div className={styles.preHoneypot} aria-hidden="true">
+                <label htmlFor="pre-website">No completar este campo</label>
+                <input
+                  id="pre-website"
+                  name="website"
+                  type="text"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  value={preForm.website}
+                  onChange={(e) => setPreForm({ ...preForm, website: e.target.value })}
+                />
+              </div>
+
+              <div className={styles.preAcciones}>
+                <button type="submit" className={styles.preSubmit} disabled={preEstado === 'enviando'}>
+                  {preEstado === 'enviando' ? (
+                    <>
+                      <Loader2 size={16} className={styles.preSpinner} aria-hidden="true" />
+                      Enviando...
+                    </>
+                  ) : (
+                    'Obtener mi folio'
+                  )}
+                </button>
+                <span className={styles.preNota}>
+                  Tus datos se usan exclusivamente para el proceso de admisión.
+                </span>
+              </div>
+
+              {preEstado === 'error' && (
+                <p className={styles.preError} role="alert">{preMensaje}</p>
+              )}
+              {catalogosEstado === 'error' && (
+                <p className={styles.preError} role="alert">
+                  No se pudieron cargar las especialidades. Recarga la página o contáctanos para pre-registrarte.
+                </p>
+              )}
+            </form>
+          )}
         </div>
       </section>
 
