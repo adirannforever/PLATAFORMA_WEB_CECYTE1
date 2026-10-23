@@ -54,7 +54,7 @@ export default function App() {
       <NetworkStatus/>
       <Suspense fallback={<div className="loading-screen" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--color-gray-50)' }}><Skeleton variant="text" width="200px" height="1.5rem" /><Skeleton variant="text" width="200px" height="1.5rem" /><Skeleton variant="text" width="200px" height="1.5rem" /></div>}>
         <Routes>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/" element={<LandingPage />} />
         <Route path="/activar-cuenta" element={<ActivarCuentaAspirantePage />} />
         <Route
           path="/login"
