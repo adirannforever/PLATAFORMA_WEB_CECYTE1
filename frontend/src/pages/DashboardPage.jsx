@@ -25,10 +25,10 @@ const ROLE_LABEL = { administrador: 'Administrador', docente: 'Docente', alumno:
 
 export default function DashboardPage() {
   const { usuario } = useAuth();
-  if (!usuario) return <div className={styles.loading}>Verificando sesión...</div>;
+
   // El panel administrativo rediseñado solo aplica al administrador.
   // Docentes y alumnos conservan su dashboard existente (sin regresión).
-  if (usuario.rol === 'administrador') return <AdminDashboard usuario={usuario} />;
+  if (usuario?.rol === 'administrador') return <AdminDashboard usuario={usuario} />;
   return <LegacyDashboard usuario={usuario} />;
 }
 

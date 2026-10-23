@@ -8,20 +8,6 @@ const api = axios.create({
   },
 });
 
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      const path = window.location.pathname;
-      const rutaPublica = path === '/' || path === '/login'
-        || path === '/activar-cuenta' || path.startsWith('/legal/');
-      if (!rutaPublica) {
-        window.location.href = '/login';
-      }
-    }
-    return Promise.reject(error);
-  }
-);
 
 
 export const authService = {

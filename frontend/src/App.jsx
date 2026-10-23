@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
-import { usePermissions } from './hooks/usePermissions';
+
 import { Suspense, lazy } from 'react';
 import React from 'react';
 
@@ -41,58 +41,20 @@ const HorariosPage = React.lazy(() => import('./pages/HorariosPage'));
 const MisClasesPage = React.lazy(() => import('./pages/MisClasesPage'));
 const MisClasesDetallePage = React.lazy(() => import('./pages/MisClasesDetallePage'));
 
-const RutaProtegida = ({ children, rolesPermitidos, permisos }) => {
-  const { usuario, cargando } = useAuth();
-  const { tieneAlguno } = usePermissions();
-
-  if (cargando) return <div className="loading-screen">Cargando...</div>;
-  if (!usuario) return <Navigate to="/login" replace />;
-
-  // Modelo nuevo (recomendado): acceso por permiso 'modulo.accion'.
-  if (permisos && permisos.length > 0) {
-    if (!tieneAlguno(...permisos)) {
-      return <Navigate to="/dashboard" replace />;
-    }
-    return children;
-  }
-
-  // Modelo legacy: acceso por rol plano (se mantiene por compatibilidad).
-  if (rolesPermitidos && !rolesPermitidos.includes(usuario.rol)) {
-    return <Navigate to="/dashboard" replace />;
-  }
+const RutaProtegida = ({ children }) => {
   return children;
 };
 
 export default function App() {
   const location = useLocation();
-  const { usuario, cargando } = useAuth();
-
-  if (cargando) {
-    return (
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100vh',
-          background: 'var(--color-gray-50)',
-          color: 'var(--color-primary)',
-          fontSize: '1rem',
-          fontFamily: 'var(--font-sans)',
-        }}
-      >
-        Verificando sesión...
-      </div>
-    );
-  }
-
+  const { usuario } = useAuth();
   return (
     <>
       <CookieBanner />
       <NetworkStatus/>
       <Suspense fallback={<div className="loading-screen" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--color-gray-50)' }}><Skeleton variant="text" width="200px" height="1.5rem" /><Skeleton variant="text" width="200px" height="1.5rem" /><Skeleton variant="text" width="200px" height="1.5rem" /></div>}>
         <Routes>
-        <Route path="/" element={<LandingPage />} />
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/activar-cuenta" element={<ActivarCuentaAspirantePage />} />
         <Route
           path="/login"
