@@ -20,7 +20,9 @@
     "db:migrate:status": "node scripts/migrate.mjs --status",
     "test:servicios": "node scripts/testServicios.js",
     "test:auditoria": "node scripts/testAuditoria.js",
-    "test:migrate": "node scripts/test-migrate.mjs"
+    "test:migrate": "node scripts/test-migrate.mjs",
+    "db:r2-probe": "node scripts/probe-r2.mjs",
+    "db:backup": "node scripts/backup.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1109.0",

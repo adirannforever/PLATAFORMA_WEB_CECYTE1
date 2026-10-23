@@ -3,7 +3,7 @@ import { mkdir, readFile, unlink } from 'fs/promises';
 import { createWriteStream, createReadStream } from 'fs';
 import { createGzip } from 'zlib';
 import { pipeline } from 'stream/promises';
-import { S3Client, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command, HeadBucketCommand } from '@aws-sdk/client-s3';
 import dotenv from 'dotenv';
 import { promisify } from 'util';
 import { join } from 'path';
@@ -14,13 +14,16 @@ dotenv.config();
 const execAsync = promisify(exec);
 const DATABASE_URL = process.env.DATABASE_URL;
 
-// Validación temprana: mejor fallar con mensaje claro ANTES de intentar pg_dump
 if (!DATABASE_URL) {
   console.error('❌ DATABASE_URL no definida. Abortando: no se puede generar el backup.');
   process.exit(1);
 }
-if (!process.env.AWS_BUCKET_NAME) {
-  console.warn('️ AWS_BUCKET_NAME no definida: el backup se generará pero NO se subirá a la nube.');
+
+const BUCKET = process.env.AWS_BUCKET_NAME;
+const S3_ENABLED = !!BUCKET && !!process.env.AWS_ACCESS_KEY_ID && !!process.env.AWS_SECRET_ACCESS_KEY;
+
+if (!S3_ENABLED) {
+  console.warn('⚠️  AWS_BUCKET_NAME / credenciales no definidas: el backup se generará localmente pero NO se subirá a la nube.');
 }
 
 const s3 = new S3Client({
@@ -33,7 +36,23 @@ const s3 = new S3Client({
   forcePathStyle: true,
 });
 
-const BUCKET = process.env.AWS_BUCKET_NAME;
+async function s3SendWithTimeout(command, timeoutMs = 120000) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const result = await s3.send(command, { abortSignal: controller.signal });
+    clearTimeout(timeoutId);
+    return result;
+  } catch (e) {
+    clearTimeout(timeoutId);
+    throw e;
+  }
+}
+
+function log(msg) {
+  const ts = new Date().toISOString();
+  console.log(`[${ts}] ${msg}`);
+}
 
 async function findPgDumpWindows() {
   const possiblePaths = [
@@ -48,7 +67,7 @@ async function findPgDumpWindows() {
       await execAsync(`"${p}" --version`);
       return p;
     } catch {
-      
+      // continuar
     }
   }
   return null;
@@ -69,12 +88,24 @@ async function runPgDumpWithCommand(cmd, connUrl, outputPath) {
       if (code === 0) {
         resolve();
       } else {
-        reject(new Error(`pg_dump se rindió. Código ${code}. Stderr: ${stderr}`));
+        reject(new Error(`pg_dump falló. Código ${code}. Stderr: ${stderr}`));
       }
     });
 
     writeStream.on('error', reject);
   });
+}
+
+async function ensureBucketAccessible() {
+  if (!S3_ENABLED) return false;
+  try {
+    await s3SendWithTimeout(new HeadBucketCommand({ Bucket: BUCKET }), 30000);
+    log(`✅ Bucket accesible: ${BUCKET}`);
+    return true;
+  } catch (e) {
+    log(`❌ No se puede acceder al bucket ${BUCKET}: ${e.message}`);
+    return false;
+  }
 }
 
 export async function backup() {
@@ -87,8 +118,10 @@ export async function backup() {
   const sqlPath = join(secureBackupDir, `backup-${timestamp}.sql`);
   const gzPath = join(secureBackupDir, filename);
 
-  console.log(` Iniciando backup...`);
-  console.log(` Guardando archivos temporalmente: ${secureBackupDir}`);
+  log(`🚀 Iniciando backup de base de datos...`);
+  log(`📁 Directorio temporal: ${secureBackupDir}`);
+
+  let uploadOk = false;
 
   try {
     let pgDumpCmd = 'pg_dump';
@@ -96,56 +129,76 @@ export async function backup() {
       const found = await findPgDumpWindows();
       if (found) {
         pgDumpCmd = found;
-        console.log(` pg_dump localizado en: ${found}`);
+        log(`📍 pg_dump localizado en: ${found}`);
       } else {
-        console.warn('️ No encontré pg_dump. Buscando alternativa.');
+        log('⚠️  No se encontró pg_dump en rutas estándar de Windows.');
       }
     }
 
     let connUrl = DATABASE_URL;
     if (connUrl.includes('sslmode=verify-full')) {
       connUrl = connUrl.replace('sslmode=verify-full', 'sslmode=require');
-      console.log(' Bajando la restricción de SSL a "require".');
+      log('🔒 Ajustando SSL de verify-full a require.');
     }
 
-    console.log(` Extrayendo tu base de datos...`);
+    log(`📤 Extrayendo base de datos...`);
     await runPgDumpWithCommand(pgDumpCmd, connUrl, sqlPath);
 
-    console.log(' Comprimiendo...');
+    log(`🗜️  Comprimiendo backup...`);
     const readStream = createReadStream(sqlPath);
     const writeStream = createWriteStream(gzPath);
     const gzip = createGzip();
     await pipeline(readStream, gzip, writeStream);
-    console.log(` Archivo listo: ${gzPath}`);
 
-    console.log(`️ Subiendo a la nube...`);
-    const fileBuffer = await readFile(gzPath);
-    await s3.send(new PutObjectCommand({
-      Bucket: BUCKET,
-      Key: filename,
-      Body: fileBuffer,
-      ContentType: 'application/gzip',
-    }));
-    console.log(` Backup completado y subido: ${filename}`);
+    const { stat } = await import('fs/promises');
+    const stats = await stat(gzPath);
+    const sizeMB = (stats.size / (1024 * 1024)).toFixed(2);
+    log(`📦 Archivo comprimido listo: ${gzPath} (${sizeMB} MB)`);
 
-    
-    // Retención SOLO sobre los backups (nunca tocar otros prefijos del bucket,
-    // ej. horarios/*. Se conservan los 7 backups más recientes.)
-    const list = await s3.send(new ListObjectsV2Command({ Bucket: BUCKET, Prefix: 'backup-' }));
-    const files = list.Contents || [];
-    const sorted = files.sort((a, b) => a.Key.localeCompare(b.Key));
-    const toDelete = sorted.slice(0, Math.max(0, sorted.length - 7));
-    for (const item of toDelete) {
-      await s3.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: item.Key }));
-      console.log(`️ Backup antiguo eliminado: ${item.Key}`);
+    if (S3_ENABLED) {
+      const bucketOk = await ensureBucketAccessible();
+      if (bucketOk) {
+        log(`☁️  Subiendo a la nube (R2)...`);
+        const fileBuffer = await readFile(gzPath);
+        await s3SendWithTimeout(new PutObjectCommand({
+          Bucket: BUCKET,
+          Key: filename,
+          Body: fileBuffer,
+          ContentType: 'application/gzip',
+        }), 300000);
+        log(`✅ Backup subido exitosamente: ${filename}`);
+        uploadOk = true;
+      } else {
+        log('⚠️  Omitiendo subida a la nube: bucket no accesible.');
+      }
+    } else {
+      log('📂 S3/R2 no configurado. Backup solo local.');
     }
 
-    console.log(' Todo terminado. Sistema impecable.');
+    
+    if (S3_ENABLED && uploadOk) {
+      log(`🧹 Aplicando política de retención (últimos 7 backups)...`);
+      const list = await s3SendWithTimeout(new ListObjectsV2Command({ Bucket: BUCKET, Prefix: 'backup-' }), 30000);
+      const files = list.Contents || [];
+      const sorted = files.sort((a, b) => (a.Key || '').localeCompare(b.Key || ''));
+      const toDelete = sorted.slice(0, Math.max(0, sorted.length - 7));
+      for (const item of toDelete) {
+        await s3SendWithTimeout(new DeleteObjectCommand({ Bucket: BUCKET, Key: item.Key }), 30000);
+        log(`🗑️  Backup antiguo eliminado: ${item.Key}`);
+      }
+    }
+
+    log(`✅ Backup completado. Sistema impecable.`);
+  } catch (e) {
+    log(`❌ Error durante el backup: ${e.message}`);
+    throw e;
   } finally {
-    console.log(` Limpiando directorio temporal...`);
+    log(`🧹 Limpiando archivos temporales...`);
     await unlink(sqlPath).catch(() => {});
     await unlink(gzPath).catch(() => {});
   }
+
+  return { uploadOk, filename, timestamp };
 }
 
 
