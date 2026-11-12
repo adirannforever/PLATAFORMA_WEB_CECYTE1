@@ -46,7 +46,7 @@ En Cloudflare Dashboard: **R2 → bucket → Settings → CORS Policy → JSON**
 ```json
 [
   {
-    "AllowedOrigins": ["https://cecyte-frontend.vercel.app"],
+    "AllowedOrigins": ["https://plataforma-web-cecyte.vercel.app"],
     "AllowedMethods": ["GET", "PUT"],
     "AllowedHeaders": ["Content-Type"],
     "ExposeHeaders": ["ETag"],
