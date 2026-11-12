@@ -45,7 +45,10 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 4000;
-const corsOrigins = parseCorsOrigins(process.env.CORS_ORIGIN);
+const corsOrigins = parseCorsOrigins([
+  process.env.CORS_ORIGIN || 'http://localhost:5173',
+  'https://plataforma-web-cecyte.vercel.app',
+].join(','));
 
 app.use(cors({
   origin(origin, callback) {
