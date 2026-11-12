@@ -3,7 +3,7 @@
 // Flow:
 //   1) create a uniquely named throwaway DB
 //   2) apply src/db/schema.sql (base tables)
-//   3) run scripts/migrate.mjs -> applies 001 + 002
+//   3) run scripts/migrate.mjs -> applies 001 .. 005
 //   4) verify status, idempotency, and migration immutability
 //   5) drop the throwaway DB
 //
@@ -68,19 +68,19 @@ try {
 
   const count = async (q) => (await t.query(q)).rows[0].n;
   const tablesBefore = await count(`SELECT count(*)::int n FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'`);
-  check(`schema.sql applied (${tablesBefore} base tables)`, tablesBefore === 40);
+  check(`schema.sql applied (${tablesBefore} base tables)`, tablesBefore === 41);
 
-  console.log('\n[test] running migrate (expect 001 + 002)...');
+  console.log('\n[test] running migrate (expect 001 .. 005)...');
   run(process.execPath, ['scripts/migrate.mjs'], { LOCAL_DATABASE_URL: targetConn });
 
   const tablesAfter = await count(`SELECT count(*)::int n FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE' AND table_name <> 'schema_migrations'`);
-  check(`+3 RBAC tables (now ${tablesAfter}, excl. ledger)`, tablesAfter === 43);
+  check(`+8 tables (RBAC 3 + aspirante_invitaciones 1 + planes 4 = 49 total, excl. ledger)`, tablesAfter === 49);
   const viewCount = await count(`SELECT count(*)::int n FROM pg_views WHERE schemaname='public' AND viewname='v_promedios_periodo'`);
   check('view v_promedios_periodo created', viewCount === 1);
   const trigCount = await count(`SELECT count(*)::int n FROM pg_trigger tg JOIN pg_class c ON c.oid=tg.tgrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE NOT tg.tgisinternal AND n.nspname='public'`);
-  check('2 domain triggers created', trigCount === 2);
+  check('2 domain triggers + 3 plan immutability triggers = 5 triggers', trigCount === 5);
   const ledgerCount = await count('SELECT count(*)::int n FROM schema_migrations');
-  check('ledger has 2 rows', ledgerCount === 2);
+  check('ledger has 5 rows (001..005)', ledgerCount === 5);
   await t.end();
 
   console.log('\n[test] running migrate again (expect no-op)...');
@@ -88,7 +88,7 @@ try {
   const t2 = new pg.Client({ connectionString: targetConn });
   await t2.connect();
   const ledgerAfter = (await t2.query('SELECT count(*)::int n FROM schema_migrations')).rows[0].n;
-  check('idempotent: ledger still 2 rows', ledgerAfter === 2);
+  check('idempotent: ledger still 5 rows', ledgerAfter === 5);
   await t2.end();
 
   console.log('\n[test] tamper test (expect integrity error, exit 1)...');

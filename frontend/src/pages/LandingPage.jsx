@@ -1171,9 +1171,9 @@ export default function LandingPage() {
         </nav>
         <p>&copy; {new Date().getFullYear()} {INSTITUCION.nombre} · Plataforma educativa (demo). Todos los derechos reservados.</p>
         <div className={styles.footerLinks}>
-          <a href="/legal/privacidad">Aviso de Privacidad</a>
-          <a href="/legal/terminos">Términos y Condiciones</a>
-          <a href="/legal/cookies">Política de Cookies</a>
+<Link to="/legal/privacidad">Aviso de Privacidad</Link>
+            <Link to="/legal/terminos">Términos y Condiciones</Link>
+            <Link to="/legal/cookies">Política de Cookies</Link>
         </div>
         <button
           className={styles.scrollTopBtn}

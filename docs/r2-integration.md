@@ -25,6 +25,41 @@ Esta documentación describe la integración de Cloudflare R2 (S3-compatible) pa
 
 ## Configuración
 
+### Configuración del despliegue (Render y Vercel)
+
+El servicio de Render necesita `CORS_ORIGIN` con el origen exacto del frontend
+desplegado (sin ruta ni barra final). Para más de un origen, sepárelos con
+comas; por ejemplo, agregue `http://localhost:5173` solo si necesita desarrollo
+local. No use `*`, ya que la API usa credenciales.
+
+El blueprint `backend/render.yaml` declara `AWS_ENDPOINT`,
+`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` y `AWS_BUCKET_NAME` como variables
+secretas/no sincronizadas. Asígneles en Render los valores de la cuenta R2 y el
+bucket; `AWS_ENDPOINT` debe ser `https://<account-id>.r2.cloudflarestorage.com`.
+`AWS_REGION` debe permanecer como `auto`. Las operaciones de archivos requieren
+las cuatro variables y devolverán un error explícito si falta alguna.
+
+Las cargas del navegador usan URLs prefirmadas directamente hacia R2, por lo que
+también se debe permitir el origen del frontend en la política CORS del bucket.
+En Cloudflare Dashboard: **R2 → bucket → Settings → CORS Policy → JSON**:
+
+```json
+[
+  {
+    "AllowedOrigins": ["https://cecyte-frontend.vercel.app"],
+    "AllowedMethods": ["GET", "PUT"],
+    "AllowedHeaders": ["Content-Type"],
+    "ExposeHeaders": ["ETag"],
+    "MaxAgeSeconds": 3600
+  }
+]
+```
+
+Reemplace el origen del ejemplo si el dominio de producción es distinto y
+manténgalo alineado con `CORS_ORIGIN` de Render. Añada otros orígenes exactos
+solo cuando sean necesarios. Las políticas CORS de la API y del bucket R2 son
+independientes: configurar solo una no habilita las cargas del navegador.
+
 ### 1. Crear el archivo `.env`
 
 Copie el ejemplo y complete los valores de Cloudflare R2:

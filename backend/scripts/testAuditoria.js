@@ -143,7 +143,7 @@ async function run() {
   await updateTarget({ nombre: testName });
   console.log('✔ Updating a user succeeds');
 
-  const exportResponse = await request('/api/reportes/estadisticas');
+  const exportResponse = await request('/api/reportes/estadisticas?ciclo_id=1');
   assert.ok(exportResponse, 'Statistics endpoint should return a response');
   console.log('✔ Statistics endpoint responds successfully');
 

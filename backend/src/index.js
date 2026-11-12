@@ -9,6 +9,7 @@ import '../scripts/scheduler.js';
 
 import { logger } from './config/logger.js';
 import redisClient from './config/redis.js';
+import { parseCorsOrigins } from './config/http.js';
 
 import authRoutes from './routes/auth.routes.js';
 import usuariosRoutes from './routes/usuarios.routes.js';
@@ -44,17 +45,17 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 4000;
-const corsOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173')
-  .split(',')
-  .map((origin) => origin.trim())
-  .filter(Boolean);
+const corsOrigins = parseCorsOrigins(process.env.CORS_ORIGIN);
 
 app.use(cors({
   origin(origin, callback) {
     if (!origin || corsOrigins.includes(origin)) {
       return callback(null, true);
     }
-    return callback(new Error('Origen no permitido por CORS'));
+    const error = new Error('Origen no permitido por CORS');
+    error.status = 403;
+    error.code = 'CORS_ORIGIN_DENIED';
+    return callback(error);
   },
   credentials: true,
 }));

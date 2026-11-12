@@ -120,8 +120,11 @@ export default function DashboardLayout() {
     });
   };
 
-  const groupedItems = getMenuItems(tiene);
-  const categoriesWithItems = categoryOrder.filter((cat) => groupedItems[cat]?.length > 0);
+  const groupedItems = useMemo(() => getMenuItems(tiene), [tiene]);
+  const categoriesWithItems = useMemo(
+    () => categoryOrder.filter((cat) => groupedItems[cat]?.length > 0),
+    [groupedItems]
+  );
 
   const badgeCounts = useMemo(() => {
     return {};

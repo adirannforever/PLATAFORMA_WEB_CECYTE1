@@ -28,6 +28,7 @@ const exigirConfigS3 = (accion) => {
   if (!BUCKET) faltantes.push('AWS_BUCKET_NAME');
   if (!process.env.AWS_ACCESS_KEY_ID) faltantes.push('AWS_ACCESS_KEY_ID');
   if (!process.env.AWS_SECRET_ACCESS_KEY) faltantes.push('AWS_SECRET_ACCESS_KEY');
+  if (!process.env.AWS_ENDPOINT) faltantes.push('AWS_ENDPOINT');
   if (faltantes.length > 0) {
     throw new Error(
       `S3 no configurado: faltan variables [${faltantes.join(', ')}] (no se pudo ${accion})`
